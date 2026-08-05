@@ -1,0 +1,271 @@
+/* Main App Styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #f5f7fa;
+  color: #333;
+}
+
+.App {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header */
+.app-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 1.5rem 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 2rem;
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.header-title h1 {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+  margin-top: 0;
+}
+
+.header-title p {
+  font-size: 1rem;
+  opacity: 0.9;
+  margin: 0;
+}
+
+.header-admin {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.admin-name {
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.btn-logout {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+}
+
+.btn-logout:hover {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.loading-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-size: 1.2rem;
+}
+
+/* Container */
+.container {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 0 1rem;
+  width: 100%;
+}
+
+main.container {
+  flex: 1;
+  margin-bottom: 2rem;
+}
+
+/* Tabs Navigation */
+.tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid #e0e0e0;
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.tab {
+  padding: 1rem 1.5rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  color: #666;
+  border-bottom: 3px solid transparent;
+  transition: all 0.3s ease;
+  font-weight: 500;
+}
+
+.tab:hover {
+  color: #667eea;
+}
+
+.tab.active {
+  color: #667eea;
+  border-bottom-color: #667eea;
+}
+
+/* Alerts */
+.alert {
+  padding: 1rem;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.alert-error {
+  background-color: #fee;
+  color: #c33;
+  border: 1px solid #fcc;
+}
+
+.alert-success {
+  background-color: #efe;
+  color: #3c3;
+  border: 1px solid #cfc;
+}
+
+.alert button {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: inherit;
+}
+
+/* Buttons */
+.btn {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-primary {
+  background-color: #667eea;
+  color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background-color: #5568d3;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-refresh {
+  background-color: #f0f0f0;
+  color: #333;
+}
+
+.btn-refresh:hover {
+  background-color: #e0e0e0;
+}
+
+/* Forms */
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: #333;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-family: inherit;
+  transition: border-color 0.3s ease;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+@media (max-width: 600px) {
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Footer */
+.app-footer {
+  background-color: #333;
+  color: white;
+  text-align: center;
+  padding: 2rem;
+  margin-top: auto;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .app-header {
+    padding: 1.5rem 0;
+  }
+
+  .app-header h1 {
+    font-size: 1.5rem;
+  }
+
+  .tab {
+    padding: 0.75rem 1rem;
+    font-size: 0.9rem;
+  }
+
+  main.container {
+    margin-bottom: 1rem;
+  }
+}

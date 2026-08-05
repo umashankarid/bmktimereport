@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: badminton-backend
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=development
+      - SECRET_KEY=dev-secret-key-12345
+      - GOOGLE_CREDENTIALS_PATH=/app/backend/credentials.json
+      - GOOGLE_SHEET_ID=1Kn2zxibNy2omm00YEZDmLnnanruqkfcv2UeU7TK35KU
+      - CORS_ORIGINS=http://localhost:3000,http://localhost:5000,http://frontend:3000
+      - PORT=5000
+    volumes:
+      - ./backend:/app/backend
+      - ./backend/credentials.json:/app/backend/credentials.json:ro
+    working_dir: /app/backend
+    command: python app.py
+    networks:
+      - badminton-network
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: badminton-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_URL=http://localhost:5000/api
+      - REACT_APP_GAS_URL=https://your-deployment-url
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+    depends_on:
+      - backend
+    networks:
+      - badminton-network
+    restart: unless-stopped
+
+networks:
+  badminton-network:
+    driver: bridge
+
+volumes:
+  backend_data:
+  frontend_data:

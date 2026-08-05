@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: badminton-backend
+    runtime: docker
+    dockerfilePath: ./Dockerfile.backend
+    port: 5000
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: SECRET_KEY
+        generateValue: true
+      - key: GOOGLE_SHEET_ID
+        scope: shared
+      - key: GOOGLE_CREDENTIALS_PATH
+        value: /app/credentials.json
+      - key: CORS_ORIGINS
+        value: https://badminton-frontend.onrender.com,https://badminton-backend.onrender.com
+    healthCheckPath: /api/health
+    autoDeploy: true
+
+  - type: web
+    name: badminton-frontend
+    runtime: docker
+    dockerfilePath: ./frontend/Dockerfile
+    port: 3000
+    envVars:
+      - key: REACT_APP_API_URL
+        value: https://badminton-backend.onrender.com/api
+    autoDeploy: true
+    depends_on:
+      - badminton-backend
