@@ -1,43 +1,42 @@
-# Backend
-backend/__pycache__/
-backend/*.pyc
-backend/*.pyo
-backend/venv/
-backend/.env
-backend/credentials.json
-backend/config/
+# Credentials and secrets
+credentials.json
+.env
+.env.local
+*.key
+*.pem
 
-# Frontend
-frontend/node_modules/
-frontend/.env.local
-frontend/.env.development.local
-frontend/.env.test.local
-frontend/.env.production.local
-frontend/build/
-frontend/dist/
+# Dependencies
+node_modules/
+venv/
+__pycache__/
+*.pyc
+
+# Build outputs
+build/
+dist/
+*.egg-info/
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
-*~
+
+# OS
 .DS_Store
+Thumbs.db
 
 # Logs
 *.log
 npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# OS
-Thumbs.db
-.DS_Store
-
-# Testing
-.coverage
-htmlcov/
-pytest_cache/
 
 # Docker
-.docker/
+.dockerignore
+
+# Testing
+.pytest_cache/
+coverage/
+
+# Environment
+.env*.local
+credentials.json
