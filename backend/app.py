@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from config import Config
 from sheets import get_sheets_manager
@@ -7,10 +7,10 @@ import os
 
 def create_app():
     """Application factory"""
-    app = Flask(__name__)
+    app = Flask(__name__, static_folder='static', static_url_path='')
     app.config.from_object(Config)
     
-    # Enable CORS
+    # Enable CORS for API routes only
     CORS(app, resources={r"/api/*": {"origins": Config.CORS_ORIGINS}})
     
     # Initialize Google Sheets on startup
@@ -27,6 +27,20 @@ def create_app():
             'service': 'badminton-activity-logger',
             'version': '1.0.0'
         })
+    
+    # Serve React app
+    @app.route('/')
+    def serve_index():
+        """Serve index.html for root path"""
+        return send_from_directory(app.static_folder, 'index.html')
+    
+    @app.route('/<path:path>')
+    def serve_static(path):
+        """Serve static files and fallback to index.html for React Router"""
+        if os.path.exists(os.path.join(app.static_folder, path)):
+            return send_from_directory(app.static_folder, path)
+        else:
+            return send_from_directory(app.static_folder, 'index.html')
     
     # Log activity
     @app.route('/api/activities', methods=['POST'])
@@ -108,7 +122,14 @@ def create_app():
     # Error handlers
     @app.errorhandler(404)
     def not_found(error):
-        return jsonify({'error': 'Endpoint not found'}), 404
+        # If it's an API request, return JSON
+        if request.path.startswith('/api/'):
+            return jsonify({'error': 'Endpoint not found'}), 404
+        # Otherwise serve index.html for React Router
+        try:
+            return send_from_directory(app.static_folder, 'index.html')
+        except:
+            return jsonify({'error': 'Not found'}), 404
     
     @app.errorhandler(500)
     def internal_error(error):
