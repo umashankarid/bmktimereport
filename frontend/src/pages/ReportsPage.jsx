@@ -7,17 +7,41 @@ function ReportsPage({ currentTrainer = null }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [isTrainerView, setIsTrainerView] = useState(false);
+  const [trainers, setTrainers] = useState([]);
+  const [selectedTrainer, setSelectedTrainer] = useState(null);
 
   useEffect(() => {
     // Check if this is a trainer view (not admin)
     if (currentTrainer && currentTrainer.name) {
       setIsTrainerView(true);
+    } else {
+      // Admin view - fetch all trainers
+      fetchTrainers();
     }
   }, [currentTrainer]);
 
+  const fetchTrainers = async () => {
+    try {
+      console.log('📋 Fetching trainers list...');
+      const response = await fetch('/api/trainers');
+      const result = await response.json();
+      
+      if (result.success && result.data) {
+        console.log('✅ Trainers loaded:', result.data);
+        setTrainers(result.data);
+        // Set first trainer as default
+        if (result.data.length > 0) {
+          setSelectedTrainer(result.data[0]);
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching trainers:', err);
+    }
+  };
+
   useEffect(() => {
     fetchReports();
-  }, [activeReport]);
+  }, [activeReport, selectedTrainer]);
 
   const fetchReports = async () => {
     setLoading(true);
@@ -89,6 +113,25 @@ function ReportsPage({ currentTrainer = null }) {
               : `View activity analytics and trends`
             }
           </p>
+          
+          {/* Trainer Selector for Admin */}
+          {!isTrainerView && trainers.length > 0 && (
+            <div className="trainer-selector">
+              <label htmlFor="trainer-filter">Select Trainer:</label>
+              <select
+                id="trainer-filter"
+                value={selectedTrainer || ''}
+                onChange={(e) => setSelectedTrainer(e.target.value)}
+                className="trainer-select"
+              >
+                {trainers.map(trainer => (
+                  <option key={trainer} value={trainer}>
+                    {trainer}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </header>
 
         {error && (
@@ -136,16 +179,16 @@ function ReportsPage({ currentTrainer = null }) {
             ) : (
               <>
                 {activeReport === 'activity-summary' && (
-                  <ActivitySummaryReport data={reports['activity-summary']} trainerFilter={isTrainerView ? currentTrainer?.name : null} />
+                  <ActivitySummaryReport data={reports['activity-summary']} trainerFilter={isTrainerView ? currentTrainer?.name : selectedTrainer} />
                 )}
                 {activeReport === 'activity-distribution' && (
-                  <ActivityDistributionReport data={reports['activity-distribution']} trainerFilter={isTrainerView ? currentTrainer?.name : null} />
+                  <ActivityDistributionReport data={reports['activity-distribution']} trainerFilter={isTrainerView ? currentTrainer?.name : selectedTrainer} />
                 )}
                 {activeReport === 'training-hours' && (
-                  <TrainingHoursReport data={reports['training-hours']} trainerFilter={isTrainerView ? currentTrainer?.name : null} />
+                  <TrainingHoursReport data={reports['training-hours']} trainerFilter={isTrainerView ? currentTrainer?.name : selectedTrainer} />
                 )}
                 {activeReport === 'monthly-trends' && (
-                  <MonthlyTrendsReport data={reports['monthly-trends']} trainerFilter={isTrainerView ? currentTrainer?.name : null} />
+                  <MonthlyTrendsReport data={reports['monthly-trends']} trainerFilter={isTrainerView ? currentTrainer?.name : selectedTrainer} />
                 )}
               </>
             )}
@@ -169,7 +212,11 @@ function ReportsPage({ currentTrainer = null }) {
 
 // Activity Summary Report Component
 function ActivitySummaryReport({ data, trainerFilter }) {
-  if (!data || Object.keys(data).length === 0) {
+  if (!data) {
+    return <div className="empty-report">Loading report data...</div>;
+  }
+
+  if (typeof data !== 'object' || Object.keys(data).length === 0) {
     return <div className="empty-report">No data available</div>;
   }
 
@@ -183,7 +230,7 @@ function ActivitySummaryReport({ data, trainerFilter }) {
   }
 
   if (Object.keys(filteredData).length === 0) {
-    return <div className="empty-report">No data available for your activities</div>;
+    return <div className="empty-report">No data available for {trainerFilter}</div>;
   }
 
   return (
@@ -195,21 +242,21 @@ function ActivitySummaryReport({ data, trainerFilter }) {
             <h3>{trainer}</h3>
             <div className="stat-row">
               <span className="stat-label">Total Activities:</span>
-              <span className="stat-value">{summary.total_activities}</span>
+              <span className="stat-value">{summary.total_activities || 0}</span>
             </div>
             <div className="stat-row">
               <span className="stat-label">Total Hours:</span>
-              <span className="stat-value">{summary.total_hours}h</span>
+              <span className="stat-value">{typeof summary.total_hours === 'number' ? summary.total_hours.toFixed(2) : 0}h</span>
             </div>
             <div className="stat-row">
               <span className="stat-label">Active Days:</span>
-              <span className="stat-value">{summary.active_days}</span>
+              <span className="stat-value">{summary.active_days || 0}</span>
             </div>
             
             <div className="activity-types">
               <h4>Activity Types:</h4>
               <ul>
-                {Object.entries(summary.activity_types).map(([type, count]) => (
+                {summary.activity_types && Object.entries(summary.activity_types).map(([type, count]) => (
                   <li key={type}>
                     <span className="type-name">{type}</span>
                     <span className="type-count">{count}</span>
@@ -226,7 +273,11 @@ function ActivitySummaryReport({ data, trainerFilter }) {
 
 // Activity Distribution Report Component
 function ActivityDistributionReport({ data, trainerFilter }) {
-  if (!data || data.length === 0) {
+  if (!data) {
+    return <div className="empty-report">Loading report data...</div>;
+  }
+
+  if (!Array.isArray(data) || data.length === 0) {
     return <div className="empty-report">No data available</div>;
   }
 
@@ -270,30 +321,45 @@ function ActivityDistributionReport({ data, trainerFilter }) {
 
 // Training Hours Report Component
 function TrainingHoursReport({ data, trainerFilter }) {
-  if (!data || data.data.length === 0) {
+  if (!data) {
+    return <div className="empty-report">Loading report data...</div>;
+  }
+
+  if (!data.data || data.data.length === 0) {
     return <div className="empty-report">No data available</div>;
   }
 
   // Filter data if this is a trainer view
   let filteredData = data.data;
   if (trainerFilter) {
-    filteredData = data.data.filter(item => item.trainer.toLowerCase() === trainerFilter.toLowerCase());
+    filteredData = data.data.filter(item => 
+      item.trainer.toLowerCase() === trainerFilter.toLowerCase()
+    );
   }
 
   if (filteredData.length === 0) {
-    return <div className="empty-report">No data available for your activities</div>;
+    return <div className="empty-report">No data available for {trainerFilter}</div>;
   }
 
   // Calculate summary for filtered data
-  const summary = filteredData.length === data.data.length 
-    ? data.summary
-    : {
-        total_hours: filteredData.reduce((sum, item) => sum + item.total_hours, 0),
-        total_sessions: filteredData.reduce((sum, item) => sum + item.total_sessions, 0),
-        avg_hours_per_trainer: filteredData.length > 0 
-          ? filteredData.reduce((sum, item) => sum + item.total_hours, 0) / filteredData.length 
-          : 0
-      };
+  let summary = {};
+  
+  if (trainerFilter) {
+    // For single trainer, use their data
+    const trainerData = filteredData[0];
+    summary = {
+      total_hours: trainerData.total_hours || 0,
+      total_sessions: trainerData.total_sessions || 0,
+      avg_hours_per_trainer: trainerData.avg_session_hours || 0
+    };
+  } else {
+    // For all trainers (admin view)
+    summary = data.summary || {
+      total_hours: 0,
+      total_sessions: 0,
+      avg_hours_per_trainer: 0
+    };
+  }
 
   return (
     <div className="report-section">
@@ -302,15 +368,17 @@ function TrainingHoursReport({ data, trainerFilter }) {
       <div className="summary-stats">
         <div className="stat-box">
           <h4>Total Hours</h4>
-          <p className="stat-number">{summary.total_hours.toFixed(2)}h</p>
+          <p className="stat-number">{typeof summary.total_hours === 'number' ? summary.total_hours.toFixed(2) : 0}h</p>
         </div>
         <div className="stat-box">
           <h4>Total Sessions</h4>
-          <p className="stat-number">{summary.total_sessions}</p>
+          <p className="stat-number">{summary.total_sessions || 0}</p>
         </div>
         <div className="stat-box">
-          <h4>Avg Hours/Session</h4>
-          <p className="stat-number">{(summary.total_hours / summary.total_sessions).toFixed(2)}h</p>
+          <h4>{trainerFilter ? 'Avg Hours/Session' : 'Avg Hours/Trainer'}</h4>
+          <p className="stat-number">
+            {typeof summary.avg_hours_per_trainer === 'number' ? summary.avg_hours_per_trainer.toFixed(2) : 0}h
+          </p>
         </div>
       </div>
 
@@ -328,9 +396,9 @@ function TrainingHoursReport({ data, trainerFilter }) {
             {filteredData.map((item, idx) => (
               <tr key={idx}>
                 <td className="trainer-name">{item.trainer}</td>
-                <td className="hours-cell">{item.total_hours}h</td>
-                <td className="sessions-cell">{item.total_sessions}</td>
-                <td className="avg-cell">{item.avg_session_hours}h</td>
+                <td className="hours-cell">{typeof item.total_hours === 'number' ? item.total_hours.toFixed(2) : 0}h</td>
+                <td className="sessions-cell">{item.total_sessions || 0}</td>
+                <td className="avg-cell">{typeof item.avg_session_hours === 'number' ? item.avg_session_hours.toFixed(2) : 0}h</td>
               </tr>
             ))}
           </tbody>
@@ -342,7 +410,11 @@ function TrainingHoursReport({ data, trainerFilter }) {
 
 // Monthly Trends Report Component
 function MonthlyTrendsReport({ data, trainerFilter }) {
-  if (!data || data.length === 0) {
+  if (!data) {
+    return <div className="empty-report">Loading report data...</div>;
+  }
+
+  if (!Array.isArray(data) || data.length === 0) {
     return <div className="empty-report">No data available</div>;
   }
 
@@ -358,20 +430,20 @@ function MonthlyTrendsReport({ data, trainerFilter }) {
             <div className="month-summary">
               <div className="metric">
                 <span className="metric-label">Activities:</span>
-                <span className="metric-value">{month.total_count}</span>
+                <span className="metric-value">{month.total_count || 0}</span>
               </div>
               <div className="metric">
                 <span className="metric-label">Hours:</span>
-                <span className="metric-value">{month.total_hours}h</span>
+                <span className="metric-value">{typeof month.total_hours === 'number' ? month.total_hours.toFixed(2) : 0}h</span>
               </div>
             </div>
 
             <div className="activities-breakdown">
-              {month.activities.map((act, i) => (
+              {month.activities && month.activities.map((act, i) => (
                 <div key={i} className="activity-item">
                   <span className="activity-name">{act.activity_type}</span>
                   <span className="activity-stat">
-                    {act.count} ({act.hours}h)
+                    {act.count} ({typeof act.hours === 'number' ? act.hours.toFixed(2) : 0}h)
                   </span>
                 </div>
               ))}
