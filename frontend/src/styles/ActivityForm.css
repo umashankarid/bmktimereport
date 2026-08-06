@@ -107,9 +107,16 @@
 
 .existing-activities-list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 1rem;
   margin-top: 1rem;
+}
+
+@media (max-width: 768px) {
+  .existing-activities-list {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
 }
 
 .existing-activity-card {
@@ -150,9 +157,31 @@
 
 .activity-times-edit {
   display: grid;
-  grid-template-columns: 1fr 1fr auto;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
   gap: 0.75rem;
   align-items: flex-end;
+  min-width: 0;
+}
+
+@media (max-width: 768px) {
+  .activity-times-edit {
+    grid-template-columns: 1fr 1fr auto;
+    gap: 0.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .activity-times-edit {
+    grid-template-columns: 1fr 1fr 40px;
+    gap: 0.35rem;
+  }
+  
+  .activity-times-edit .btn-save {
+    padding: 0.5rem 0.35rem;
+    font-size: 0.85rem;
+    white-space: nowrap;
+    overflow: hidden;
+  }
 }
 
 .btn-save {
@@ -264,10 +293,23 @@
 
 .time-slot-inputs {
   display: grid;
-  grid-template-columns: 1fr 1fr auto;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
   gap: 0.5rem;
   align-items: flex-end;
   margin-bottom: 0.5rem;
+  min-width: 0;
+}
+
+@media (max-width: 480px) {
+  .time-slot-inputs {
+    grid-template-columns: 1fr 1fr 40px;
+    gap: 0.35rem;
+  }
+  
+  .time-slot-inputs .btn-remove-slot {
+    padding: 0.5rem 0.35rem;
+    font-size: 0.85rem;
+  }
 }
 
 .btn-remove-slot {
@@ -319,6 +361,7 @@
 .time-input {
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 
 .time-input label {

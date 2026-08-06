@@ -2,6 +2,7 @@
 
 .simple-time-input-container {
   width: 100%;
+  min-width: 0;
 }
 
 .time-label {
@@ -52,8 +53,22 @@
 }
 
 /* Responsive */
+@media (max-width: 768px) {
+  .time-input-simple {
+    font-size: 1.1rem;
+    padding: 0.65rem;
+  }
+}
+
 @media (max-width: 480px) {
   .time-input-simple {
-    font-size: 1rem;
+    font-size: 0.9rem;
+    padding: 0.5rem;
+    letter-spacing: 0.05em;
+  }
+  
+  .time-label {
+    font-size: 0.75rem;
+    margin-bottom: 0.25rem;
   }
 }
