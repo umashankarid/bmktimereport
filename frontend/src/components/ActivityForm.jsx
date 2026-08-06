@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import '../styles/ActivityForm.css';
 
 const ACTIVITY_TYPES = [
@@ -11,10 +11,10 @@ const ACTIVITY_TYPES = [
   'Other'
 ];
 
-function ActivityForm({ onSubmit, trainers }) {
+function ActivityForm({ onSubmit, trainers, currentTrainer }) {
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
-    trainer_name: '',
+    trainer_name: currentTrainer?.name || '',
     activity: '',
     start_time: '',
     end_time: '',
@@ -23,6 +23,16 @@ function ActivityForm({ onSubmit, trainers }) {
 
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState('');
+
+  // Update trainer name if it changes
+  useEffect(() => {
+    if (currentTrainer?.name) {
+      setFormData(prev => ({
+        ...prev,
+        trainer_name: currentTrainer.name
+      }));
+    }
+  }, [currentTrainer]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -36,7 +46,7 @@ function ActivityForm({ onSubmit, trainers }) {
     e.preventDefault();
     
     // Validate required fields
-    if (!formData.trainer_name || !formData.activity || !formData.date || !formData.start_time || !formData.end_time) {
+    if (!formData.activity || !formData.date || !formData.start_time || !formData.end_time) {
       alert('Please fill in all required fields');
       return;
     }
@@ -47,15 +57,15 @@ function ActivityForm({ onSubmit, trainers }) {
       
       if (result.success) {
         setSuccess('✓ Activity logged successfully!');
-        // Reset form
-        setFormData({
+        // Reset form but keep trainer name
+        setFormData(prev => ({
           date: new Date().toISOString().split('T')[0],
-          trainer_name: '',
+          trainer_name: prev.trainer_name,
           activity: '',
           start_time: '',
           end_time: '',
           note: ''
-        });
+        }));
         
         setTimeout(() => setSuccess(''), 3000);
       }
@@ -72,6 +82,10 @@ function ActivityForm({ onSubmit, trainers }) {
         {success && <div className="alert alert-success">{success}</div>}
 
         <form onSubmit={handleSubmit} className="activity-form">
+          <div className="trainer-info">
+            <p>Logging as: <strong>{formData.trainer_name}</strong></p>
+          </div>
+
           <div className="form-group">
             <label htmlFor="date">Date *</label>
             <input
@@ -82,34 +96,6 @@ function ActivityForm({ onSubmit, trainers }) {
               onChange={handleChange}
               required
             />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="trainer_name">Trainer Name *</label>
-            {trainers.length > 0 ? (
-              <select
-                id="trainer_name"
-                name="trainer_name"
-                value={formData.trainer_name}
-                onChange={handleChange}
-                required
-              >
-                <option value="">Select a trainer</option>
-                {trainers.map(trainer => (
-                  <option key={trainer} value={trainer}>{trainer}</option>
-                ))}
-              </select>
-            ) : (
-              <input
-                type="text"
-                id="trainer_name"
-                name="trainer_name"
-                value={formData.trainer_name}
-                onChange={handleChange}
-                placeholder="Enter trainer name"
-                required
-              />
-            )}
           </div>
 
           <div className="form-group">

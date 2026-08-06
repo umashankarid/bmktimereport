@@ -173,7 +173,7 @@ function App() {
         )}
 
         {activeTab === 'form' && (
-          <ActivityForm onSubmit={handleActivitySubmit} trainers={trainers} />
+          <ActivityForm onSubmit={handleActivitySubmit} trainers={trainers} currentTrainer={admin} />
         )}
 
         {activeTab === 'history' && (
