@@ -28,7 +28,64 @@
   margin: 0 0 1rem 0;
 }
 
-/* Trainer Selector */
+/* Report Filters */
+.report-filters {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background: #f5f7ff;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+}
+
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.filter-group label {
+  font-weight: 600;
+  color: #333;
+  font-size: 0.95rem;
+  white-space: nowrap;
+}
+
+.filter-select,
+.filter-input {
+  padding: 0.6rem 0.9rem;
+  border: 2px solid #667eea;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  color: #333;
+  background: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 180px;
+}
+
+.filter-input {
+  cursor: text;
+}
+
+.filter-select:hover,
+.filter-input:hover {
+  background: #fafbff;
+  border-color: #764ba2;
+}
+
+.filter-select:focus,
+.filter-input:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  background: white;
+}
+
+/* Trainer Selector (Legacy - Keep for backward compat) */
 .trainer-selector {
   margin-top: 1rem;
   display: flex;
@@ -768,6 +825,15 @@
     flex: 1;
     min-width: 120px;
   }
+
+  .report-filters {
+    gap: 1rem;
+  }
+
+  .filter-select,
+  .filter-input {
+    min-width: 150px;
+  }
 }
 
 @media (max-width: 768px) {
@@ -781,6 +847,23 @@
 
   .reports-content {
     padding: 1.5rem;
+  }
+
+  .report-filters {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .filter-group {
+    width: 100%;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .filter-select,
+  .filter-input {
+    width: 100%;
+    min-width: auto;
   }
 
   .summary-grid {

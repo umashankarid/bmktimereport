@@ -9,6 +9,12 @@ function ReportsPage({ currentTrainer = null }) {
   const [isTrainerView, setIsTrainerView] = useState(false);
   const [trainers, setTrainers] = useState([]);
   const [selectedTrainer, setSelectedTrainer] = useState(null);
+  
+  // Month/Year filter
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  });
 
   useEffect(() => {
     // Check if this is a trainer view (not admin)
@@ -41,7 +47,7 @@ function ReportsPage({ currentTrainer = null }) {
 
   useEffect(() => {
     fetchReports();
-  }, [activeReport, selectedTrainer]);
+  }, [activeReport, selectedTrainer, selectedMonth]);
 
   const fetchReports = async () => {
     setLoading(true);
@@ -114,22 +120,35 @@ function ReportsPage({ currentTrainer = null }) {
             }
           </p>
           
-          {/* Trainer Selector for Admin */}
+          {/* Filters for Admin */}
           {!isTrainerView && trainers.length > 0 && (
-            <div className="trainer-selector">
-              <label htmlFor="trainer-filter">Select Trainer:</label>
-              <select
-                id="trainer-filter"
-                value={selectedTrainer || ''}
-                onChange={(e) => setSelectedTrainer(e.target.value)}
-                className="trainer-select"
-              >
-                {trainers.map(trainer => (
-                  <option key={trainer} value={trainer}>
-                    {trainer}
-                  </option>
-                ))}
-              </select>
+            <div className="report-filters">
+              <div className="filter-group">
+                <label htmlFor="trainer-filter">Trainer:</label>
+                <select
+                  id="trainer-filter"
+                  value={selectedTrainer || ''}
+                  onChange={(e) => setSelectedTrainer(e.target.value)}
+                  className="filter-select"
+                >
+                  {trainers.map(trainer => (
+                    <option key={trainer} value={trainer}>
+                      {trainer}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              <div className="filter-group">
+                <label htmlFor="month-filter">Month & Year:</label>
+                <input
+                  type="month"
+                  id="month-filter"
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(e.target.value)}
+                  className="filter-input"
+                />
+              </div>
             </div>
           )}
         </header>
@@ -179,6 +198,21 @@ function ReportsPage({ currentTrainer = null }) {
             ) : (
               <>
                 {activeReport === 'activity-summary' && (
+                  <ActivitySummaryReport data={reports['activity-summary']} trainerFilter={isTrainerView ? currentTrainer?.name : selectedTrainer} selectedMonth={selectedMonth} />
+                )}
+                {activeReport === 'activity-distribution' && (
+                  <ActivityDistributionReport data={reports['activity-distribution']} trainerFilter={isTrainerView ? currentTrainer?.name : selectedTrainer} selectedMonth={selectedMonth} />
+                )}
+                {activeReport === 'training-hours' && (
+                  <TrainingHoursReport data={reports['training-hours']} trainerFilter={isTrainerView ? currentTrainer?.name : selectedTrainer} selectedMonth={selectedMonth} />
+                )}
+                {activeReport === 'monthly-trends' && (
+                  <MonthlyTrendsReport data={reports['monthly-trends']} trainerFilter={isTrainerView ? currentTrainer?.name : selectedTrainer} selectedMonth={selectedMonth} />
+                )}
+              </>
+            ) : (
+              <>
+                {activeReport === 'activity-summary' && (
                   <ActivitySummaryReport data={reports['activity-summary']} trainerFilter={isTrainerView ? currentTrainer?.name : selectedTrainer} />
                 )}
                 {activeReport === 'activity-distribution' && (
@@ -210,8 +244,15 @@ function ReportsPage({ currentTrainer = null }) {
   );
 }
 
+// Helper function to format month (e.g., "Aug 2026")
+function formatMonthShort(monthStr) {
+  const [year, month] = monthStr.split('-');
+  const date = new Date(`${monthStr}-01`);
+  return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+}
+
 // Activity Summary Report Component
-function ActivitySummaryReport({ data, trainerFilter }) {
+function ActivitySummaryReport({ data, trainerFilter, selectedMonth }) {
   if (!data) {
     return <div className="empty-report">Loading report data...</div>;
   }
@@ -235,7 +276,7 @@ function ActivitySummaryReport({ data, trainerFilter }) {
 
   return (
     <div className="report-section">
-      <h2>Activity Summary {trainerFilter ? `for ${trainerFilter}` : 'by Trainer'}</h2>
+      <h2>Activity Summary {trainerFilter ? `for ${trainerFilter}` : 'by Trainer'} {selectedMonth && `(${formatMonthShort(selectedMonth)})`}</h2>
       <div className="summary-grid">
         {Object.entries(filteredData).map(([trainer, summary]) => (
           <div key={trainer} className="summary-card">
@@ -318,7 +359,7 @@ function ActivitySummaryReport({ data, trainerFilter }) {
 }
 
 // Activity Distribution Report Component
-function ActivityDistributionReport({ data, trainerFilter }) {
+function ActivityDistributionReport({ data, trainerFilter, selectedMonth }) {
   if (!data) {
     return <div className="empty-report">Loading report data...</div>;
   }
@@ -329,7 +370,7 @@ function ActivityDistributionReport({ data, trainerFilter }) {
 
   return (
     <div className="report-section">
-      <h2>Activity Types Distribution {trainerFilter && `(${trainerFilter})`}</h2>
+      <h2>Activity Types Distribution {trainerFilter && `(${trainerFilter})`} {selectedMonth && `(${formatMonthShort(selectedMonth)})`}</h2>
       <p className="report-subtitle">
         Total Activities: <strong>{data.total_activities || 0}</strong>
       </p>
@@ -366,7 +407,7 @@ function ActivityDistributionReport({ data, trainerFilter }) {
 }
 
 // Training Hours Report Component
-function TrainingHoursReport({ data, trainerFilter }) {
+function TrainingHoursReport({ data, trainerFilter, selectedMonth }) {
   if (!data) {
     return <div className="empty-report">Loading report data...</div>;
   }
@@ -413,7 +454,7 @@ function TrainingHoursReport({ data, trainerFilter }) {
 
   return (
     <div className="report-section">
-      <h2>Training Hours Report {trainerFilter && `(${trainerFilter})`}</h2>
+      <h2>Training Hours Report {trainerFilter && `(${trainerFilter})`} {selectedMonth && `(${formatMonthShort(selectedMonth)})`}</h2>
       
       <div className="summary-stats">
         <div className="stat-box">
@@ -544,7 +585,7 @@ function formatMonthShort(monthStr) {
 }
 
 // Monthly Trends Report Component
-function MonthlyTrendsReport({ data, trainerFilter }) {
+function MonthlyTrendsReport({ data, trainerFilter, selectedMonth }) {
   if (!data) {
     return <div className="empty-report">Loading report data...</div>;
   }
@@ -555,7 +596,7 @@ function MonthlyTrendsReport({ data, trainerFilter }) {
 
   return (
     <div className="report-section">
-      <h2>Monthly Activity Trends {trainerFilter && `(${trainerFilter})`}</h2>
+      <h2>Monthly Activity Trends {trainerFilter && `(${trainerFilter})`} {selectedMonth && `(${formatMonthShort(selectedMonth)})`}</h2>
       
       <div className="trends-timeline">
         {data.map((month, idx) => (
