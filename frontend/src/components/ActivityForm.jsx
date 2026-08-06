@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import '../styles/ActivityForm.css';
+import TimeInput from './TimeInput';
 
 function ActivityForm({ onSubmit, trainers, currentTrainer }) {
   const [formData, setFormData] = useState({
@@ -382,10 +383,8 @@ function ActivityForm({ onSubmit, trainers, currentTrainer }) {
                     
                     <div className="activity-times-edit">
                       <div className="time-input">
-                        <label>Start Time</label>
-                        <input
-                          type="time"
-                          lang="en-GB"
+                        <TimeInput
+                          label="Start Time"
                           value={editingActivities[activity.Activity]?.start_time || ''}
                           onChange={(e) =>
                             handleExistingActivityChange(activity.Activity, 'start_time', e.target.value)
@@ -394,10 +393,8 @@ function ActivityForm({ onSubmit, trainers, currentTrainer }) {
                       </div>
 
                       <div className="time-input">
-                        <label>End Time</label>
-                        <input
-                          type="time"
-                          lang="en-GB"
+                        <TimeInput
+                          label="End Time"
                           value={editingActivities[activity.Activity]?.end_time || ''}
                           onChange={(e) =>
                             handleExistingActivityChange(activity.Activity, 'end_time', e.target.value)
@@ -443,10 +440,8 @@ function ActivityForm({ onSubmit, trainers, currentTrainer }) {
                           <div key={slotIndex} className="time-slot">
                             <div className="time-slot-inputs">
                               <div className="time-input">
-                                <label>Start</label>
-                                <input
-                                  type="time"
-                                  lang="en-GB"
+                                <TimeInput
+                                  label="Start"
                                   value={slot.start_time}
                                   onChange={(e) =>
                                     handleTimeSlotChange(activity, slotIndex, 'start_time', e.target.value)
@@ -456,10 +451,8 @@ function ActivityForm({ onSubmit, trainers, currentTrainer }) {
                               </div>
 
                               <div className="time-input">
-                                <label>End</label>
-                                <input
-                                  type="time"
-                                  lang="en-GB"
+                                <TimeInput
+                                  label="End"
                                   value={slot.end_time}
                                   onChange={(e) =>
                                     handleTimeSlotChange(activity, slotIndex, 'end_time', e.target.value)
