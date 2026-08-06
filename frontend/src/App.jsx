@@ -301,7 +301,7 @@ function App() {
         )}
 
         {activeTab === 'history' && (
-          <ActivityList activities={activities} loading={loading} onRefresh={handleRefresh} />
+          <ActivityList activities={activities} loading={loading} onRefresh={handleRefresh} currentTrainer={admin} />
         )}
       </main>
 

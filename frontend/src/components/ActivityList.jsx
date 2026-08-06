@@ -1,7 +1,7 @@
 import React from 'react';
 import '../styles/ActivityList.css';
 
-function ActivityList({ activities, loading, onRefresh }) {
+function ActivityList({ activities, loading, onRefresh, currentTrainer }) {
   if (loading) {
     return (
       <div className="activity-list-container">
@@ -12,7 +12,14 @@ function ActivityList({ activities, loading, onRefresh }) {
     );
   }
 
-  if (!activities || activities.length === 0) {
+  // Filter activities for the logged-in user
+  const userActivities = (activities || []).filter(activity => {
+    const trainerName = activity['Trainer Name'] || activity.trainer_name || '';
+    const currentName = currentTrainer?.name || '';
+    return trainerName.toLowerCase() === currentName.toLowerCase();
+  });
+
+  if (!userActivities || userActivities.length === 0) {
     return (
       <div className="activity-list-container">
         <div className="empty-state">
@@ -23,7 +30,7 @@ function ActivityList({ activities, loading, onRefresh }) {
   }
 
   // Sort activities by date (most recent first)
-  const sortedActivities = [...activities].reverse();
+  const sortedActivities = [...userActivities].reverse();
 
   // Calculate duration from start and end times
   const calculateDuration = (startTime, endTime) => {
@@ -34,65 +41,79 @@ function ActivityList({ activities, loading, onRefresh }) {
     return duration > 0 ? `${duration} min` : '-';
   };
 
+  // Group activities by date
+  const groupedByDate = sortedActivities.reduce((groups, activity) => {
+    const date = activity.Date || activity.date;
+    if (!groups[date]) {
+      groups[date] = [];
+    }
+    groups[date].push(activity);
+    return groups;
+  }, {});
+
+  const sortedDates = Object.keys(groupedByDate).sort((a, b) => new Date(b) - new Date(a));
+
   return (
     <div className="activity-list-container">
       <div className="list-header">
-        <h2>Activity History</h2>
+        <div className="header-info">
+          <h2>📋 Your Activity History</h2>
+          <p className="trainer-filter">Showing activities for: <strong>{currentTrainer?.name}</strong></p>
+        </div>
         <button className="btn btn-refresh" onClick={onRefresh}>
           🔄 Refresh
         </button>
       </div>
 
-      <div className="table-responsive">
-        <table className="activities-table">
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Trainer Name</th>
-              <th>Activity</th>
-              <th>Start Time</th>
-              <th>End Time</th>
-              <th>Duration</th>
-              <th>Note</th>
-            </tr>
-          </thead>
-          <tbody>
-            {sortedActivities.map((activity, index) => (
-              <tr key={index} className="activity-row">
-                <td className="date-cell">
-                  {new Date(activity.Date || activity.date).toLocaleDateString()}
-                </td>
-                <td className="trainer-cell">
-                  {activity['Trainer Name'] || activity.trainer_name}
-                </td>
-                <td className="activity-cell">
+      {/* Activities by Date */}
+      {sortedDates.map(date => (
+        <div key={date} className="date-group">
+          <h3 className="date-header">
+            📅 {new Date(date).toLocaleDateString('en-US', { 
+              weekday: 'long', 
+              year: 'numeric', 
+              month: 'long', 
+              day: 'numeric' 
+            })}
+          </h3>
+          
+          <div className="date-activities">
+            {groupedByDate[date].map((activity, index) => (
+              <div key={index} className="activity-card">
+                <div className="activity-header">
                   <span className={`badge badge-${activity.Activity?.toLowerCase() || 'default'}`}>
                     {activity.Activity || activity.activity}
                   </span>
-                </td>
-                <td className="time-cell">
-                  {activity['Start Time'] || activity.start_time}
-                </td>
-                <td className="time-cell">
-                  {activity['End Time'] || activity.end_time}
-                </td>
-                <td className="duration-cell">
-                  {calculateDuration(
-                    activity['Start Time'] || activity.start_time,
-                    activity['End Time'] || activity.end_time
+                  <span className="time-range">
+                    {activity['Start Time'] || activity.start_time} - {activity['End Time'] || activity.end_time}
+                  </span>
+                </div>
+                
+                <div className="activity-details">
+                  <div className="detail-item">
+                    <span className="label">Duration:</span>
+                    <span className="value">
+                      {calculateDuration(
+                        activity['Start Time'] || activity.start_time,
+                        activity['End Time'] || activity.end_time
+                      )}
+                    </span>
+                  </div>
+                  {(activity.Note || activity.note) && (
+                    <div className="detail-item">
+                      <span className="label">Note:</span>
+                      <span className="value">{activity.Note || activity.note}</span>
+                    </div>
                   )}
-                </td>
-                <td className="note-cell">
-                  {activity.Note || activity.note || '-'}
-                </td>
-              </tr>
+                </div>
+              </div>
             ))}
-          </tbody>
-        </table>
-      </div>
+          </div>
+        </div>
+      ))}
 
       <div className="list-footer">
-        <p>Showing {activities.length} recent activities</p>
+        <p>Total: {userActivities.length} activities</p>
       </div>
     </div>
   );
