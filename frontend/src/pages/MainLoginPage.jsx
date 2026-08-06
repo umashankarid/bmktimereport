@@ -72,16 +72,26 @@ function MainLoginPage({ onAdminLogin, onTrainerLogin }) {
     e.preventDefault();
     setError('');
     setLoading(true);
+    
+    console.log(`[TRAINER LOGIN] Starting login for: ${trainerName}`);
 
     if (!trainerName || !trainerPassword) {
+      console.log(`[TRAINER LOGIN] Validation failed - empty fields`);
       setError('Trainer name and password are required');
       setLoading(false);
       return;
     }
 
+    console.log(`[TRAINER LOGIN] Calling onTrainerLogin...`);
     const result = await onTrainerLogin(trainerName, trainerPassword, false);
+    
+    console.log(`[TRAINER LOGIN] Result:`, result);
+    
     if (!result.success) {
+      console.log(`[TRAINER LOGIN] Login failed: ${result.message}`);
       setError(result.message);
+    } else {
+      console.log(`[TRAINER LOGIN] Login successful!`);
     }
     setLoading(false);
   };

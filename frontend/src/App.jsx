@@ -84,27 +84,36 @@ function App() {
 
   const handleTrainerLogin = async (trainerName, password, isRegister) => {
     try {
+      console.log(`[APP] Trainer login/register attempt:`, {trainerName, isRegister});
+      
       if (isRegister) {
         // Registration
+        console.log(`[APP] Calling registration endpoint...`);
         const response = await axios.post(`${API_URL}/auth/trainer/register`, {
           trainer_name: trainerName,
           password
         });
 
+        console.log(`[APP] Registration response:`, response.data);
         return { 
           success: response.data.success, 
           message: response.data.message 
         };
       } else {
         // Login - call backend first
+        console.log(`[APP] Calling login endpoint...`);
         const response = await axios.post(`${API_URL}/auth/trainer/login`, {
           trainer_name: trainerName,
           password
         });
 
+        console.log(`[APP] Login response:`, response.data);
+
         if (response.data.success) {
           // Backend verified the password, now just save locally
           const trainerData = response.data.trainer;
+          
+          console.log(`[APP] Login successful, saving trainer data:`, trainerData);
           
           // Store token and trainer info
           localStorage.setItem('trainerToken', response.data.token);
@@ -122,6 +131,7 @@ function App() {
           
           return { success: true };
         } else {
+          console.log(`[APP] Login failed:`, response.data.message);
           return { 
             success: false, 
             message: response.data.message 
@@ -129,6 +139,12 @@ function App() {
         }
       }
     } catch (err) {
+      console.error(`[APP] Login error:`, err);
+      console.error(`[APP] Error details:`, {
+        status: err.response?.status,
+        data: err.response?.data,
+        message: err.message
+      });
       return { 
         success: false, 
         message: err.response?.data?.message || 'Error: ' + err.message 
