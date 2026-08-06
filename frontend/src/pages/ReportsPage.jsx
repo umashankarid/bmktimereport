@@ -344,20 +344,24 @@ function TrainingHoursReport({ data, trainerFilter }) {
   // Calculate summary for filtered data
   let summary = {};
   
-  if (trainerFilter) {
+  if (trainerFilter && filteredData.length === 1) {
     // For single trainer, use their data
     const trainerData = filteredData[0];
     summary = {
       total_hours: trainerData.total_hours || 0,
       total_sessions: trainerData.total_sessions || 0,
-      avg_hours_per_trainer: trainerData.avg_session_hours || 0
+      avg_hours_per_trainer: trainerData.avg_session_hours || 0,
+      total_overtime: trainerData.total_overtime || 0,
+      monthly_quota: data.summary?.monthly_quota || 180
     };
   } else {
     // For all trainers (admin view)
     summary = data.summary || {
       total_hours: 0,
       total_sessions: 0,
-      avg_hours_per_trainer: 0
+      avg_hours_per_trainer: 0,
+      total_overtime: 0,
+      monthly_quota: 180
     };
   }
 
@@ -380,6 +384,12 @@ function TrainingHoursReport({ data, trainerFilter }) {
             {typeof summary.avg_hours_per_trainer === 'number' ? summary.avg_hours_per_trainer.toFixed(2) : 0}h
           </p>
         </div>
+        <div className="stat-box stat-box-warning">
+          <h4>Total Overtime</h4>
+          <p className="stat-number stat-overtime">
+            {typeof summary.total_overtime === 'number' ? summary.total_overtime.toFixed(2) : 0}h
+          </p>
+        </div>
       </div>
 
       <div className="hours-table">
@@ -389,7 +399,8 @@ function TrainingHoursReport({ data, trainerFilter }) {
               <th>Trainer</th>
               <th>Total Hours</th>
               <th>Sessions</th>
-              <th>Avg per Session</th>
+              <th>Avg/Session</th>
+              <th>Overtime</th>
             </tr>
           </thead>
           <tbody>
@@ -399,13 +410,91 @@ function TrainingHoursReport({ data, trainerFilter }) {
                 <td className="hours-cell">{typeof item.total_hours === 'number' ? item.total_hours.toFixed(2) : 0}h</td>
                 <td className="sessions-cell">{item.total_sessions || 0}</td>
                 <td className="avg-cell">{typeof item.avg_session_hours === 'number' ? item.avg_session_hours.toFixed(2) : 0}h</td>
+                <td className={`overtime-cell ${item.total_overtime > 0 ? 'overtime' : ''}`}>
+                  {typeof item.total_overtime === 'number' ? item.total_overtime.toFixed(2) : 0}h
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      {/* Monthly Breakdown */}
+      {filteredData.length > 0 && filteredData[0].monthly_breakdown && (
+        <div className="monthly-breakdown">
+          <h3>📅 Monthly Breakdown & Quota Tracking</h3>
+          <div className="monthly-quota-grid">
+            {filteredData.map((trainer, idx) => (
+              <div key={idx} className="trainer-monthly-section">
+                <h4>{trainer.trainer}</h4>
+                <div className="months-list">
+                  {trainer.monthly_breakdown.map((month, mIdx) => (
+                    <div key={mIdx} className="month-quota-card">
+                      <div className="month-header">
+                        <span className="month-name">{formatMonthShort(month.month)}</span>
+                        <span className={`quota-badge ${month.overtime > 0 ? 'overtime' : 'normal'}`}>
+                          {month.overtime > 0 ? `+${month.overtime.toFixed(1)}h OT` : month.hours_left > 0 ? `${month.hours_left.toFixed(1)}h Left` : 'Met'}
+                        </span>
+                      </div>
+                      
+                      <div className="quota-bar-container">
+                        <div className="quota-bar">
+                          <div 
+                            className="quota-bar-fill"
+                            style={{ width: `${Math.min(month.percentage, 100)}%` }}
+                          >
+                            {month.percentage > 10 && <span>{month.percentage}%</span>}
+                          </div>
+                          {month.percentage > 100 && (
+                            <div 
+                              className="quota-bar-overtime"
+                              style={{ width: `${Math.min(month.percentage - 100, 100)}%` }}
+                            >
+                              {(month.percentage - 100) > 10 && <span>+{(month.percentage - 100).toFixed(0)}%</span>}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div className="quota-details">
+                        <div className="detail-row">
+                          <span className="detail-label">Hours:</span>
+                          <span className="detail-value">{month.hours.toFixed(1)}h / {month.quota}h</span>
+                        </div>
+                        <div className="detail-row">
+                          <span className="detail-label">Sessions:</span>
+                          <span className="detail-value">{month.sessions}</span>
+                        </div>
+                        {month.hours_left > 0 && (
+                          <div className="detail-row hours-left">
+                            <span className="detail-label">Hours Left:</span>
+                            <span className="detail-value">{month.hours_left.toFixed(1)}h</span>
+                          </div>
+                        )}
+                        {month.overtime > 0 && (
+                          <div className="detail-row overtime-row">
+                            <span className="detail-label">Overtime:</span>
+                            <span className="detail-value overtime">{month.overtime.toFixed(1)}h</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
+}
+
+// Helper function to format month short (e.g., "Aug 2026")
+function formatMonthShort(monthStr) {
+  const [year, month] = monthStr.split('-');
+  const date = new Date(`${monthStr}-01`);
+  return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
 }
 
 // Monthly Trends Report Component

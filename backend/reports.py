@@ -144,22 +144,34 @@ class ReportsManager:
             }
     
     def training_hours_report(self):
-        """Generate training hours report"""
+        """Generate training hours report with monthly quota and overtime"""
         try:
             activities = self.get_all_activities()
             
-            hours_data = defaultdict(lambda: {
+            MONTHLY_QUOTA = 180  # Hours per month
+            
+            # Group by trainer and month
+            trainer_monthly_data = defaultdict(lambda: defaultdict(lambda: {
                 'total_hours': 0,
-                'sessions': 0,
-                'avg_session_hours': 0
-            })
+                'sessions': 0
+            }))
             
             for activity in activities:
                 trainer = activity.get('Trainer Name', 'Unknown')
+                date_str = activity.get('Date', '')
                 start_time = activity.get('Start Time', '')
                 end_time = activity.get('End Time', '')
                 
-                hours_data[trainer]['sessions'] += 1
+                # Get month key (YYYY-MM)
+                month_key = 'Unknown'
+                if date_str:
+                    try:
+                        date_obj = datetime.strptime(date_str, '%Y-%m-%d')
+                        month_key = date_obj.strftime('%Y-%m')
+                    except:
+                        pass
+                
+                trainer_monthly_data[trainer][month_key]['sessions'] += 1
                 
                 if start_time and end_time:
                     try:
@@ -167,39 +179,80 @@ class ReportsManager:
                         end_h, end_m = map(int, end_time.split(':'))
                         duration_minutes = (end_h - start_h) * 60 + (end_m - start_m)
                         hours = duration_minutes / 60
-                        hours_data[trainer]['total_hours'] += hours
+                        trainer_monthly_data[trainer][month_key]['total_hours'] += hours
                     except:
                         pass
             
-            # Calculate averages and convert to JSON-serializable
+            # Calculate aggregates with quota tracking
             result = []
-            for trainer, data in hours_data.items():
-                avg_hours = data['total_hours'] / data['sessions'] if data['sessions'] > 0 else 0
+            overall_totals = {
+                'total_hours': 0,
+                'total_sessions': 0,
+                'total_overtime': 0
+            }
+            
+            for trainer, monthly_data in trainer_monthly_data.items():
+                trainer_total_hours = 0
+                trainer_total_sessions = 0
+                trainer_total_overtime = 0
+                monthly_breakdown = []
+                
+                for month, data in sorted(monthly_data.items(), reverse=True):
+                    monthly_hours = data['total_hours']
+                    monthly_sessions = data['sessions']
+                    
+                    # Calculate overtime
+                    hours_left = MONTHLY_QUOTA - monthly_hours
+                    overtime = max(0, monthly_hours - MONTHLY_QUOTA)
+                    
+                    trainer_total_hours += monthly_hours
+                    trainer_total_sessions += monthly_sessions
+                    trainer_total_overtime += overtime
+                    
+                    monthly_breakdown.append({
+                        'month': month,
+                        'hours': round(monthly_hours, 2),
+                        'sessions': monthly_sessions,
+                        'quota': MONTHLY_QUOTA,
+                        'hours_left': round(max(0, hours_left), 2),
+                        'overtime': round(overtime, 2),
+                        'percentage': round((monthly_hours / MONTHLY_QUOTA * 100) if monthly_hours > 0 else 0, 1)
+                    })
+                
+                avg_hours = trainer_total_hours / trainer_total_sessions if trainer_total_sessions > 0 else 0
+                
                 result.append({
                     'trainer': trainer,
-                    'total_hours': round(data['total_hours'], 2),
-                    'total_sessions': data['sessions'],
-                    'avg_session_hours': round(avg_hours, 2)
+                    'total_hours': round(trainer_total_hours, 2),
+                    'total_sessions': trainer_total_sessions,
+                    'avg_session_hours': round(avg_hours, 2),
+                    'total_overtime': round(trainer_total_overtime, 2),
+                    'monthly_breakdown': monthly_breakdown
                 })
+                
+                overall_totals['total_hours'] += trainer_total_hours
+                overall_totals['total_sessions'] += trainer_total_sessions
+                overall_totals['total_overtime'] += trainer_total_overtime
             
             # Sort by total hours descending
             result.sort(key=lambda x: x['total_hours'], reverse=True)
-            
-            total_hours = sum(r['total_hours'] for r in result)
-            total_sessions = sum(r['total_sessions'] for r in result)
             
             return {
                 'success': True,
                 'data': result,
                 'summary': {
-                    'total_hours': round(total_hours, 2),
-                    'total_sessions': total_sessions,
-                    'avg_hours_per_trainer': round(total_hours / len(result) if result else 0, 2)
+                    'total_hours': round(overall_totals['total_hours'], 2),
+                    'total_sessions': overall_totals['total_sessions'],
+                    'total_overtime': round(overall_totals['total_overtime'], 2),
+                    'avg_hours_per_trainer': round(overall_totals['total_hours'] / len(result) if result else 0, 2),
+                    'monthly_quota': MONTHLY_QUOTA
                 },
                 'timestamp': datetime.now().isoformat()
             }
         except Exception as e:
             print(f"Error generating training hours report: {e}")
+            import traceback
+            traceback.print_exc()
             return {
                 'success': False,
                 'error': str(e)
