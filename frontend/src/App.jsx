@@ -262,7 +262,9 @@ function App() {
               <p>Track and log your coaching activities</p>
             </div>
             <div className="header-admin">
-              <span className="admin-name">👤 {admin?.username || 'Admin'}</span>
+              <span className="admin-name">
+                👤 {userType === 'admin' ? (admin?.username || 'Admin') : (admin?.name || 'Trainer')}
+              </span>
               <button className="btn-logout" onClick={handleLogout}>
                 Logout
               </button>
