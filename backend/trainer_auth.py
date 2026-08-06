@@ -41,8 +41,6 @@ class TrainerAuthManager:
             if not sheets_manager.authenticated or sheets_manager.demo_mode:
                 raise RuntimeError("Google Sheets not configured")
             
-            sheet_id = sheets_manager.creds.service_account_email if hasattr(sheets_manager, 'creds') else None
-            
             # Get spreadsheet
             from config import Config
             import os
@@ -51,11 +49,16 @@ class TrainerAuthManager:
             spreadsheet = sheets_manager.client.open_by_key(sheet_id)
             
             # Try to get existing Login sheet
+            login_sheet = None
             try:
                 login_sheet = spreadsheet.worksheet(TrainerAuthManager.LOGIN_SHEET_NAME)
                 print(f"✅ Login sheet found")
+                return login_sheet
             except gspread.exceptions.WorksheetNotFound:
-                # Create new Login sheet
+                pass
+            
+            # If Login sheet doesn't exist, try to create it
+            try:
                 print(f"⚠️  Login sheet not found, creating...")
                 login_sheet = spreadsheet.add_worksheet(
                     title=TrainerAuthManager.LOGIN_SHEET_NAME,
@@ -64,8 +67,18 @@ class TrainerAuthManager:
                 )
                 login_sheet.append_row(TrainerAuthManager.HEADERS)
                 print(f"✅ Login sheet created with headers")
+                return login_sheet
+            except Exception as create_error:
+                # If creation fails (e.g., sheet already exists due to race condition),
+                # try to get it again
+                print(f"⚠️  Could not create sheet: {create_error}, trying to fetch...")
+                try:
+                    login_sheet = spreadsheet.worksheet(TrainerAuthManager.LOGIN_SHEET_NAME)
+                    print(f"✅ Login sheet found on retry")
+                    return login_sheet
+                except:
+                    raise create_error
             
-            return login_sheet
         except Exception as e:
             print(f"❌ Error getting login sheet: {e}")
             raise
