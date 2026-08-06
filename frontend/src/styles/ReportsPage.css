@@ -237,6 +237,101 @@
   color: #667eea;
 }
 
+/* Monthly Quota Section in Summary Card */
+.monthly-quota-section {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: linear-gradient(135deg, #f5f7ff 0%, #ffffff 100%);
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+}
+
+.monthly-quota-section h4 {
+  margin: 0 0 0.75rem 0;
+  color: #333;
+  font-size: 0.95rem;
+  border-bottom: 2px solid #667eea;
+  padding-bottom: 0.5rem;
+}
+
+.quota-bar-container {
+  margin-bottom: 0.75rem;
+}
+
+.quota-bar {
+  width: 100%;
+  height: 24px;
+  background: #e0e0e0;
+  border-radius: 4px;
+  overflow: hidden;
+  display: flex;
+  position: relative;
+}
+
+.quota-bar-fill {
+  background: linear-gradient(90deg, #667eea, #764ba2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 600;
+  min-width: 20px;
+  transition: width 0.3s ease;
+}
+
+.quota-bar-overtime {
+  background: linear-gradient(90deg, #f093fb, #f5576c);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.quota-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.quota-stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.4rem 0;
+  font-size: 0.85rem;
+}
+
+.quota-label {
+  color: #666;
+  font-weight: 500;
+}
+
+.quota-value {
+  color: #333;
+  font-weight: 600;
+}
+
+.quota-value-green {
+  color: #4caf50;
+  font-weight: 700;
+}
+
+.quota-value-red {
+  color: #f5576c;
+  font-weight: 700;
+}
+
+.quota-stat-row.hours-left {
+  color: #4caf50;
+}
+
+.quota-stat-row.overtime {
+  color: #f5576c;
+}
+
 /* Distribution Report */
 .distribution-list {
   display: flex;

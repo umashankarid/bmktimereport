@@ -27,16 +27,22 @@ class ReportsManager:
             return []
     
     def activity_summary_by_trainer(self):
-        """Generate activity summary grouped by trainer"""
+        """Generate activity summary grouped by trainer with quota tracking"""
         try:
             activities = self.get_all_activities()
+            
+            MONTHLY_QUOTA = 180  # Hours per month
             
             summary = defaultdict(lambda: {
                 'total_activities': 0,
                 'total_hours': 0,
                 'activity_types': defaultdict(int),
-                'dates': set()
+                'dates': set(),
+                'monthly_hours': defaultdict(float)
             })
+            
+            # Get current month
+            current_month = datetime.now().strftime('%Y-%m')
             
             for activity in activities:
                 trainer = activity.get('Trainer Name', 'Unknown')
@@ -55,18 +61,37 @@ class ReportsManager:
                         start_h, start_m = map(int, start_time.split(':'))
                         end_h, end_m = map(int, end_time.split(':'))
                         duration_minutes = (end_h - start_h) * 60 + (end_m - start_m)
-                        summary[trainer]['total_hours'] += duration_minutes / 60
+                        hours = duration_minutes / 60
+                        summary[trainer]['total_hours'] += hours
+                        
+                        # Track monthly hours
+                        if date:
+                            try:
+                                date_obj = datetime.strptime(date, '%Y-%m-%d')
+                                month_key = date_obj.strftime('%Y-%m')
+                                summary[trainer]['monthly_hours'][month_key] += hours
+                            except:
+                                pass
                     except:
                         pass
             
-            # Convert to JSON-serializable format
+            # Convert to JSON-serializable format and calculate current month stats
             result = {}
             for trainer, data in summary.items():
+                current_month_hours = data['monthly_hours'].get(current_month, 0)
+                overtime = max(0, current_month_hours - MONTHLY_QUOTA)
+                hours_left = max(0, MONTHLY_QUOTA - current_month_hours)
+                
                 result[trainer] = {
                     'total_activities': data['total_activities'],
                     'total_hours': round(data['total_hours'], 2),
                     'activity_types': dict(data['activity_types']),
-                    'active_days': len(data['dates'])
+                    'active_days': len(data['dates']),
+                    'current_month_hours': round(current_month_hours, 2),
+                    'current_month_quota': MONTHLY_QUOTA,
+                    'current_month_overtime': round(overtime, 2),
+                    'current_month_hours_left': round(hours_left, 2),
+                    'current_month_percentage': round((current_month_hours / MONTHLY_QUOTA * 100) if current_month_hours > 0 else 0, 1)
                 }
             
             return {
@@ -76,6 +101,8 @@ class ReportsManager:
             }
         except Exception as e:
             print(f"Error generating activity summary: {e}")
+            import traceback
+            traceback.print_exc()
             return {
                 'success': False,
                 'error': str(e)

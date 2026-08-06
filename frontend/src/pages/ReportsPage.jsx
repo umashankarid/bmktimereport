@@ -240,6 +240,7 @@ function ActivitySummaryReport({ data, trainerFilter }) {
         {Object.entries(filteredData).map(([trainer, summary]) => (
           <div key={trainer} className="summary-card">
             <h3>{trainer}</h3>
+            
             <div className="stat-row">
               <span className="stat-label">Total Activities:</span>
               <span className="stat-value">{summary.total_activities || 0}</span>
@@ -251,6 +252,51 @@ function ActivitySummaryReport({ data, trainerFilter }) {
             <div className="stat-row">
               <span className="stat-label">Active Days:</span>
               <span className="stat-value">{summary.active_days || 0}</span>
+            </div>
+            
+            {/* Current Month Quota Section */}
+            <div className="monthly-quota-section">
+              <h4>📅 Current Month Quota</h4>
+              
+              <div className="quota-bar-container">
+                <div className="quota-bar">
+                  <div 
+                    className="quota-bar-fill"
+                    style={{ width: `${Math.min(summary.current_month_percentage || 0, 100)}%` }}
+                  >
+                    {(summary.current_month_percentage || 0) > 10 && <span>{summary.current_month_percentage}%</span>}
+                  </div>
+                  {(summary.current_month_percentage || 0) > 100 && (
+                    <div 
+                      className="quota-bar-overtime"
+                      style={{ width: `${Math.min((summary.current_month_percentage || 0) - 100, 100)}%` }}
+                    >
+                      {((summary.current_month_percentage || 0) - 100) > 10 && <span>+{((summary.current_month_percentage || 0) - 100).toFixed(0)}%</span>}
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              <div className="quota-stats">
+                <div className="quota-stat-row">
+                  <span className="quota-label">Hours Worked:</span>
+                  <span className="quota-value">{typeof summary.current_month_hours === 'number' ? summary.current_month_hours.toFixed(1) : 0}h / {summary.current_month_quota}h</span>
+                </div>
+                
+                {summary.current_month_hours_left > 0 && (
+                  <div className="quota-stat-row hours-left">
+                    <span className="quota-label">⏳ Hours Left:</span>
+                    <span className="quota-value-green">{typeof summary.current_month_hours_left === 'number' ? summary.current_month_hours_left.toFixed(1) : 0}h</span>
+                  </div>
+                )}
+                
+                {summary.current_month_overtime > 0 && (
+                  <div className="quota-stat-row overtime">
+                    <span className="quota-label">⚠️ Overtime:</span>
+                    <span className="quota-value-red">{typeof summary.current_month_overtime === 'number' ? summary.current_month_overtime.toFixed(1) : 0}h</span>
+                  </div>
+                )}
+              </div>
             </div>
             
             <div className="activity-types">
