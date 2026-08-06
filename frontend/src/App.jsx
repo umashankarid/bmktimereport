@@ -5,7 +5,6 @@ import MainLoginPage from './pages/MainLoginPage';
 import AdminDashboard from './pages/AdminDashboard';
 import ActivityForm from './components/ActivityForm';
 import ActivityList from './components/ActivityList';
-import trainerAuthService from './services/trainerAuthService';
 
 const API_URL = process.env.REACT_APP_API_URL || '/api';
 
@@ -26,10 +25,14 @@ function App() {
 
   const checkAuthStatus = () => {
     // Check trainer auth first
-    if (trainerAuthService.isAuthenticated()) {
+    const trainerToken = localStorage.getItem('trainerToken');
+    const trainer = JSON.parse(localStorage.getItem('trainer')) || null;
+    
+    if (trainerToken && trainer) {
       setAuthState('ready');
-      setAdmin(trainerAuthService.getTrainer());
+      setAdmin(trainer);
       setUserType('trainer');
+      axios.defaults.headers.common['Authorization'] = `Bearer ${trainerToken}`;
       fetchTrainers();
       fetchActivities();
     } else {
@@ -41,6 +44,7 @@ function App() {
         setAuthState('ready');
         setAdmin(adminData);
         setUserType('admin');
+        axios.defaults.headers.common['Authorization'] = `Bearer ${adminToken}`;
         fetchTrainers();
         fetchActivities();
       } else {
@@ -80,29 +84,50 @@ function App() {
 
   const handleTrainerLogin = async (trainerName, password, isRegister) => {
     try {
-      const endpoint = isRegister ? '/auth/trainer/register' : '/auth/trainer/login';
-      const payload = isRegister 
-        ? { trainer_name: trainerName, password }
-        : { trainer_name: trainerName, password };
+      if (isRegister) {
+        // Registration
+        const response = await axios.post(`${API_URL}/auth/trainer/register`, {
+          trainer_name: trainerName,
+          password
+        });
 
-      const response = await axios.post(`${API_URL}${endpoint}`, payload);
+        return { 
+          success: response.data.success, 
+          message: response.data.message 
+        };
+      } else {
+        // Login - call backend first
+        const response = await axios.post(`${API_URL}/auth/trainer/login`, {
+          trainer_name: trainerName,
+          password
+        });
 
-      if (response.data.success && !isRegister) {
-        const result = await trainerAuthService.login(trainerName, password);
-        if (result.success) {
-          setAdmin(result.trainer);
+        if (response.data.success) {
+          // Backend verified the password, now just save locally
+          const trainerData = response.data.trainer;
+          
+          // Store token and trainer info
+          localStorage.setItem('trainerToken', response.data.token);
+          localStorage.setItem('trainer', JSON.stringify(trainerData));
+          
+          // Set auth header
+          axios.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
+          
+          // Update app state
+          setAdmin(trainerData);
           setUserType('trainer');
           setAuthState('ready');
           fetchTrainers();
           fetchActivities();
+          
           return { success: true };
+        } else {
+          return { 
+            success: false, 
+            message: response.data.message 
+          };
         }
       }
-      
-      return { 
-        success: response.data.success, 
-        message: response.data.message 
-      };
     } catch (err) {
       return { 
         success: false, 
@@ -174,12 +199,13 @@ function App() {
   };
 
   const handleLogout = () => {
-    if (userType === 'trainer') {
-      trainerAuthService.logout();
-    } else if (userType === 'admin') {
-      localStorage.removeItem('adminToken');
-      localStorage.removeItem('adminData');
-    }
+    // Clear both trainer and admin auth
+    localStorage.removeItem('trainerToken');
+    localStorage.removeItem('trainer');
+    localStorage.removeItem('adminToken');
+    localStorage.removeItem('adminData');
+    delete axios.defaults.headers.common['Authorization'];
+    
     setAdmin(null);
     setUserType(null);
     setAuthState('login');
