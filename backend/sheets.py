@@ -226,6 +226,88 @@ class GoogleSheetsManager:
             print(f"✗ Error accessing sheet: {type(e).__name__}: {e}")
             raise
     
+    def _parse_time(self, time_str):
+        """Parse HH:MM time string to minutes since midnight"""
+        try:
+            hours, minutes = map(int, time_str.split(':'))
+            return hours * 60 + minutes
+        except:
+            return None
+    
+    def _times_overlap(self, start1, end1, start2, end2):
+        """Check if two time ranges overlap
+        
+        Args:
+            start1, end1: First time range (HH:MM format)
+            start2, end2: Second time range (HH:MM format)
+        
+        Returns:
+            True if ranges overlap, False otherwise
+        """
+        start1_min = self._parse_time(start1)
+        end1_min = self._parse_time(end1)
+        start2_min = self._parse_time(start2)
+        end2_min = self._parse_time(end2)
+        
+        if None in [start1_min, end1_min, start2_min, end2_min]:
+            return False
+        
+        # Ranges overlap if one starts before the other ends
+        return start1_min < end2_min and start2_min < end1_min
+    
+    def _check_time_conflicts(self, trainer_name, date, new_activities):
+        """Check if new activities conflict with existing activities
+        
+        Args:
+            trainer_name: Name of trainer
+            date: Date in YYYY-MM-DD format
+            new_activities: List of {activity, start_time, end_time} dicts
+        
+        Returns:
+            Tuple of (has_conflicts, conflict_details)
+        """
+        try:
+            # Get all existing activities for this trainer on this date
+            if self.demo_mode:
+                existing = [
+                    act for act in self.demo_data
+                    if (act.get('Trainer Name', '').lower() == trainer_name.lower() and
+                        act.get('Date') == date)
+                ]
+            else:
+                sheet = self.get_sheet()
+                all_records = sheet.get_all_records()
+                existing = [
+                    act for act in all_records
+                    if (act.get('Trainer Name', '').lower() == trainer_name.lower() and
+                        act.get('Date') == date)
+                ]
+            
+            # Check for conflicts
+            conflicts = []
+            for new_act in new_activities:
+                new_start = new_act.get('start_time')
+                new_end = new_act.get('end_time')
+                new_activity = new_act.get('activity', 'Unknown')
+                
+                for existing_act in existing:
+                    existing_start = existing_act.get('Start Time', '')
+                    existing_end = existing_act.get('End Time', '')
+                    existing_activity = existing_act.get('Activity', '')
+                    
+                    if self._times_overlap(new_start, new_end, existing_start, existing_end):
+                        conflicts.append({
+                            'new': f"{new_activity} {new_start}-{new_end}",
+                            'existing': f"{existing_activity} {existing_start}-{existing_end}",
+                            'message': f"⏰ Overlap: {new_activity} ({new_start}-{new_end}) overlaps with {existing_activity} ({existing_start}-{existing_end})"
+                        })
+            
+            return len(conflicts) > 0, conflicts
+        
+        except Exception as e:
+            print(f"⚠️  Error checking time conflicts: {e}")
+            return False, []
+    
     def add_activity(self, activity_data):
         """Add one or more activities to the sheet
         
@@ -277,6 +359,27 @@ class GoogleSheetsManager:
             print(f"\n✅ Base fields valid")
             print(f"📝 Trainer: {activity_data['trainer_name']}")
             print(f"📅 Date: {activity_data['date']}")
+            
+            # Check for time conflicts
+            print(f"\n⏰ CHECKING FOR TIME CONFLICTS")
+            has_conflicts, conflicts = self._check_time_conflicts(
+                activity_data['trainer_name'],
+                activity_data['date'],
+                activities_to_log
+            )
+            
+            if has_conflicts:
+                print(f"❌ TIME CONFLICTS DETECTED:")
+                for conflict in conflicts:
+                    print(f"   {conflict['message']}")
+                
+                return {
+                    'success': False,
+                    'message': 'Time conflict detected. Cannot log overlapping activities.',
+                    'conflicts': [c['message'] for c in conflicts]
+                }
+            
+            print(f"✅ No time conflicts")
             
             # Log each activity
             logged_count = 0
