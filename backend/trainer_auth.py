@@ -3,6 +3,10 @@ import hashlib
 import secrets
 from sheets import get_sheets_manager
 import gspread
+import logging
+
+# Use Python logging instead of print for proper output capture
+logger = logging.getLogger(__name__)
 
 class TrainerAuthManager:
     """Manages trainer authentication with Google Sheets"""
@@ -81,27 +85,27 @@ class TrainerAuthManager:
                 return login_sheet
             except Exception as create_error:
                 error_msg = str(create_error)
-                print(f"❌ Error creating sheet: {error_msg}")
+                logger.error(f"❌ Error creating sheet: {error_msg}")
                 
                 # If it's a "sheet already exists" error, retry fetching
                 if "already exists" in error_msg or "ALREADY_EXISTS" in error_msg:
-                    print(f"📍 Sheet exists but wasn't in list, retrying fetch...")
+                    logger.warning(f"📍 Sheet exists but wasn't in list, retrying fetch...")
                     time.sleep(1)  # Wait a moment
                     
                     # Refresh worksheet list
                     all_worksheets = spreadsheet.worksheets()
                     worksheet_names = [ws.title for ws in all_worksheets]
-                    print(f"📋 Updated worksheets: {worksheet_names}")
+                    logger.warning(f"📋 Updated worksheets: {worksheet_names}")
                     
                     if TrainerAuthManager.LOGIN_SHEET_NAME in worksheet_names:
                         login_sheet = spreadsheet.worksheet(TrainerAuthManager.LOGIN_SHEET_NAME)
-                        print(f"✅ Login sheet retrieved on retry")
+                        logger.warning(f"✅ Login sheet retrieved on retry")
                         return login_sheet
                 
                 raise create_error
             
         except Exception as e:
-            print(f"❌ Error in get_login_sheet: {type(e).__name__}: {e}")
+            logger.error(f"❌ Error in get_login_sheet: {type(e).__name__}: {e}")
             import traceback
             traceback.print_exc()
             raise
@@ -196,27 +200,27 @@ class TrainerAuthManager:
     def login_trainer(trainer_name, password):
         """Authenticate trainer with name and password"""
         try:
-            print(f"\n{'='*60}")
-            print(f"🔐 LOGIN ATTEMPT: {trainer_name}")
-            print(f"{'='*60}")
+            logger.warning(f"\n{'='*60}")
+            logger.warning(f"🔐 LOGIN ATTEMPT: {trainer_name}")
+            logger.warning(f"{'='*60}")
             
             # Get login sheet
-            print(f"🔗 Getting login sheet...")
+            logger.warning(f"🔗 Getting login sheet...")
             login_sheet = TrainerAuthManager.get_login_sheet()
-            print(f"✅ Got login sheet")
+            logger.warning(f"✅ Got login sheet")
             
             # Find trainer by name
-            print(f"📋 Fetching all trainers...")
+            logger.warning(f"📋 Fetching all trainers...")
             try:
-                print(f"   Calling get_all_records()...")
+                logger.warning(f"   Calling get_all_records()...")
                 all_trainers = login_sheet.get_all_records()
-                print(f"✅ get_all_records() returned successfully")
-                print(f"📋 Total trainers in sheet: {len(all_trainers)}")
-                print(f"📋 Raw trainer records:")
+                logger.warning(f"✅ get_all_records() returned successfully")
+                logger.warning(f"📋 Total trainers in sheet: {len(all_trainers)}")
+                logger.warning(f"📋 Raw trainer records:")
                 for idx, record in enumerate(all_trainers):
-                    print(f"     [{idx}] {record}")
+                    logger.warning(f"     [{idx}] {record}")
             except Exception as record_error:
-                print(f"❌ ERROR getting records: {type(record_error).__name__}: {record_error}")
+                logger.error(f"❌ ERROR getting records: {type(record_error).__name__}: {record_error}")
                 import traceback
                 traceback.print_exc()
                 raise
@@ -227,34 +231,34 @@ class TrainerAuthManager:
                 stored_name_lower = stored_name.lower()
                 input_name_lower = trainer_name.lower()
                 
-                print(f"  [{idx}] Stored: '{stored_name}' (lower: '{stored_name_lower}')")
-                print(f"       Input:  '{trainer_name}' (lower: '{input_name_lower}')")
-                print(f"       Match: {stored_name_lower == input_name_lower}")
+                logger.warning(f"  [{idx}] Stored: '{stored_name}' (lower: '{stored_name_lower}')")
+                logger.warning(f"       Input:  '{trainer_name}' (lower: '{input_name_lower}')")
+                logger.warning(f"       Match: {stored_name_lower == input_name_lower}")
                 
                 if stored_name_lower == input_name_lower:
                     trainer = t
-                    print(f"  ✅ MATCH FOUND at index {idx}")
+                    logger.warning(f"  ✅ MATCH FOUND at index {idx}")
                     break
             
             if not trainer:
-                print(f"❌ Trainer not found: {trainer_name}")
-                print(f"   Available trainers: {[t.get('Trainer Name', '?') for t in all_trainers]}")
+                logger.warning(f"❌ Trainer not found: {trainer_name}")
+                logger.warning(f"   Available trainers: {[t.get('Trainer Name', '?') for t in all_trainers]}")
                 return {
                     'success': False,
                     'message': 'Trainer name or password incorrect'
                 }
             
-            print(f"\n🔐 VERIFYING PASSWORD")
+            logger.warning(f"\n🔐 VERIFYING PASSWORD")
             # Verify password
             stored_hash = trainer.get('Password Hash')
             salt = trainer.get('Salt')
             
-            print(f"  Stored Hash (first 20 chars): {stored_hash[:20] if stored_hash else 'NONE'}...")
-            print(f"  Salt (first 20 chars): {salt[:20] if salt else 'NONE'}...")
-            print(f"  Input password length: {len(password)}")
+            logger.warning(f"  Stored Hash (first 20 chars): {stored_hash[:20] if stored_hash else 'NONE'}...")
+            logger.warning(f"  Salt (first 20 chars): {salt[:20] if salt else 'NONE'}...")
+            logger.warning(f"  Input password length: {len(password)}")
             
             if not stored_hash or not salt:
-                print(f"❌ Missing hash or salt in sheet")
+                logger.warning(f"❌ Missing hash or salt in sheet")
                 return {
                     'success': False,
                     'message': 'Trainer account incomplete'
@@ -262,23 +266,23 @@ class TrainerAuthManager:
             
             # Verify
             is_valid = TrainerAuthManager.verify_password(stored_hash, password, salt)
-            print(f"  Password verification result: {is_valid}")
+            logger.warning(f"  Password verification result: {is_valid}")
             
             if not is_valid:
-                print(f"❌ Invalid password for: {trainer_name}")
-                print(f"   Recalculating hash to debug...")
+                logger.warning(f"❌ Invalid password for: {trainer_name}")
+                logger.warning(f"   Recalculating hash to debug...")
                 recalc_hash, _ = TrainerAuthManager.hash_password(password, salt)
-                print(f"   Recalculated (first 20): {recalc_hash[:20]}...")
-                print(f"   Stored (first 20):       {stored_hash[:20]}...")
-                print(f"   Match: {recalc_hash == stored_hash}")
+                logger.warning(f"   Recalculated (first 20): {recalc_hash[:20]}...")
+                logger.warning(f"   Stored (first 20):       {stored_hash[:20]}...")
+                logger.warning(f"   Match: {recalc_hash == stored_hash}")
                 
                 return {
                     'success': False,
                     'message': 'Trainer name or password incorrect'
                 }
             
-            print(f"✅ Trainer authenticated: {trainer_name}")
-            print(f"{'='*60}\n")
+            logger.warning(f"✅ Trainer authenticated: {trainer_name}")
+            logger.warning(f"{'='*60}\n")
             return {
                 'success': True,
                 'message': 'Login successful',
@@ -290,10 +294,10 @@ class TrainerAuthManager:
         except Exception as e:
             error_type = type(e).__name__
             error_msg = str(e)
-            print(f"❌ Login error ({error_type}): {error_msg}")
+            logger.error(f"❌ Login error ({error_type}): {error_msg}")
             import traceback
             traceback.print_exc()
-            print(f"{'='*60}\n")
+            logger.error(f"{'='*60}\n")
             return {
                 'success': False,
                 'message': f'Login failed: {error_msg}'
