@@ -10,8 +10,11 @@ function ActivityHistoryView({ currentTrainer = null, isAdminView = false }) {
   // Filter states
   const [selectedTrainer, setSelectedTrainer] = useState(null);
   const [selectedActivity, setSelectedActivity] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    // Default to current month (YYYY-MM)
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  });
   const [availableActivities, setAvailableActivities] = useState([]);
   
   // Pagination
@@ -32,7 +35,7 @@ function ActivityHistoryView({ currentTrainer = null, isAdminView = false }) {
 
   useEffect(() => {
     fetchActivityHistory();
-  }, [selectedTrainer, selectedActivity, startDate, endDate]);
+  }, [selectedTrainer, selectedActivity, selectedMonth]);
 
   const fetchTrainers = async () => {
     try {
@@ -76,12 +79,18 @@ function ActivityHistoryView({ currentTrainer = null, isAdminView = false }) {
         params.append('activity', selectedActivity);
       }
       
-      if (startDate) {
-        params.append('start_date', startDate);
-      }
-      
-      if (endDate) {
-        params.append('end_date', endDate);
+      if (selectedMonth) {
+        // Convert YYYY-MM to date range for backend
+        const [year, month] = selectedMonth.split('-');
+        const monthNum = parseInt(month);
+        const startOfMonth = `${year}-${String(monthNum).padStart(2, '0')}-01`;
+        
+        // Calculate end of month
+        const lastDay = new Date(parseInt(year), monthNum, 0).getDate();
+        const endOfMonth = `${year}-${String(monthNum).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+        
+        params.append('start_date', startOfMonth);
+        params.append('end_date', endOfMonth);
       }
       
       params.append('limit', 500);
@@ -105,8 +114,9 @@ function ActivityHistoryView({ currentTrainer = null, isAdminView = false }) {
 
   const handleClearFilters = () => {
     setSelectedActivity('');
-    setStartDate('');
-    setEndDate('');
+    // Reset month to current month
+    const now = new Date();
+    setSelectedMonth(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`);
     setCurrentPage(1);
   };
 
@@ -208,20 +218,11 @@ function ActivityHistoryView({ currentTrainer = null, isAdminView = false }) {
           </div>
 
           <div className="filter-group">
-            <label>Start Date:</label>
+            <label>Month:</label>
             <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-            />
-          </div>
-
-          <div className="filter-group">
-            <label>End Date:</label>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
+              type="month"
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
             />
           </div>
 
