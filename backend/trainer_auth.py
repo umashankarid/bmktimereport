@@ -51,36 +51,62 @@ class TrainerAuthManager:
             
             sheet_id = os.getenv('GOOGLE_SHEET_ID')
             
-            print(f"\n🔍 Attempting to get Login sheet for ID: {sheet_id}")
+            logger.warning(f"\n🔍 Attempting to get Login sheet for ID: {sheet_id}")
             spreadsheet = sheets_manager.client.open_by_key(sheet_id)
             
             # Get all existing worksheets first
-            print(f"📋 Fetching all worksheets...")
+            logger.warning(f"📋 Fetching all worksheets...")
             all_worksheets = spreadsheet.worksheets()
             worksheet_names = [ws.title for ws in all_worksheets]
-            print(f"📋 Existing worksheets: {worksheet_names}")
+            logger.warning(f"📋 Existing worksheets: {worksheet_names}")
             
             # Check if Login sheet exists
             if TrainerAuthManager.LOGIN_SHEET_NAME in worksheet_names:
-                print(f"✅ Login sheet exists, fetching it...")
+                logger.warning(f"✅ Login sheet exists, checking if it needs repair...")
                 login_sheet = spreadsheet.worksheet(TrainerAuthManager.LOGIN_SHEET_NAME)
-                print(f"✅ Login sheet retrieved successfully")
+                
+                # Check if headers are correct
+                headers = login_sheet.row_values(1)
+                logger.warning(f"   Current headers: {headers}")
+                
+                # If headers don't match expected, rebuild the sheet
+                if headers != TrainerAuthManager.HEADERS:
+                    logger.warning(f"❌ Headers corrupted! Expected: {TrainerAuthManager.HEADERS}")
+                    logger.warning(f"   Deleting and recreating Login sheet...")
+                    spreadsheet.del_worksheet(login_sheet)
+                    
+                    # Recreate it
+                    login_sheet = spreadsheet.add_worksheet(
+                        title=TrainerAuthManager.LOGIN_SHEET_NAME,
+                        rows=1000,
+                        cols=4
+                    )
+                    logger.warning(f"✅ New Login sheet created")
+                    
+                    # Add headers
+                    logger.warning(f"📝 Adding headers...")
+                    login_sheet.append_row(TrainerAuthManager.HEADERS)
+                    logger.warning(f"✅ Headers added: {TrainerAuthManager.HEADERS}")
+                else:
+                    logger.warning(f"✅ Headers are correct")
+                
+                logger.warning(f"✅ Login sheet retrieved successfully")
                 return login_sheet
             
             # If Login sheet doesn't exist, create it
-            print(f"⚠️  Login sheet doesn't exist, creating new one...")
+            logger.warning(f"⚠️  Login sheet doesn't exist, creating new one...")
             try:
                 login_sheet = spreadsheet.add_worksheet(
                     title=TrainerAuthManager.LOGIN_SHEET_NAME,
                     rows=1000,
                     cols=4
                 )
-                print(f"✅ Login sheet created")
+                logger.warning(f"✅ Login sheet created")
                 
                 # Add headers
-                print(f"📝 Adding headers...")
+                logger.warning(f"📝 Adding headers...")
                 login_sheet.append_row(TrainerAuthManager.HEADERS)
-                print(f"✅ Headers added")
+                logger.warning(f"✅ Headers added: {TrainerAuthManager.HEADERS}")
                 
                 return login_sheet
             except Exception as create_error:
