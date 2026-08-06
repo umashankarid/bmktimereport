@@ -36,7 +36,7 @@ class ReportsManager:
             summary = defaultdict(lambda: {
                 'total_activities': 0,
                 'total_hours': 0,
-                'activity_types': defaultdict(int),
+                'activity_types': defaultdict(lambda: {'count': 0, 'hours': 0}),
                 'dates': set(),
                 'monthly_hours': defaultdict(float)
             })
@@ -52,7 +52,7 @@ class ReportsManager:
                 date = activity.get('Date', '')
                 
                 summary[trainer]['total_activities'] += 1
-                summary[trainer]['activity_types'][activity_type] += 1
+                summary[trainer]['activity_types'][activity_type]['count'] += 1
                 summary[trainer]['dates'].add(date)
                 
                 # Calculate hours
@@ -63,6 +63,7 @@ class ReportsManager:
                         duration_minutes = (end_h - start_h) * 60 + (end_m - start_m)
                         hours = duration_minutes / 60
                         summary[trainer]['total_hours'] += hours
+                        summary[trainer]['activity_types'][activity_type]['hours'] += hours
                         
                         # Track monthly hours
                         if date:
@@ -82,10 +83,18 @@ class ReportsManager:
                 overtime = max(0, current_month_hours - self.MONTHLY_QUOTA)
                 hours_left = max(0, self.MONTHLY_QUOTA - current_month_hours)
                 
+                # Convert activity_types to JSON-serializable format
+                activity_types_dict = {}
+                for activity_type, stats in data['activity_types'].items():
+                    activity_types_dict[activity_type] = {
+                        'count': stats['count'],
+                        'hours': round(stats['hours'], 2)
+                    }
+                
                 result[trainer] = {
                     'total_activities': data['total_activities'],
                     'total_hours': round(data['total_hours'], 2),
-                    'activity_types': dict(data['activity_types']),
+                    'activity_types': activity_types_dict,
                     'active_days': len(data['dates']),
                     'current_month_hours': round(current_month_hours, 2),
                     'current_month_quota': self.MONTHLY_QUOTA,

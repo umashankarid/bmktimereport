@@ -325,12 +325,19 @@ function ActivitySummaryReport({ data, trainerFilter, selectedMonth }) {
             <div className="activity-types">
               <h4>Activity Types:</h4>
               <ul>
-                {summary.activity_types && Object.entries(summary.activity_types).map(([type, count]) => (
-                  <li key={type}>
-                    <span className="type-name">{type}</span>
-                    <span className="type-count">{count}</span>
-                  </li>
-                ))}
+                {summary.activity_types && Object.entries(summary.activity_types).map(([type, data]) => {
+                  // Handle both old format (plain count) and new format (object with count and hours)
+                  const count = typeof data === 'object' ? data.count : data;
+                  const hours = typeof data === 'object' ? data.hours : 0;
+                  const hoursStr = hours > 0 ? formatHoursToHHMM(hours) : '0:00';
+                  
+                  return (
+                    <li key={type}>
+                      <span className="type-name">{type}</span>
+                      <span className="type-count">{count} ({hoursStr})</span>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           </div>
