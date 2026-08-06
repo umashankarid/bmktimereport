@@ -18,8 +18,10 @@ ADMIN_CREDENTIALS = {
 
 def generate_token(admin_data):
     """Generate JWT token"""
+    # Support both 'username' (admin) and 'name' (trainer)
+    username = admin_data.get('username') or admin_data.get('name') or 'unknown'
     payload = {
-        'username': admin_data['username'],
+        'username': username,
         'exp': datetime.utcnow() + timedelta(hours=24),
         'iat': datetime.utcnow()
     }
