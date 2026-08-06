@@ -5,6 +5,9 @@ from functools import wraps
 from flask import request, jsonify
 import jwt
 from sheets import reset_sheets_manager
+import logging
+
+logger = logging.getLogger(__name__)
 
 SECRET_KEY = os.getenv('SECRET_KEY', 'dev-secret-key')
 
@@ -245,17 +248,17 @@ def register_auth_routes(app, sheets_manager):
             from trainer_auth import TrainerAuthManager
             import jwt
             
-            print(f"\n{'='*60}")
-            print(f"📍 TRAINER LOGIN ENDPOINT CALLED")
-            print(f"{'='*60}")
+            logger.warning(f"\n{'='*60}")
+            logger.warning(f"📍 TRAINER LOGIN ENDPOINT CALLED")
+            logger.warning(f"{'='*60}")
             
             data = request.get_json()
             
-            print(f"📥 Raw request data: {data}")
-            print(f"📥 Request type: {type(data)}")
+            logger.warning(f"📥 Raw request data: {data}")
+            logger.warning(f"📥 Request type: {type(data)}")
             
             if not data:
-                print(f"❌ No JSON data in request")
+                logger.warning(f"❌ No JSON data in request")
                 return jsonify({
                     'success': False,
                     'message': 'No data provided'
@@ -264,23 +267,23 @@ def register_auth_routes(app, sheets_manager):
             trainer_name = data.get('trainer_name')
             password = data.get('password')
             
-            print(f"📝 Extracted values:")
-            print(f"   trainer_name: '{trainer_name}' (type: {type(trainer_name).__name__}, len: {len(trainer_name) if trainer_name else 'None'})")
-            print(f"   password: [REDACTED] (len: {len(password) if password else 'None'})")
+            logger.warning(f"📝 Extracted values:")
+            logger.warning(f"   trainer_name: '{trainer_name}' (type: {type(trainer_name).__name__}, len: {len(trainer_name) if trainer_name else 'None'})")
+            logger.warning(f"   password: [REDACTED] (len: {len(password) if password else 'None'})")
             
             if not trainer_name or not password:
-                print(f"❌ Missing trainer_name or password")
+                logger.warning(f"❌ Missing trainer_name or password")
                 return jsonify({
                     'success': False,
                     'message': 'Trainer name and password required'
                 }), 400
             
-            print(f"\n🔐 Calling TrainerAuthManager.login_trainer()...")
+            logger.warning(f"\n🔐 Calling TrainerAuthManager.login_trainer()...")
             result = TrainerAuthManager.login_trainer(trainer_name, password)
             
-            print(f"\n📤 Result from login_trainer:")
-            print(f"   success: {result.get('success')}")
-            print(f"   message: {result.get('message')}")
+            logger.warning(f"\n📤 Result from login_trainer:")
+            logger.warning(f"   success: {result.get('success')}")
+            logger.warning(f"   message: {result.get('message')}")
             
             if result['success']:
                 # Generate JWT token
@@ -296,25 +299,25 @@ def register_auth_routes(app, sheets_manager):
                     'trainer': result['trainer'],
                     'message': result['message']
                 }
-                print(f"✅ LOGIN SUCCESSFUL")
-                print(f"{'='*60}\n")
+                logger.warning(f"✅ LOGIN SUCCESSFUL")
+                logger.warning(f"{'='*60}\n")
                 return jsonify(response_data), 200
             else:
                 response_data = {
                     'success': False,
                     'message': result['message']
                 }
-                print(f"❌ LOGIN FAILED: {result['message']}")
-                print(f"{'='*60}\n")
+                logger.warning(f"❌ LOGIN FAILED: {result['message']}")
+                logger.warning(f"{'='*60}\n")
                 return jsonify(response_data), 401
             
         except Exception as e:
             error_type = type(e).__name__
             error_msg = str(e)
-            print(f"❌ EXCEPTION in trainer_login ({error_type}): {error_msg}")
+            logger.error(f"❌ EXCEPTION in trainer_login ({error_type}): {error_msg}")
             import traceback
             traceback.print_exc()
-            print(f"{'='*60}\n")
+            logger.error(f"{'='*60}\n")
             return jsonify({
                 'success': False,
                 'message': f'Login error: {error_msg}'
