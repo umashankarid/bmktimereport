@@ -312,7 +312,7 @@ function App() {
         )}
 
         {activeTab === 'reports' && (
-          <ReportsPage />
+          <ReportsPage currentTrainer={admin} />
         )}
       </main>
 

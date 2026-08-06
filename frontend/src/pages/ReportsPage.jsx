@@ -1,11 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import '../styles/ReportsPage.css';
 
-function ReportsPage() {
+function ReportsPage({ currentTrainer = null }) {
   const [activeReport, setActiveReport] = useState('activity-summary');
   const [reports, setReports] = useState({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [isTrainerView, setIsTrainerView] = useState(false);
+
+  useEffect(() => {
+    // Check if this is a trainer view (not admin)
+    if (currentTrainer && currentTrainer.name) {
+      setIsTrainerView(true);
+    }
+  }, [currentTrainer]);
 
   useEffect(() => {
     fetchReports();
@@ -75,7 +83,12 @@ function ReportsPage() {
       <div className="reports-container">
         <header className="reports-header">
           <h1>📊 Reports</h1>
-          <p>View activity analytics and trends</p>
+          <p>
+            {isTrainerView 
+              ? `View your activity analytics and trends`
+              : `View activity analytics and trends`
+            }
+          </p>
         </header>
 
         {error && (
@@ -123,16 +136,16 @@ function ReportsPage() {
             ) : (
               <>
                 {activeReport === 'activity-summary' && (
-                  <ActivitySummaryReport data={reports['activity-summary']} />
+                  <ActivitySummaryReport data={reports['activity-summary']} trainerFilter={isTrainerView ? currentTrainer?.name : null} />
                 )}
                 {activeReport === 'activity-distribution' && (
-                  <ActivityDistributionReport data={reports['activity-distribution']} />
+                  <ActivityDistributionReport data={reports['activity-distribution']} trainerFilter={isTrainerView ? currentTrainer?.name : null} />
                 )}
                 {activeReport === 'training-hours' && (
-                  <TrainingHoursReport data={reports['training-hours']} />
+                  <TrainingHoursReport data={reports['training-hours']} trainerFilter={isTrainerView ? currentTrainer?.name : null} />
                 )}
                 {activeReport === 'monthly-trends' && (
-                  <MonthlyTrendsReport data={reports['monthly-trends']} />
+                  <MonthlyTrendsReport data={reports['monthly-trends']} trainerFilter={isTrainerView ? currentTrainer?.name : null} />
                 )}
               </>
             )}
@@ -155,16 +168,29 @@ function ReportsPage() {
 }
 
 // Activity Summary Report Component
-function ActivitySummaryReport({ data }) {
+function ActivitySummaryReport({ data, trainerFilter }) {
   if (!data || Object.keys(data).length === 0) {
     return <div className="empty-report">No data available</div>;
   }
 
+  // Filter data if this is a trainer view
+  let filteredData = data;
+  if (trainerFilter) {
+    filteredData = {};
+    if (data[trainerFilter]) {
+      filteredData[trainerFilter] = data[trainerFilter];
+    }
+  }
+
+  if (Object.keys(filteredData).length === 0) {
+    return <div className="empty-report">No data available for your activities</div>;
+  }
+
   return (
     <div className="report-section">
-      <h2>Activity Summary by Trainer</h2>
+      <h2>Activity Summary {trainerFilter ? `for ${trainerFilter}` : 'by Trainer'}</h2>
       <div className="summary-grid">
-        {Object.entries(data).map(([trainer, summary]) => (
+        {Object.entries(filteredData).map(([trainer, summary]) => (
           <div key={trainer} className="summary-card">
             <h3>{trainer}</h3>
             <div className="stat-row">
@@ -199,14 +225,14 @@ function ActivitySummaryReport({ data }) {
 }
 
 // Activity Distribution Report Component
-function ActivityDistributionReport({ data }) {
+function ActivityDistributionReport({ data, trainerFilter }) {
   if (!data || data.length === 0) {
     return <div className="empty-report">No data available</div>;
   }
 
   return (
     <div className="report-section">
-      <h2>Activity Types Distribution</h2>
+      <h2>Activity Types Distribution {trainerFilter && `(${trainerFilter})`}</h2>
       <p className="report-subtitle">
         Total Activities: <strong>{data.total_activities || 0}</strong>
       </p>
@@ -243,29 +269,48 @@ function ActivityDistributionReport({ data }) {
 }
 
 // Training Hours Report Component
-function TrainingHoursReport({ data }) {
+function TrainingHoursReport({ data, trainerFilter }) {
   if (!data || data.data.length === 0) {
     return <div className="empty-report">No data available</div>;
   }
 
-  const summary = data.summary || {};
+  // Filter data if this is a trainer view
+  let filteredData = data.data;
+  if (trainerFilter) {
+    filteredData = data.data.filter(item => item.trainer.toLowerCase() === trainerFilter.toLowerCase());
+  }
+
+  if (filteredData.length === 0) {
+    return <div className="empty-report">No data available for your activities</div>;
+  }
+
+  // Calculate summary for filtered data
+  const summary = filteredData.length === data.data.length 
+    ? data.summary
+    : {
+        total_hours: filteredData.reduce((sum, item) => sum + item.total_hours, 0),
+        total_sessions: filteredData.reduce((sum, item) => sum + item.total_sessions, 0),
+        avg_hours_per_trainer: filteredData.length > 0 
+          ? filteredData.reduce((sum, item) => sum + item.total_hours, 0) / filteredData.length 
+          : 0
+      };
 
   return (
     <div className="report-section">
-      <h2>Training Hours Report</h2>
+      <h2>Training Hours Report {trainerFilter && `(${trainerFilter})`}</h2>
       
       <div className="summary-stats">
         <div className="stat-box">
           <h4>Total Hours</h4>
-          <p className="stat-number">{summary.total_hours}h</p>
+          <p className="stat-number">{summary.total_hours.toFixed(2)}h</p>
         </div>
         <div className="stat-box">
           <h4>Total Sessions</h4>
           <p className="stat-number">{summary.total_sessions}</p>
         </div>
         <div className="stat-box">
-          <h4>Avg Hours/Trainer</h4>
-          <p className="stat-number">{summary.avg_hours_per_trainer}h</p>
+          <h4>Avg Hours/Session</h4>
+          <p className="stat-number">{(summary.total_hours / summary.total_sessions).toFixed(2)}h</p>
         </div>
       </div>
 
@@ -280,7 +325,7 @@ function TrainingHoursReport({ data }) {
             </tr>
           </thead>
           <tbody>
-            {data.data.map((item, idx) => (
+            {filteredData.map((item, idx) => (
               <tr key={idx}>
                 <td className="trainer-name">{item.trainer}</td>
                 <td className="hours-cell">{item.total_hours}h</td>
@@ -296,14 +341,14 @@ function TrainingHoursReport({ data }) {
 }
 
 // Monthly Trends Report Component
-function MonthlyTrendsReport({ data }) {
+function MonthlyTrendsReport({ data, trainerFilter }) {
   if (!data || data.length === 0) {
     return <div className="empty-report">No data available</div>;
   }
 
   return (
     <div className="report-section">
-      <h2>Monthly Activity Trends</h2>
+      <h2>Monthly Activity Trends {trainerFilter && `(${trainerFilter})`}</h2>
       
       <div className="trends-timeline">
         {data.map((month, idx) => (
