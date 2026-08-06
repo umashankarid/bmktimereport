@@ -85,7 +85,6 @@ function TimeInput({ value = '', onChange, label = '', required = false }) {
           inputMode="numeric"
           autoComplete="off"
         />
-        <span className="time-hint">24h format</span>
       </div>
     </div>
   );

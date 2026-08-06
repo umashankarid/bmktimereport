@@ -51,20 +51,9 @@
   font-style: italic;
 }
 
-.time-hint {
-  font-size: 0.75rem;
-  color: #999;
-  white-space: nowrap;
-  font-style: italic;
-}
-
 /* Responsive */
 @media (max-width: 480px) {
   .time-input-simple {
     font-size: 1rem;
-  }
-
-  .time-hint {
-    display: none;
   }
 }
