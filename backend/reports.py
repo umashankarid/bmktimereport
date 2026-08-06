@@ -364,12 +364,11 @@ class ReportsManager:
                         'status': 'overtime' if overtime > 0 else ('normal' if total_hours >= self.MONTHLY_QUOTA else 'undertime')
                     }
                 
-                # Calculate overall overtime for the month (if multiple trainers, aggregate)
-                total_overtime = 0
-                total_undertime = 0
-                for trainer_data in month_data['trainers_data'].values():
-                    total_overtime += trainer_data['overtime']
-                    total_undertime += trainer_data['undertime']
+                # Calculate overall overtime/undertime for the month
+                # Total hours across all trainers
+                month_total_hours = sum(monthly_totals[month].values())
+                total_overtime = max(0, month_total_hours - self.MONTHLY_QUOTA)
+                total_undertime = max(0, self.MONTHLY_QUOTA - month_total_hours)
                 
                 month_data['overtime'] = round(total_overtime, 2)
                 month_data['undertime'] = round(total_undertime, 2)
