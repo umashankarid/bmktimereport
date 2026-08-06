@@ -234,6 +234,30 @@ class GoogleSheetsManager:
         except:
             return None
     
+    def _is_valid_time_range(self, start_time, end_time):
+        """Check if time range is valid (end time >= start time)
+        
+        Args:
+            start_time: Start time in HH:MM format
+            end_time: End time in HH:MM format
+        
+        Returns:
+            Tuple of (is_valid, error_message)
+        """
+        start_min = self._parse_time(start_time)
+        end_min = self._parse_time(end_time)
+        
+        if start_min is None or end_min is None:
+            return False, f"Invalid time format: {start_time} or {end_time}"
+        
+        if end_min < start_min:
+            return False, f"Invalid time range: End time {end_time} is before start time {start_time}"
+        
+        if end_min == start_min:
+            return False, f"Invalid time range: End time {end_time} must be after start time {start_time}"
+        
+        return True, None
+    
     def _times_overlap(self, start1, end1, start2, end2):
         """Check if two time ranges overlap
         
@@ -359,6 +383,26 @@ class GoogleSheetsManager:
             print(f"\n✅ Base fields valid")
             print(f"📝 Trainer: {activity_data['trainer_name']}")
             print(f"📅 Date: {activity_data['date']}")
+            
+            # Validate time ranges for all activities
+            print(f"\n⏱️  VALIDATING TIME RANGES")
+            for idx, activity_item in enumerate(activities_to_log):
+                start_time = activity_item.get('start_time', '')
+                end_time = activity_item.get('end_time', '')
+                activity_name = activity_item.get('activity', 'Unknown')
+                
+                is_valid, error_msg = self._is_valid_time_range(start_time, end_time)
+                
+                if not is_valid:
+                    print(f"❌ INVALID TIME RANGE for {activity_name}: {error_msg}")
+                    return {
+                        'success': False,
+                        'message': f"Invalid time range for {activity_name}: {error_msg}"
+                    }
+                
+                print(f"✅ Valid: {activity_name} {start_time}-{end_time}")
+            
+            print(f"\n✅ All time ranges valid")
             
             # Check for time conflicts
             print(f"\n⏰ CHECKING FOR TIME CONFLICTS")
