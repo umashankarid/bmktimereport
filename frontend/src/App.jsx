@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import './App.css';
-import TrainerLoginPage from './pages/TrainerLoginPage';
+import MainLoginPage from './pages/MainLoginPage';
 import ActivityForm from './components/ActivityForm';
 import ActivityList from './components/ActivityList';
 import trainerAuthService from './services/trainerAuthService';
@@ -9,36 +9,105 @@ import trainerAuthService from './services/trainerAuthService';
 const API_URL = process.env.REACT_APP_API_URL || '/api';
 
 function App() {
-  const [authState, setAuthState] = useState('checking'); // checking, login, setup, ready
+  const [authState, setAuthState] = useState('checking'); // checking, login, ready
   const [activities, setActivities] = useState([]);
   const [trainers, setTrainers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('form');
   const [admin, setAdmin] = useState(null);
+  const [userType, setUserType] = useState(null); // 'admin' or 'trainer'
 
   // Check authentication status on mount
   useEffect(() => {
     checkAuthStatus();
   }, []);
 
-  const checkAuthStatus = async () => {
+  const checkAuthStatus = () => {
+    // Check trainer auth first
     if (trainerAuthService.isAuthenticated()) {
-      // Skip setup - go directly to ready state
       setAuthState('ready');
       setAdmin(trainerAuthService.getTrainer());
+      setUserType('trainer');
       fetchTrainers();
       fetchActivities();
     } else {
-      setAuthState('login');
+      // Check admin auth
+      const adminToken = localStorage.getItem('adminToken');
+      const adminData = JSON.parse(localStorage.getItem('adminData')) || null;
+      
+      if (adminToken && adminData) {
+        setAuthState('ready');
+        setAdmin(adminData);
+        setUserType('admin');
+        fetchTrainers();
+        fetchActivities();
+      } else {
+        setAuthState('login');
+      }
     }
   };
 
-  const handleLoginSuccess = (adminData) => {
-    setAdmin(adminData);
-    setAuthState('ready');
-    fetchTrainers();
-    fetchActivities();
+  const handleAdminLogin = async (username, password) => {
+    try {
+      const response = await axios.post(`${API_URL}/auth/login`, {
+        username,
+        password
+      });
+
+      if (response.data.success) {
+        localStorage.setItem('adminToken', response.data.token);
+        localStorage.setItem('adminData', JSON.stringify(response.data.admin));
+        axios.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
+        
+        setAdmin(response.data.admin);
+        setUserType('admin');
+        setAuthState('ready');
+        fetchTrainers();
+        fetchActivities();
+        return { success: true };
+      } else {
+        return { success: false, message: response.data.message };
+      }
+    } catch (err) {
+      return { 
+        success: false, 
+        message: err.response?.data?.message || 'Login error: ' + err.message 
+      };
+    }
+  };
+
+  const handleTrainerLogin = async (trainerName, password, isRegister) => {
+    try {
+      const endpoint = isRegister ? '/auth/trainer/register' : '/auth/trainer/login';
+      const payload = isRegister 
+        ? { trainer_name: trainerName, password }
+        : { trainer_name: trainerName, password };
+
+      const response = await axios.post(`${API_URL}${endpoint}`, payload);
+
+      if (response.data.success && !isRegister) {
+        const result = await trainerAuthService.login(trainerName, password);
+        if (result.success) {
+          setAdmin(result.trainer);
+          setUserType('trainer');
+          setAuthState('ready');
+          fetchTrainers();
+          fetchActivities();
+          return { success: true };
+        }
+      }
+      
+      return { 
+        success: response.data.success, 
+        message: response.data.message 
+      };
+    } catch (err) {
+      return { 
+        success: false, 
+        message: err.response?.data?.message || 'Error: ' + err.message 
+      };
+    }
   };
 
   const fetchTrainers = async () => {
@@ -104,8 +173,14 @@ function App() {
   };
 
   const handleLogout = () => {
-    trainerAuthService.logout();
+    if (userType === 'trainer') {
+      trainerAuthService.logout();
+    } else if (userType === 'admin') {
+      localStorage.removeItem('adminToken');
+      localStorage.removeItem('adminData');
+    }
     setAdmin(null);
+    setUserType(null);
     setAuthState('login');
     setActivities([]);
     setTrainers([]);
@@ -123,7 +198,7 @@ function App() {
   }
 
   if (authState === 'login') {
-    return <TrainerLoginPage onLoginSuccess={handleLoginSuccess} />;
+    return <MainLoginPage onAdminLogin={handleAdminLogin} onTrainerLogin={handleTrainerLogin} />;
   }
 
   // Main app - ready state (skip setup page)

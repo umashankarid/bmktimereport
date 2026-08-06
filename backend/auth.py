@@ -54,7 +54,7 @@ def register_auth_routes(app, sheets_manager):
 
     @app.route('/api/auth/login', methods=['POST'])
     def login():
-        """Admin login endpoint"""
+        """Admin login endpoint with fixed credentials"""
         try:
             data = request.get_json()
             
@@ -73,7 +73,7 @@ def register_auth_routes(app, sheets_manager):
                     'message': 'Username and password required'
                 }), 400
 
-            # Verify credentials
+            # Verify admin credentials (fixed in backend)
             if username not in ADMIN_CREDENTIALS or ADMIN_CREDENTIALS[username] != password:
                 return jsonify({
                     'success': False,
@@ -81,7 +81,7 @@ def register_auth_routes(app, sheets_manager):
                 }), 401
 
             # Generate token
-            admin_data = {'username': username}
+            admin_data = {'username': username, 'type': 'admin'}
             token = generate_token(admin_data)
 
             return jsonify({
