@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import '../styles/AdminDashboard.css';
 import ReportsPage from './ReportsPage';
+import ActivityHistoryView from '../components/ActivityHistoryView';
 
 function AdminDashboard({ onLogout }) {
   const [activeTab, setActiveTab] = useState('config'); // config, reports, activities
@@ -193,25 +194,7 @@ function AdminDashboard({ onLogout }) {
 
         {activeTab === 'activities' && (
           <div className="activities-section">
-            <h2>Activity History</h2>
-            <p className="section-description">
-              View and manage all logged activities across all trainers.
-            </p>
-
-            <div className="activities-placeholder">
-              <div className="placeholder-content">
-                <span className="placeholder-icon">📝</span>
-                <h3>Activities View Coming Soon</h3>
-                <p>Features to be added:</p>
-                <ul>
-                  <li>Table view of all activities</li>
-                  <li>Filter by trainer, date, activity type</li>
-                  <li>Sort by any column</li>
-                  <li>Export functionality</li>
-                  <li>Activity search</li>
-                </ul>
-              </div>
-            </div>
+            <ActivityHistoryView isAdminView={true} />
           </div>
         )}
       </div>

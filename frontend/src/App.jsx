@@ -5,7 +5,7 @@ import MainLoginPage from './pages/MainLoginPage';
 import AdminDashboard from './pages/AdminDashboard';
 import ReportsPage from './pages/ReportsPage';
 import ActivityForm from './components/ActivityForm';
-import ActivityList from './components/ActivityList';
+import ActivityHistoryView from './components/ActivityHistoryView';
 
 const API_URL = process.env.REACT_APP_API_URL || '/api';
 
@@ -308,7 +308,7 @@ function App() {
         )}
 
         {activeTab === 'history' && (
-          <ActivityList activities={activities} loading={loading} onRefresh={handleRefresh} currentTrainer={admin} />
+          <ActivityHistoryView currentTrainer={admin} isAdminView={false} />
         )}
 
         {activeTab === 'reports' && (

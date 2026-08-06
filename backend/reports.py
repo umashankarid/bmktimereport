@@ -8,6 +8,8 @@ import json
 class ReportsManager:
     """Generate various reports from activity data"""
     
+    MONTHLY_QUOTA = 180  # Hours per month
+    
     def __init__(self, sheets_manager):
         self.sheets = sheets_manager
     
@@ -30,8 +32,6 @@ class ReportsManager:
         """Generate activity summary grouped by trainer with quota tracking"""
         try:
             activities = self.get_all_activities()
-            
-            MONTHLY_QUOTA = 180  # Hours per month
             
             summary = defaultdict(lambda: {
                 'total_activities': 0,
@@ -79,8 +79,8 @@ class ReportsManager:
             result = {}
             for trainer, data in summary.items():
                 current_month_hours = data['monthly_hours'].get(current_month, 0)
-                overtime = max(0, current_month_hours - MONTHLY_QUOTA)
-                hours_left = max(0, MONTHLY_QUOTA - current_month_hours)
+                overtime = max(0, current_month_hours - self.MONTHLY_QUOTA)
+                hours_left = max(0, self.MONTHLY_QUOTA - current_month_hours)
                 
                 result[trainer] = {
                     'total_activities': data['total_activities'],
@@ -88,10 +88,10 @@ class ReportsManager:
                     'activity_types': dict(data['activity_types']),
                     'active_days': len(data['dates']),
                     'current_month_hours': round(current_month_hours, 2),
-                    'current_month_quota': MONTHLY_QUOTA,
+                    'current_month_quota': self.MONTHLY_QUOTA,
                     'current_month_overtime': round(overtime, 2),
                     'current_month_hours_left': round(hours_left, 2),
-                    'current_month_percentage': round((current_month_hours / MONTHLY_QUOTA * 100) if current_month_hours > 0 else 0, 1)
+                    'current_month_percentage': round((current_month_hours / self.MONTHLY_QUOTA * 100) if current_month_hours > 0 else 0, 1)
                 }
             
             return {
@@ -354,14 +354,14 @@ class ReportsManager:
                 
                 # Calculate overtime/undertime per trainer
                 for trainer, total_hours in monthly_totals[month].items():
-                    overtime = max(0, total_hours - MONTHLY_QUOTA)
-                    undertime = max(0, MONTHLY_QUOTA - total_hours)
+                    overtime = max(0, total_hours - self.MONTHLY_QUOTA)
+                    undertime = max(0, self.MONTHLY_QUOTA - total_hours)
                     
                     month_data['trainers_data'][trainer] = {
                         'hours': round(total_hours, 2),
                         'overtime': round(overtime, 2),
                         'undertime': round(undertime, 2),
-                        'status': 'overtime' if overtime > 0 else ('normal' if total_hours >= MONTHLY_QUOTA else 'undertime')
+                        'status': 'overtime' if overtime > 0 else ('normal' if total_hours >= self.MONTHLY_QUOTA else 'undertime')
                     }
                 
                 # Calculate overall overtime for the month (if multiple trainers, aggregate)

@@ -178,6 +178,69 @@ def create_app():
                 'message': str(e)
             }), 500
     
+    # Activity History endpoint
+    @app.route('/api/activity-history', methods=['GET'])
+    def get_activity_history():
+        """Get activity history with optional filtering"""
+        try:
+            sheets = get_sheets_manager()
+            
+            # Get query parameters for filtering
+            trainer_name = request.args.get('trainer', None)
+            activity_type = request.args.get('activity', None)
+            start_date = request.args.get('start_date', None)
+            end_date = request.args.get('end_date', None)
+            limit = request.args.get('limit', 500, type=int)
+            
+            # Get all activities
+            activities = sheets.get_all_activities(limit=limit)
+            
+            if not activities.get('success'):
+                return jsonify({
+                    'success': False,
+                    'data': [],
+                    'message': 'Failed to retrieve activities'
+                }), 400
+            
+            all_activities = activities.get('data', [])
+            
+            # Filter activities
+            filtered = []
+            for activity in all_activities:
+                # Filter by trainer
+                if trainer_name and activity.get('Trainer Name', '').lower() != trainer_name.lower():
+                    continue
+                
+                # Filter by activity type
+                if activity_type and activity.get('Activity', '').lower() != activity_type.lower():
+                    continue
+                
+                # Filter by date range
+                if start_date or end_date:
+                    activity_date = activity.get('Date', '')
+                    if start_date and activity_date < start_date:
+                        continue
+                    if end_date and activity_date > end_date:
+                        continue
+                
+                filtered.append(activity)
+            
+            # Sort by date descending (most recent first)
+            filtered.sort(key=lambda x: x.get('Date', ''), reverse=True)
+            
+            return jsonify({
+                'success': True,
+                'data': filtered,
+                'total': len(filtered)
+            }), 200
+        except Exception as e:
+            print(f"Error retrieving activity history: {e}")
+            return jsonify({
+                'success': False,
+                'error': str(e),
+                'data': []
+            }), 500
+    
     # Reports endpoints
     @app.route('/api/reports/activity-summary', methods=['GET'])
     def report_activity_summary():
