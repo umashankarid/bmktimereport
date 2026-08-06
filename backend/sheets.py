@@ -16,6 +16,8 @@ class GoogleSheetsManager:
     
     SHEET_NAME = 'Activities'
     HEADERS = ['Trainer Name', 'Date', 'Activity', 'Start Time', 'End Time', 'Note']
+    ALL_ACTIVITIES_SHEET = 'All Activities'
+    ACTIVITIES_COLUMN = 'Activities'
     
     def __init__(self, demo_mode=False):
         """Initialize Google Sheets connection"""
@@ -158,7 +160,12 @@ class GoogleSheetsManager:
             raise
     
     def add_activity(self, activity_data):
-        """Add a new activity to the sheet"""
+        """Add one or more activities to the sheet
+        
+        activity_data can be:
+        - Single dict with 'activity' key
+        - Dict with 'activities' array, where each item has {activity, start_time, end_time}
+        """
         try:
             print(f"\n{'='*60}")
             print(f"🔍 ADD_ACTIVITY CALLED")
@@ -173,11 +180,21 @@ class GoogleSheetsManager:
                     'message': 'Google Sheets not configured. Please setup through the admin panel.'
                 }
             
-            # Validate required fields FIRST (before any API calls)
-            required_fields = ['trainer_name', 'date', 'activity', 'start_time', 'end_time']
-            print(f"\n📋 VALIDATING REQUIRED FIELDS: {required_fields}")
+            # Check if this is multi-activity format
+            if 'activities' in activity_data and isinstance(activity_data['activities'], list):
+                # Multi-activity submission
+                print(f"📋 Multi-activity submission with {len(activity_data['activities'])} activities")
+                activities_to_log = activity_data['activities']
+            else:
+                # Single activity (legacy format)
+                print(f"📋 Single activity submission")
+                activities_to_log = [{'activity': activity_data.get('activity')}]
+            
+            # Validate required base fields
+            required_base_fields = ['trainer_name', 'date']
+            print(f"\n📋 VALIDATING REQUIRED BASE FIELDS: {required_base_fields}")
             missing_fields = []
-            for field in required_fields:
+            for field in required_base_fields:
                 value = activity_data.get(field)
                 print(f"  ✓ {field}: {value} (present: {bool(value)})")
                 if field not in activity_data or not activity_data[field]:
@@ -190,57 +207,80 @@ class GoogleSheetsManager:
                     'message': f"Missing required fields: {', '.join(missing_fields)}"
                 }
             
-            print(f"\n✅ All required fields present")
+            print(f"\n✅ Base fields valid")
             print(f"📝 Trainer: {activity_data['trainer_name']}")
             print(f"📅 Date: {activity_data['date']}")
-            print(f"🎯 Activity: {activity_data['activity']}")
-            print(f"⏱️  Time: {activity_data['start_time']} - {activity_data['end_time']}")
-            print(f"📌 Note: {activity_data.get('note', '(none)')}")
             
-            # Prepare row data - matching column order
-            row = [
-                activity_data['trainer_name'],
-                activity_data['date'],
-                activity_data['activity'],
-                activity_data['start_time'],
-                activity_data['end_time'],
-                activity_data.get('note', '')
-            ]
+            # Log each activity
+            logged_count = 0
+            logged_activities = []
             
-            print(f"\n📤 ROW DATA TO APPEND:")
-            for i, (header, value) in enumerate(zip(self.HEADERS, row)):
-                print(f"  Col {i}: {header} = {value}")
+            for activity_item in activities_to_log:
+                activity_name = activity_item.get('activity', '')
+                start_time = activity_item.get('start_time', '')
+                end_time = activity_item.get('end_time', '')
+                
+                if not activity_name or not start_time or not end_time:
+                    print(f"⚠️  Skipping incomplete activity: {activity_item}")
+                    continue
+                
+                print(f"\n📤 Logging activity: {activity_name}")
+                print(f"   ⏱️  {start_time} - {end_time}")
+                
+                # Prepare row data - matching column order
+                row = [
+                    activity_data['trainer_name'],
+                    activity_data['date'],
+                    activity_name,
+                    start_time,
+                    end_time,
+                    activity_data.get('note', '')
+                ]
+                
+                print(f"   📝 ROW DATA TO APPEND:")
+                for i, (header, value) in enumerate(zip(self.HEADERS, row)):
+                    print(f"     Col {i}: {header} = {value}")
+                
+                if self.demo_mode:
+                    # Demo mode: store in memory
+                    print(f"   📝 DEMO MODE: Storing in memory...")
+                    self.demo_data.append(dict(zip(self.HEADERS, row)))
+                else:
+                    # Real mode: append to Google Sheet
+                    print(f"   📡 Appending row to Google Sheet...")
+                    sheet = self.get_sheet()
+                    sheet.append_row(row)
+                
+                logged_activities.append(activity_name)
+                logged_count += 1
+                print(f"   ✅ Activity logged")
             
-            if self.demo_mode:
-                # Demo mode: store in memory
-                print(f"\n📝 DEMO MODE: Storing in memory...")
-                self.demo_data.append(dict(zip(self.HEADERS, row)))
-                print(f"✅ Activity stored ({len(self.demo_data)} total in demo)")
-            else:
-                # Real mode: append to Google Sheet
-                print(f"\n📡 Appending row to Google Sheet...")
-                sheet = self.get_sheet()
-                sheet.append_row(row)
-                print(f"✅ Row appended successfully!")
+            if logged_count == 0:
+                print(f"❌ No activities were logged")
+                return {
+                    'success': False,
+                    'message': 'No valid activities to log'
+                }
             
             result = {
                 'success': True,
-                'message': 'Activity logged successfully' + (' (DEMO MODE - not synced to Google Sheets)' if self.demo_mode else ''),
-                'data': dict(zip(self.HEADERS, row))
+                'message': f'✓ Logged {logged_count} activity/activities' + (' (DEMO MODE)' if self.demo_mode else ''),
+                'count': logged_count,
+                'activities': logged_activities
             }
-            print(f"\n✓ Activity added: {activity_data['trainer_name']} - {activity_data['activity']}")
+            print(f"\n✓ Activities logged: {', '.join(logged_activities)}")
             print(f"{'='*60}\n")
             
             return result
         except Exception as e:
-            print(f"\n❌ ERROR ADDING ACTIVITY: {e}")
+            print(f"\n❌ ERROR ADDING ACTIVITIES: {e}")
             import traceback
             print(f"Traceback:")
             traceback.print_exc()
             print(f"{'='*60}\n")
             return {
                 'success': False,
-                'message': f'Error logging activity: {str(e)}'
+                'message': f'Error logging activities: {str(e)}'
             }
     
     def get_all_activities(self, limit=100):
@@ -323,6 +363,74 @@ class GoogleSheetsManager:
                 'success': False,
                 'data': [],
                 'message': f'Error retrieving trainers: {str(e)}'
+            }
+    
+    def get_activity_list(self):
+        """Get list of all activities from 'All Activities' sheet"""
+        try:
+            if not self.authenticated:
+                return {
+                    'success': False,
+                    'data': [],
+                    'message': 'Google Sheets not configured'
+                }
+            
+            if self.demo_mode:
+                # Demo mode: return default activities
+                default_activities = [
+                    'Practice',
+                    'Drill',
+                    'Match',
+                    'Tournament',
+                    'Conditioning',
+                    'Theory',
+                    'Other'
+                ]
+                return {
+                    'success': True,
+                    'data': default_activities,
+                    'note': 'DEMO MODE - using defaults'
+                }
+            
+            # Real mode: fetch from Google Sheet
+            sheet_id = os.getenv('GOOGLE_SHEET_ID')
+            if not sheet_id or sheet_id == "demo-sheet-id":
+                raise ValueError("GOOGLE_SHEET_ID not configured")
+            
+            spreadsheet = self.client.open_by_key(sheet_id)
+            
+            # Try to get All Activities sheet
+            try:
+                all_activities_sheet = spreadsheet.worksheet(self.ALL_ACTIVITIES_SHEET)
+            except gspread.exceptions.WorksheetNotFound:
+                print(f"⚠️  '{self.ALL_ACTIVITIES_SHEET}' sheet not found")
+                return {
+                    'success': False,
+                    'data': [],
+                    'message': f"'{self.ALL_ACTIVITIES_SHEET}' sheet not found"
+                }
+            
+            # Get all data from the sheet
+            all_data = all_activities_sheet.get_all_records()
+            
+            # Extract activities from the specified column
+            activities = []
+            for row in all_data:
+                activity = row.get(self.ACTIVITIES_COLUMN, '').strip()
+                if activity:  # Only include non-empty activities
+                    activities.append(activity)
+            
+            return {
+                'success': True,
+                'data': activities,
+                'count': len(activities)
+            }
+        except Exception as e:
+            print(f"✗ Error retrieving activities list: {e}")
+            return {
+                'success': False,
+                'data': [],
+                'message': f'Error retrieving activities: {str(e)}'
             }
 
 

@@ -163,6 +163,21 @@ def create_app():
                 'message': str(e)
             }), 500
     
+    # Get activity list
+    @app.route('/api/activity-list', methods=['GET'])
+    def get_activity_list():
+        """Get list of all available activities"""
+        try:
+            sheets = get_sheets_manager()
+            result = sheets.get_activity_list()
+            
+            return jsonify(result), 200 if result['success'] else 400
+        except Exception as e:
+            return jsonify({
+                'error': 'Failed to retrieve activity list',
+                'message': str(e)
+            }), 500
+    
     # Error handlers
     @app.errorhandler(404)
     def not_found(error):
