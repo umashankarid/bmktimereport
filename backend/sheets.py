@@ -19,6 +19,9 @@ class GoogleSheetsManager:
     ALL_ACTIVITIES_SHEET = 'All Activities'
     ACTIVITIES_COLUMN = 'Activities'
     
+    # Cache settings
+    CACHE_TTL = 60  # Cache for 60 seconds
+    
     def __init__(self, demo_mode=False):
         """Initialize Google Sheets connection"""
         self.creds = None
@@ -27,6 +30,13 @@ class GoogleSheetsManager:
         self.authenticated = False
         self.demo_mode = demo_mode
         self.demo_data = []  # Store activities in memory for demo mode
+        
+        # Cache for frequently accessed data
+        self._cache = {
+            'all_activities': {'data': None, 'timestamp': None},
+            'trainers': {'data': None, 'timestamp': None},
+            'activity_list': {'data': None, 'timestamp': None}
+        }
         
         if not demo_mode:
             self._authenticate()
@@ -328,6 +338,9 @@ class GoogleSheetsManager:
             print(f"\n✓ Activities logged: {', '.join(logged_activities)}")
             print(f"{'='*60}\n")
             
+            # Invalidate cache after adding activities
+            self._invalidate_cache('all_activities')
+            
             return result
         except Exception as e:
             print(f"\n❌ ERROR ADDING ACTIVITIES: {e}")
@@ -340,8 +353,48 @@ class GoogleSheetsManager:
                 'message': f'Error logging activities: {str(e)}'
             }
     
+    def _is_cache_valid(self, cache_key):
+        """Check if cache is still valid"""
+        cache_entry = self._cache.get(cache_key)
+        if cache_entry is None or cache_entry['data'] is None or cache_entry['timestamp'] is None:
+            return False
+        
+        elapsed = time.time() - cache_entry['timestamp']
+        is_valid = elapsed < self.CACHE_TTL
+        
+        if is_valid:
+            print(f"✅ Cache HIT for '{cache_key}' ({elapsed:.1f}s old)")
+        else:
+            print(f"⏰ Cache EXPIRED for '{cache_key}' ({elapsed:.1f}s old, TTL={self.CACHE_TTL}s)")
+        
+        return is_valid
+    
+    def _set_cache(self, cache_key, data):
+        """Set cache value with current timestamp"""
+        self._cache[cache_key] = {
+            'data': data,
+            'timestamp': time.time()
+        }
+        print(f"💾 Cache SET for '{cache_key}'")
+    
+    def _get_cache(self, cache_key):
+        """Get cached value if valid"""
+        if self._is_cache_valid(cache_key):
+            return self._cache[cache_key]['data']
+        return None
+    
+    def _invalidate_cache(self, cache_key=None):
+        """Invalidate cache (all or specific)"""
+        if cache_key:
+            self._cache[cache_key] = {'data': None, 'timestamp': None}
+            print(f"🗑️  Cache INVALIDATED for '{cache_key}'")
+        else:
+            for key in self._cache:
+                self._cache[key] = {'data': None, 'timestamp': None}
+            print(f"🗑️  All caches INVALIDATED")
+    
     def get_all_activities(self, limit=100):
-        """Get all activities from the sheet"""
+        """Get all activities from the sheet (with caching)"""
         try:
             if not self.authenticated:
                 return {
@@ -361,8 +414,23 @@ class GoogleSheetsManager:
                     'note': 'DEMO MODE - data not persisted'
                 }
             
+            # Check cache first
+            cached_data = self._get_cache('all_activities')
+            if cached_data is not None:
+                return {
+                    'success': True,
+                    'data': cached_data[-limit:] if len(cached_data) > limit else cached_data,
+                    'total': len(cached_data),
+                    'from_cache': True
+                }
+            
+            # Fetch from Google Sheets
+            print(f"📡 Fetching activities from Google Sheets...")
             sheet = self.get_sheet()
             all_rows = sheet.get_all_records()
+            
+            # Cache the full result
+            self._set_cache('all_activities', all_rows)
             
             # Return limited records (most recent first)
             return {
@@ -605,6 +673,9 @@ class GoogleSheetsManager:
                     
                     print(f"✅ Updated activity at row {row_number}: {activity_name} {start_time}-{end_time}")
                     
+                    # Invalidate cache after updating
+                    self._invalidate_cache('all_activities')
+                    
                     return {
                         'success': True,
                         'message': f'Activity updated: {activity_name}',
@@ -680,6 +751,9 @@ class GoogleSheetsManager:
                     sheet.delete_rows(row_number)
                     
                     print(f"✅ Deleted activity at row {row_number}: {activity_name}")
+                    
+                    # Invalidate cache after deleting
+                    self._invalidate_cache('all_activities')
                     
                     return {
                         'success': True,
