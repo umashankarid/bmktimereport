@@ -196,38 +196,78 @@ class TrainerAuthManager:
     def login_trainer(trainer_name, password):
         """Authenticate trainer with name and password"""
         try:
-            print(f"\n🔐 LOGIN ATTEMPT: {trainer_name}")
+            print(f"\n{'='*60}")
+            print(f"🔐 LOGIN ATTEMPT: {trainer_name}")
+            print(f"{'='*60}")
             
             # Get login sheet
+            print(f"🔗 Getting login sheet...")
             login_sheet = TrainerAuthManager.get_login_sheet()
+            print(f"✅ Got login sheet")
             
             # Find trainer by name
+            print(f"📋 Fetching all trainers...")
             all_trainers = login_sheet.get_all_records()
+            print(f"📋 Total trainers in sheet: {len(all_trainers)}")
+            
             trainer = None
-            for t in all_trainers:
-                if t.get('Trainer Name', '').lower() == trainer_name.lower():
+            for idx, t in enumerate(all_trainers):
+                stored_name = t.get('Trainer Name', '')
+                stored_name_lower = stored_name.lower()
+                input_name_lower = trainer_name.lower()
+                
+                print(f"  [{idx}] Stored: '{stored_name}' (lower: '{stored_name_lower}')")
+                print(f"       Input:  '{trainer_name}' (lower: '{input_name_lower}')")
+                print(f"       Match: {stored_name_lower == input_name_lower}")
+                
+                if stored_name_lower == input_name_lower:
                     trainer = t
+                    print(f"  ✅ MATCH FOUND at index {idx}")
                     break
             
             if not trainer:
                 print(f"❌ Trainer not found: {trainer_name}")
+                print(f"   Available trainers: {[t.get('Trainer Name', '?') for t in all_trainers]}")
                 return {
                     'success': False,
                     'message': 'Trainer name or password incorrect'
                 }
             
+            print(f"\n🔐 VERIFYING PASSWORD")
             # Verify password
             stored_hash = trainer.get('Password Hash')
             salt = trainer.get('Salt')
             
-            if not TrainerAuthManager.verify_password(stored_hash, password, salt):
+            print(f"  Stored Hash (first 20 chars): {stored_hash[:20] if stored_hash else 'NONE'}...")
+            print(f"  Salt (first 20 chars): {salt[:20] if salt else 'NONE'}...")
+            print(f"  Input password length: {len(password)}")
+            
+            if not stored_hash or not salt:
+                print(f"❌ Missing hash or salt in sheet")
+                return {
+                    'success': False,
+                    'message': 'Trainer account incomplete'
+                }
+            
+            # Verify
+            is_valid = TrainerAuthManager.verify_password(stored_hash, password, salt)
+            print(f"  Password verification result: {is_valid}")
+            
+            if not is_valid:
                 print(f"❌ Invalid password for: {trainer_name}")
+                print(f"   Recalculating hash to debug...")
+                recalc_hash, _ = TrainerAuthManager.hash_password(password, salt)
+                print(f"   Recalculated (first 20): {recalc_hash[:20]}...")
+                print(f"   Stored (first 20):       {stored_hash[:20]}...")
+                print(f"   Match: {recalc_hash == stored_hash}")
+                
                 return {
                     'success': False,
                     'message': 'Trainer name or password incorrect'
                 }
             
             print(f"✅ Trainer authenticated: {trainer_name}")
+            print(f"{'='*60}\n")
             return {
                 'success': True,
                 'message': 'Login successful',
@@ -237,8 +277,13 @@ class TrainerAuthManager:
             }
             
         except Exception as e:
-            print(f"❌ Login error: {e}")
+            error_type = type(e).__name__
+            error_msg = str(e)
+            print(f"❌ Login error ({error_type}): {error_msg}")
+            import traceback
+            traceback.print_exc()
+            print(f"{'='*60}\n")
             return {
                 'success': False,
-                'message': f'Login failed: {str(e)}'
+                'message': f'Login failed: {error_msg}'
             }
