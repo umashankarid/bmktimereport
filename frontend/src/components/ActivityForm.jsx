@@ -117,23 +117,40 @@ function ActivityForm({ onSubmit, trainers, currentTrainer }) {
       if (newSelected[activity]) {
         delete newSelected[activity];
       } else {
-        newSelected[activity] = {
-          activity,
-          start_time: '',
-          end_time: ''
-        };
+        newSelected[activity] = [{ start_time: '', end_time: '' }];
       }
       return newSelected;
     });
   };
 
-  const handleActivityTimeChange = (activity, field, value) => {
+  const handleAddTimeSlot = (activity) => {
     setSelectedActivities(prev => ({
       ...prev,
-      [activity]: {
-        ...prev[activity],
-        [field]: value
+      [activity]: [...(prev[activity] || []), { start_time: '', end_time: '' }]
+    }));
+  };
+
+  const handleRemoveTimeSlot = (activity, slotIndex) => {
+    setSelectedActivities(prev => {
+      const slots = prev[activity].filter((_, idx) => idx !== slotIndex);
+      if (slots.length === 0) {
+        const newSelected = { ...prev };
+        delete newSelected[activity];
+        return newSelected;
       }
+      return {
+        ...prev,
+        [activity]: slots
+      };
+    });
+  };
+
+  const handleTimeSlotChange = (activity, slotIndex, field, value) => {
+    setSelectedActivities(prev => ({
+      ...prev,
+      [activity]: prev[activity].map((slot, idx) =>
+        idx === slotIndex ? { ...slot, [field]: value } : slot
+      )
     }));
   };
 
@@ -194,13 +211,9 @@ function ActivityForm({ onSubmit, trainers, currentTrainer }) {
     if (!window.confirm(`Delete ${activity}?`)) return;
     
     try {
-      // For now, we'll update with empty times as a deletion placeholder
-      // In production, you'd want a proper delete endpoint
       setSubmitting(true);
       console.log(`🗑️  Deleting ${activity}...`);
       
-      // Could send DELETE request here if endpoint exists
-      // For now, just remove from UI and refresh
       setExistingActivities(prev => 
         prev.filter(act => act.Activity !== activity)
       );
@@ -224,45 +237,56 @@ function ActivityForm({ onSubmit, trainers, currentTrainer }) {
     e.preventDefault();
     setError('');
     
-    // Validate at least one new activity is selected or we have existing activities
+    // Validate at least one new activity is selected
     const selectedCount = Object.keys(selectedActivities).length;
     if (selectedCount === 0 && existingActivities.length === 0) {
       setError('Please select at least one activity or you have no existing activities');
       return;
     }
 
-    // Validate all selected activities have times
-    for (const [activityName, activityData] of Object.entries(selectedActivities)) {
-      if (!activityData.start_time || !activityData.end_time) {
-        setError(`Please set start and end times for ${activityName}`);
-        return;
+    // Validate all time slots have times
+    for (const [activityName, slots] of Object.entries(selectedActivities)) {
+      for (let i = 0; i < slots.length; i++) {
+        if (!slots[i].start_time || !slots[i].end_time) {
+          setError(`Please set start and end times for all time slots of ${activityName}`);
+          return;
+        }
       }
     }
 
     if (selectedCount === 0) {
-      // Only existing activities, no new ones to submit
       setSuccess('✓ No new activities to log');
-      // Clear selection
       setSelectedActivities({});
       return;
     }
 
     setSubmitting(true);
     try {
-      // Prepare submission data for new activities only
+      // Prepare submission data - flatten all time slots
+      const allActivities = [];
+      for (const [activityName, slots] of Object.entries(selectedActivities)) {
+        for (const slot of slots) {
+          allActivities.push({
+            activity: activityName,
+            start_time: slot.start_time,
+            end_time: slot.end_time
+          });
+        }
+      }
+
       const submissionData = {
         trainer_name: formData.trainer_name,
         date: formData.date,
         note: formData.note,
-        activities: Object.values(selectedActivities)
+        activities: allActivities
       };
 
-      console.log('📤 Submitting new activities:', submissionData);
+      console.log('📤 Submitting activities:', submissionData);
       const result = await onSubmit(submissionData);
       
       if (result.success) {
         const activityList = result.activities?.join(', ') || '';
-        setSuccess(`✓ Logged ${result.count} new activity/activities: ${activityList}`);
+        setSuccess(`✓ Logged ${result.count} activity/activities: ${activityList}`);
         
         // Refresh existing activities
         await fetchExistingActivities();
@@ -394,32 +418,59 @@ function ActivityForm({ onSubmit, trainers, currentTrainer }) {
                       <span className="checkbox-label">{activity}</span>
                     </label>
 
-                    {/* Time inputs appear when activity is selected */}
+                    {/* Time slots appear when activity is selected */}
                     {selectedActivities[activity] && (
-                      <div className="activity-times">
-                        <div className="time-input">
-                          <label>Start Time</label>
-                          <input
-                            type="time"
-                            value={selectedActivities[activity].start_time}
-                            onChange={(e) =>
-                              handleActivityTimeChange(activity, 'start_time', e.target.value)
-                            }
-                            required
-                          />
-                        </div>
+                      <div className="activity-time-slots">
+                        {selectedActivities[activity].map((slot, slotIndex) => (
+                          <div key={slotIndex} className="time-slot">
+                            <div className="time-slot-inputs">
+                              <div className="time-input">
+                                <label>Start</label>
+                                <input
+                                  type="time"
+                                  value={slot.start_time}
+                                  onChange={(e) =>
+                                    handleTimeSlotChange(activity, slotIndex, 'start_time', e.target.value)
+                                  }
+                                  required
+                                />
+                              </div>
 
-                        <div className="time-input">
-                          <label>End Time</label>
-                          <input
-                            type="time"
-                            value={selectedActivities[activity].end_time}
-                            onChange={(e) =>
-                              handleActivityTimeChange(activity, 'end_time', e.target.value)
-                            }
-                            required
-                          />
-                        </div>
+                              <div className="time-input">
+                                <label>End</label>
+                                <input
+                                  type="time"
+                                  value={slot.end_time}
+                                  onChange={(e) =>
+                                    handleTimeSlotChange(activity, slotIndex, 'end_time', e.target.value)
+                                  }
+                                  required
+                                />
+                              </div>
+
+                              {selectedActivities[activity].length > 1 && (
+                                <button
+                                  type="button"
+                                  className="btn-remove-slot"
+                                  onClick={() => handleRemoveTimeSlot(activity, slotIndex)}
+                                  title="Remove this time slot"
+                                >
+                                  ✕
+                                </button>
+                              )}
+                            </div>
+                            {slotIndex === selectedActivities[activity].length - 1 && (
+                              <button
+                                type="button"
+                                className="btn-add-slot"
+                                onClick={() => handleAddTimeSlot(activity)}
+                                title="Add another time slot for this activity"
+                              >
+                                + Add time slot
+                              </button>
+                            )}
+                          </div>
+                        ))}
                       </div>
                     )}
                   </div>
@@ -430,14 +481,14 @@ function ActivityForm({ onSubmit, trainers, currentTrainer }) {
             </div>
           </div>
 
-          {/* Summary of selected new activities */}
+          {/* Summary of selected activities */}
           {Object.keys(selectedActivities).length > 0 && (
             <div className="selected-summary">
               <h3>New Activities ({Object.keys(selectedActivities).length}):</h3>
               <ul>
-                {Object.values(selectedActivities).map((act, idx) => (
-                  <li key={idx}>
-                    {act.activity}: {act.start_time} - {act.end_time}
+                {Object.entries(selectedActivities).map(([activity, slots]) => (
+                  <li key={activity}>
+                    {activity}: {slots.map(s => `${s.start_time}-${s.end_time}`).join(', ')}
                   </li>
                 ))}
               </ul>
@@ -461,7 +512,7 @@ function ActivityForm({ onSubmit, trainers, currentTrainer }) {
               className="btn btn-primary"
               disabled={submitting}
             >
-              {submitting ? 'Logging...' : `Log ${Object.keys(selectedActivities).length} New Activity/ies`}
+              {submitting ? 'Logging...' : `Log ${Object.keys(selectedActivities).length} Activity/ies`}
             </button>
           )}
         </form>
