@@ -3,6 +3,7 @@ import axios from 'axios';
 import './App.css';
 import MainLoginPage from './pages/MainLoginPage';
 import AdminDashboard from './pages/AdminDashboard';
+import ReportsPage from './pages/ReportsPage';
 import ActivityForm from './components/ActivityForm';
 import ActivityList from './components/ActivityList';
 
@@ -286,6 +287,12 @@ function App() {
         >
           Activity History
         </button>
+        <button
+          className={`tab ${activeTab === 'reports' ? 'active' : ''}`}
+          onClick={() => setActiveTab('reports')}
+        >
+          Reports
+        </button>
       </nav>
 
       <main className="container">
@@ -302,6 +309,10 @@ function App() {
 
         {activeTab === 'history' && (
           <ActivityList activities={activities} loading={loading} onRefresh={handleRefresh} currentTrainer={admin} />
+        )}
+
+        {activeTab === 'reports' && (
+          <ReportsPage />
         )}
       </main>
 

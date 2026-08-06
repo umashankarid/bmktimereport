@@ -178,6 +178,95 @@ def create_app():
                 'message': str(e)
             }), 500
     
+    # Reports endpoints
+    @app.route('/api/reports/activity-summary', methods=['GET'])
+    def report_activity_summary():
+        """Generate activity summary by trainer"""
+        try:
+            from reports import ReportsManager
+            sheets = get_sheets_manager()
+            reports = ReportsManager(sheets)
+            result = reports.activity_summary_by_trainer()
+            
+            return jsonify(result), 200 if result.get('success') else 400
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'error': str(e)
+            }), 500
+    
+    @app.route('/api/reports/activity-distribution', methods=['GET'])
+    def report_activity_distribution():
+        """Generate activity types distribution report"""
+        try:
+            from reports import ReportsManager
+            sheets = get_sheets_manager()
+            reports = ReportsManager(sheets)
+            result = reports.activity_types_distribution()
+            
+            return jsonify(result), 200 if result.get('success') else 400
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'error': str(e)
+            }), 500
+    
+    @app.route('/api/reports/training-hours', methods=['GET'])
+    def report_training_hours():
+        """Generate training hours report"""
+        try:
+            from reports import ReportsManager
+            sheets = get_sheets_manager()
+            reports = ReportsManager(sheets)
+            result = reports.training_hours_report()
+            
+            return jsonify(result), 200 if result.get('success') else 400
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'error': str(e)
+            }), 500
+    
+    @app.route('/api/reports/monthly-trends', methods=['GET'])
+    def report_monthly_trends():
+        """Generate monthly activity trends report"""
+        try:
+            from reports import ReportsManager
+            sheets = get_sheets_manager()
+            reports = ReportsManager(sheets)
+            result = reports.monthly_activity_trends()
+            
+            return jsonify(result), 200 if result.get('success') else 400
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'error': str(e)
+            }), 500
+    
+    @app.route('/api/reports/export-csv', methods=['GET'])
+    def export_csv():
+        """Export activities to CSV"""
+        try:
+            from reports import ReportsManager
+            sheets = get_sheets_manager()
+            reports = ReportsManager(sheets)
+            result = reports.export_to_csv()
+            
+            if result.get('success'):
+                # Return CSV file
+                from flask import make_response
+                response = make_response(result['data'])
+                response.headers['Content-Type'] = 'text/csv'
+                response.headers['Content-Disposition'] = f'attachment; filename="{result["filename"]}"'
+                return response
+            else:
+                return jsonify(result), 400
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'error': str(e)
+            }), 500
+    
     # Get activities by trainer and date
     @app.route('/api/activities/<trainer_name>/<date>', methods=['GET'])
     def get_activities_by_date(trainer_name, date):
