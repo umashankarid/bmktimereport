@@ -381,12 +381,21 @@
   font-weight: 700;
 }
 
+.quota-value-gray {
+  color: #999;
+  font-weight: 700;
+}
+
 .quota-stat-row.hours-left {
   color: #4caf50;
 }
 
 .quota-stat-row.overtime {
   color: #f5576c;
+}
+
+.quota-stat-row.no-overtime {
+  color: #999;
 }
 
 /* Distribution Report */
@@ -748,6 +757,67 @@
 .metric-value {
   font-weight: 600;
   color: #667eea;
+}
+
+/* Overtime Indicators */
+.overtime-indicators {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  background: #fafbff;
+  border-radius: 6px;
+  border-left: 3px solid #667eea;
+}
+
+.overtime-badge,
+.undertime-badge {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9rem;
+}
+
+.overtime-badge.overtime-status {
+  color: #f5576c;
+  font-weight: 600;
+}
+
+.overtime-badge.overtime-status .badge-label {
+  color: #f5576c;
+}
+
+.overtime-badge.overtime-status .badge-value {
+  color: #f5576c;
+  font-weight: 700;
+}
+
+.overtime-badge.no-overtime-status {
+  color: #999;
+}
+
+.overtime-badge.no-overtime-status .badge-label {
+  color: #999;
+}
+
+.overtime-badge.no-overtime-status .badge-value {
+  color: #999;
+  font-weight: 600;
+}
+
+.undertime-badge {
+  color: #ffa500;
+  font-weight: 600;
+}
+
+.undertime-badge .badge-label {
+  color: #ffa500;
+}
+
+.undertime-badge .badge-value {
+  color: #ffa500;
+  font-weight: 700;
 }
 
 .activities-breakdown {

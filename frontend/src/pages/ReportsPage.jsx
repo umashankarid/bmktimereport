@@ -315,12 +315,10 @@ function ActivitySummaryReport({ data, trainerFilter, selectedMonth }) {
                   </div>
                 )}
                 
-                {summary.current_month_overtime > 0 && (
-                  <div className="quota-stat-row overtime">
-                    <span className="quota-label">⚠️ Overtime:</span>
-                    <span className="quota-value-red">{formatHoursToHHMM(summary.current_month_overtime)}</span>
-                  </div>
-                )}
+                <div className={`quota-stat-row ${summary.current_month_overtime > 0 ? 'overtime' : 'no-overtime'}`}>
+                  <span className="quota-label">⚠️ Overtime:</span>
+                  <span className={summary.current_month_overtime > 0 ? 'quota-value-red' : 'quota-value-gray'}>{formatHoursToHHMM(summary.current_month_overtime)}</span>
+                </div>
               </div>
             </div>
             
@@ -415,9 +413,23 @@ function MonthlyTrendsReport({ data, trainerFilter, selectedMonth }) {
                 <span className="metric-value">{month.total_count || 0}</span>
               </div>
               <div className="metric">
-                <span className="metric-label">Time:</span>
+                <span className="metric-label">Hours:</span>
                 <span className="metric-value">{formatHoursToHHMM(month.total_hours)}</span>
               </div>
+            </div>
+
+            {/* Overtime/Undertime Indicators */}
+            <div className="overtime-indicators">
+              <div className={`overtime-badge ${month.overtime > 0 ? 'overtime-status' : 'no-overtime-status'}`}>
+                <span className="badge-label">Overtime:</span>
+                <span className="badge-value">{formatHoursToHHMM(month.overtime || 0)}</span>
+              </div>
+              {month.undertime > 0 && (
+                <div className="undertime-badge">
+                  <span className="badge-label">Undertime:</span>
+                  <span className="badge-value">{formatHoursToHHMM(month.undertime || 0)}</span>
+                </div>
+              )}
             </div>
 
             <div className="activities-breakdown">

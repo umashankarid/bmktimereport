@@ -295,6 +295,9 @@ class ReportsManager:
                 'hours': 0
             }))
             
+            # Track total hours per month per trainer
+            monthly_totals = defaultdict(lambda: defaultdict(float))
+            
             for activity in activities:
                 date_str = activity.get('Date', '')
                 if not date_str:
@@ -310,6 +313,7 @@ class ReportsManager:
                 activity_type = activity.get('Activity', 'Unknown')
                 start_time = activity.get('Start Time', '')
                 end_time = activity.get('End Time', '')
+                trainer_name = activity.get('Trainer Name', 'Unknown')
                 
                 trends[month_key][activity_type]['count'] += 1
                 
@@ -318,7 +322,9 @@ class ReportsManager:
                         start_h, start_m = map(int, start_time.split(':'))
                         end_h, end_m = map(int, end_time.split(':'))
                         duration_minutes = (end_h - start_h) * 60 + (end_m - start_m)
-                        trends[month_key][activity_type]['hours'] += duration_minutes / 60
+                        hours = duration_minutes / 60
+                        trends[month_key][activity_type]['hours'] += hours
+                        monthly_totals[month_key][trainer_name] += hours
                     except:
                         pass
             
@@ -329,7 +335,10 @@ class ReportsManager:
                     'month': month,
                     'activities': [],
                     'total_count': 0,
-                    'total_hours': 0
+                    'total_hours': 0,
+                    'overtime': 0,
+                    'undertime': 0,
+                    'trainers_data': {}
                 }
                 
                 for activity_type, data in trends[month].items():
@@ -342,6 +351,28 @@ class ReportsManager:
                     month_data['total_hours'] += data['hours']
                 
                 month_data['total_hours'] = round(month_data['total_hours'], 2)
+                
+                # Calculate overtime/undertime per trainer
+                for trainer, total_hours in monthly_totals[month].items():
+                    overtime = max(0, total_hours - MONTHLY_QUOTA)
+                    undertime = max(0, MONTHLY_QUOTA - total_hours)
+                    
+                    month_data['trainers_data'][trainer] = {
+                        'hours': round(total_hours, 2),
+                        'overtime': round(overtime, 2),
+                        'undertime': round(undertime, 2),
+                        'status': 'overtime' if overtime > 0 else ('normal' if total_hours >= MONTHLY_QUOTA else 'undertime')
+                    }
+                
+                # Calculate overall overtime for the month (if multiple trainers, aggregate)
+                total_overtime = 0
+                total_undertime = 0
+                for trainer_data in month_data['trainers_data'].values():
+                    total_overtime += trainer_data['overtime']
+                    total_undertime += trainer_data['undertime']
+                
+                month_data['overtime'] = round(total_overtime, 2)
+                month_data['undertime'] = round(total_undertime, 2)
                 month_data['activities'].sort(key=lambda x: x['count'], reverse=True)
                 result.append(month_data)
             
@@ -352,6 +383,8 @@ class ReportsManager:
             }
         except Exception as e:
             print(f"Error generating trends: {e}")
+            import traceback
+            traceback.print_exc()
             return {
                 'success': False,
                 'error': str(e)
