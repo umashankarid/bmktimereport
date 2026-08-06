@@ -562,13 +562,6 @@ function TrainingHoursReport({ data, trainerFilter, selectedMonth }) {
   );
 }
 
-// Helper function to format month short (e.g., "Aug 2026")
-function formatMonthShort(monthStr) {
-  const [year, month] = monthStr.split('-');
-  const date = new Date(`${monthStr}-01`);
-  return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-}
-
 // Monthly Trends Report Component
 function MonthlyTrendsReport({ data, trainerFilter, selectedMonth }) {
   if (!data) {
