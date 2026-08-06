@@ -210,21 +210,6 @@ function ReportsPage({ currentTrainer = null }) {
                   <MonthlyTrendsReport data={reports['monthly-trends']} trainerFilter={isTrainerView ? currentTrainer?.name : selectedTrainer} selectedMonth={selectedMonth} />
                 )}
               </>
-            ) : (
-              <>
-                {activeReport === 'activity-summary' && (
-                  <ActivitySummaryReport data={reports['activity-summary']} trainerFilter={isTrainerView ? currentTrainer?.name : selectedTrainer} />
-                )}
-                {activeReport === 'activity-distribution' && (
-                  <ActivityDistributionReport data={reports['activity-distribution']} trainerFilter={isTrainerView ? currentTrainer?.name : selectedTrainer} />
-                )}
-                {activeReport === 'training-hours' && (
-                  <TrainingHoursReport data={reports['training-hours']} trainerFilter={isTrainerView ? currentTrainer?.name : selectedTrainer} />
-                )}
-                {activeReport === 'monthly-trends' && (
-                  <MonthlyTrendsReport data={reports['monthly-trends']} trainerFilter={isTrainerView ? currentTrainer?.name : selectedTrainer} />
-                )}
-              </>
             )}
 
             {/* Export Button */}
