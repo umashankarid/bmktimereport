@@ -4,24 +4,68 @@ from config import Config
 from sheets import get_sheets_manager
 from auth import register_auth_routes
 import os
+import sys
+
+# Configure logging to print to stdout (Render can capture this)
+import logging
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='[%(asctime)s] [%(levelname)s] %(message)s',
+    stream=sys.stdout
+)
+logger = logging.getLogger(__name__)
 
 def create_app():
     """Application factory"""
+    print("\n" + "="*60)
+    print("🚀 CREATING FLASK APP")
+    print("="*60)
+    
     app = Flask(__name__, static_folder='static', static_url_path='')
     app.config.from_object(Config)
     
+    print(f"✅ Flask app created")
+    print(f"   DEBUG: {app.config.get('DEBUG')}")
+    print(f"   CORS_ORIGINS: {Config.CORS_ORIGINS}")
+    
     # Enable CORS for API routes only
     CORS(app, resources={r"/api/*": {"origins": Config.CORS_ORIGINS}})
+    print(f"✅ CORS enabled")
+    
+    # Add request logging middleware
+    @app.before_request
+    def log_request():
+        print(f"\n📍 REQUEST: {request.method} {request.path}")
+        print(f"   Content-Type: {request.content_type}")
+        print(f"   Remote Addr: {request.remote_addr}")
+        if request.data:
+            print(f"   Data length: {len(request.data)} bytes")
+            try:
+                import json
+                data = json.loads(request.data)
+                print(f"   Parsed JSON: {json.dumps({k: v if k != 'password' else '[REDACTED]' for k, v in data.items()}, indent=2)}")
+            except:
+                print(f"   Raw data: {request.data[:200]}")
+    
+    @app.after_request
+    def log_response(response):
+        print(f"📤 RESPONSE: {response.status_code}")
+        return response
     
     # Initialize Google Sheets on startup
+    print(f"\n🔧 Initializing Google Sheets...")
     sheets_manager = get_sheets_manager()
+    print(f"✅ Google Sheets initialized")
     
     # Register authentication routes
+    print(f"\n📝 Registering auth routes...")
     register_auth_routes(app, sheets_manager)
+    print(f"✅ Auth routes registered")
     
     # Health check
     @app.route('/api/health', methods=['GET'])
     def health_check():
+        print(f"✅ Health check called")
         return jsonify({
             'status': 'healthy',
             'service': 'badminton-activity-logger',
@@ -139,6 +183,13 @@ def create_app():
 
 
 if __name__ == '__main__':
+    print("\n" + "="*60)
+    print("🎯 STARTING BADMINTON ACTIVITY LOGGER")
+    print("="*60)
+    print(f"PORT: {os.getenv('PORT', 5000)}")
+    print(f"DEBUG: {Config.DEBUG}")
+    print("="*60 + "\n")
+    
     app = create_app()
     app.run(
         host='0.0.0.0',
