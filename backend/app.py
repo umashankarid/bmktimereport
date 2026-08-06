@@ -249,7 +249,8 @@ def create_app():
             from reports import ReportsManager
             sheets = get_sheets_manager()
             reports = ReportsManager(sheets)
-            result = reports.activity_summary_by_trainer()
+            trainer_filter = request.args.get('trainer')
+            result = reports.activity_summary_by_trainer(trainer_filter=trainer_filter)
             
             return jsonify(result), 200 if result.get('success') else 400
         except Exception as e:
@@ -265,7 +266,9 @@ def create_app():
             from reports import ReportsManager
             sheets = get_sheets_manager()
             reports = ReportsManager(sheets)
-            result = reports.activity_types_distribution()
+            trainer_filter = request.args.get('trainer')
+            month_filter = request.args.get('month')
+            result = reports.activity_types_distribution(trainer_filter=trainer_filter, month_filter=month_filter)
             
             return jsonify(result), 200 if result.get('success') else 400
         except Exception as e:
@@ -281,7 +284,9 @@ def create_app():
             from reports import ReportsManager
             sheets = get_sheets_manager()
             reports = ReportsManager(sheets)
-            result = reports.training_hours_report()
+            trainer_filter = request.args.get('trainer')
+            month_filter = request.args.get('month')
+            result = reports.training_hours_report(trainer_filter=trainer_filter, month_filter=month_filter)
             
             return jsonify(result), 200 if result.get('success') else 400
         except Exception as e:
@@ -297,7 +302,9 @@ def create_app():
             from reports import ReportsManager
             sheets = get_sheets_manager()
             reports = ReportsManager(sheets)
-            result = reports.monthly_activity_trends()
+            trainer_filter = request.args.get('trainer')
+            month_filter = request.args.get('month')
+            result = reports.monthly_activity_trends(trainer_filter=trainer_filter, month_filter=month_filter)
             
             return jsonify(result), 200 if result.get('success') else 400
         except Exception as e:

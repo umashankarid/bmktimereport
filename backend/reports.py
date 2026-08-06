@@ -28,10 +28,14 @@ class ReportsManager:
             print(f"Error getting activities: {e}")
             return []
     
-    def activity_summary_by_trainer(self):
+    def activity_summary_by_trainer(self, trainer_filter=None):
         """Generate activity summary grouped by trainer with quota tracking"""
         try:
             activities = self.get_all_activities()
+            
+            # Filter by trainer if specified
+            if trainer_filter:
+                activities = [a for a in activities if a.get('Trainer Name') == trainer_filter]
             
             summary = defaultdict(lambda: {
                 'total_activities': 0,
@@ -117,10 +121,29 @@ class ReportsManager:
                 'error': str(e)
             }
     
-    def activity_types_distribution(self):
-        """Generate distribution of activity types"""
+    def activity_types_distribution(self, trainer_filter=None, month_filter=None):
+        """Generate distribution of activity types, optionally filtered by trainer and/or month"""
         try:
             activities = self.get_all_activities()
+            
+            # Filter by trainer if specified
+            if trainer_filter:
+                activities = [a for a in activities if a.get('Trainer Name') == trainer_filter]
+            
+            # Filter by month if specified
+            if month_filter:
+                filtered_activities = []
+                for activity in activities:
+                    date_str = activity.get('Date', '')
+                    if date_str:
+                        try:
+                            date_obj = datetime.strptime(date_str, '%Y-%m-%d')
+                            activity_month = date_obj.strftime('%Y-%m')
+                            if activity_month == month_filter:
+                                filtered_activities.append(activity)
+                        except:
+                            pass
+                activities = filtered_activities
             
             distribution = defaultdict(lambda: {
                 'count': 0,
@@ -179,10 +202,29 @@ class ReportsManager:
                 'error': str(e)
             }
     
-    def training_hours_report(self):
+    def training_hours_report(self, trainer_filter=None, month_filter=None):
         """Generate training hours report with monthly quota and overtime"""
         try:
             activities = self.get_all_activities()
+            
+            # Filter by trainer if specified
+            if trainer_filter:
+                activities = [a for a in activities if a.get('Trainer Name') == trainer_filter]
+            
+            # Filter by month if specified
+            if month_filter:
+                filtered_activities = []
+                for activity in activities:
+                    date_str = activity.get('Date', '')
+                    if date_str:
+                        try:
+                            date_obj = datetime.strptime(date_str, '%Y-%m-%d')
+                            activity_month = date_obj.strftime('%Y-%m')
+                            if activity_month == month_filter:
+                                filtered_activities.append(activity)
+                        except:
+                            pass
+                activities = filtered_activities
             
             MONTHLY_QUOTA = 180  # Hours per month
             
@@ -294,10 +336,14 @@ class ReportsManager:
                 'error': str(e)
             }
     
-    def monthly_activity_trends(self):
-        """Generate monthly activity trends"""
+    def monthly_activity_trends(self, trainer_filter=None, month_filter=None):
+        """Generate monthly activity trends, optionally filtered by trainer and/or month"""
         try:
             activities = self.get_all_activities()
+            
+            # Filter by trainer if specified
+            if trainer_filter:
+                activities = [a for a in activities if a.get('Trainer Name') == trainer_filter]
             
             trends = defaultdict(lambda: defaultdict(lambda: {
                 'count': 0,
@@ -317,6 +363,10 @@ class ReportsManager:
                     date_obj = datetime.strptime(date_str, '%Y-%m-%d')
                     month_key = date_obj.strftime('%Y-%m')  # YYYY-MM
                 except:
+                    continue
+                
+                # Filter by month if specified
+                if month_filter and month_key != month_filter:
                     continue
                 
                 activity_type = activity.get('Activity', 'Unknown')

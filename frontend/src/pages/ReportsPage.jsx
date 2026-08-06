@@ -64,8 +64,20 @@ function ReportsPage({ currentTrainer = null }) {
       const endpoint = reportEndpoints[activeReport];
       if (!endpoint) return;
 
+      // Build query parameters
+      const params = new URLSearchParams();
+      if (selectedTrainer) {
+        params.append('trainer', selectedTrainer);
+      }
+      if (selectedMonth) {
+        params.append('month', selectedMonth);
+      }
+      
+      const query = params.toString();
+      const fullEndpoint = query ? `${endpoint}?${query}` : endpoint;
+
       console.log(`📊 Fetching ${activeReport}...`);
-      const response = await fetch(endpoint);
+      const response = await fetch(fullEndpoint);
       const result = await response.json();
 
       if (result.success) {
