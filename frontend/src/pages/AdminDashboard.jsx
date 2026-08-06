@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import '../styles/AdminDashboard.css';
+import ReportsPage from './ReportsPage';
 
 function AdminDashboard({ onLogout }) {
   const [activeTab, setActiveTab] = useState('config'); // config, reports, activities
@@ -187,30 +188,7 @@ function AdminDashboard({ onLogout }) {
         )}
 
         {activeTab === 'reports' && (
-          <div className="reports-section">
-            <h2>Reports & Analytics</h2>
-            <p className="section-description">
-              Generate and view reports on badminton coaching activities.
-            </p>
-
-            <div className="reports-placeholder">
-              <div className="placeholder-content">
-                <span className="placeholder-icon">📊</span>
-                <h3>Reports Coming Soon</h3>
-                <p>Report types to be implemented:</p>
-                <ul>
-                  <li>Activity Summary by Trainer</li>
-                  <li>Activity Types Distribution</li>
-                  <li>Training Hours Report</li>
-                  <li>Monthly Activity Trends</li>
-                  <li>Export to CSV/PDF</li>
-                </ul>
-                <p className="placeholder-note">
-                  Configure this section to define which reports to generate.
-                </p>
-              </div>
-            </div>
-          </div>
+          <ReportsPage />
         )}
 
         {activeTab === 'activities' && (

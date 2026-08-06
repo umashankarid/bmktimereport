@@ -263,6 +263,30 @@
   color: #333;
 }
 
+/* ReportsPage inside AdminDashboard */
+.reports-section .reports-page {
+  padding: 0;
+  background: transparent;
+  min-height: auto;
+}
+
+.reports-section .reports-container {
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.reports-section .reports-header {
+  display: none;
+}
+
+.reports-section .reports-content {
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
+  box-shadow: none;
+}
+
 .reports-placeholder,
 .activities-placeholder {
   display: flex;
