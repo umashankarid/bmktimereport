@@ -214,17 +214,33 @@ function ActivityForm({ onSubmit, trainers, currentTrainer }) {
       setSubmitting(true);
       console.log(`🗑️  Deleting ${activity}...`);
       
-      setExistingActivities(prev => 
-        prev.filter(act => act.Activity !== activity)
+      // Call backend API to delete from Google Sheets
+      const response = await fetch(
+        `/api/activities/${encodeURIComponent(formData.trainer_name)}/${encodeURIComponent(formData.date)}/${encodeURIComponent(activity)}`,
+        {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' }
+        }
       );
-      setEditingActivities(prev => {
-        const updated = { ...prev };
-        delete updated[activity];
-        return updated;
-      });
+
+      const result = await response.json();
       
-      setSuccess(`✓ Deleted ${activity}`);
-      setTimeout(() => setSuccess(''), 3000);
+      if (result.success) {
+        // Remove from local state after successful deletion
+        setExistingActivities(prev => 
+          prev.filter(act => act.Activity !== activity)
+        );
+        setEditingActivities(prev => {
+          const updated = { ...prev };
+          delete updated[activity];
+          return updated;
+        });
+        
+        setSuccess(`✓ Deleted ${activity}`);
+        setTimeout(() => setSuccess(''), 3000);
+      } else {
+        setError(result.message || 'Failed to delete activity');
+      }
     } catch (err) {
       console.error('Error deleting activity:', err);
       setError('Failed to delete activity');

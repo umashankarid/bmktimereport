@@ -630,6 +630,79 @@ class GoogleSheetsManager:
                 'success': False,
                 'message': f'Error updating activity: {str(e)}'
             }
+    
+    def delete_activity(self, trainer_name, date, activity_name):
+        """Delete an existing activity from the sheet"""
+        try:
+            if not self.authenticated:
+                return {
+                    'success': False,
+                    'message': 'Google Sheets not configured'
+                }
+            
+            if self.demo_mode:
+                # Demo mode: delete from memory
+                original_len = len(self.demo_data)
+                self.demo_data = [
+                    activity for activity in self.demo_data
+                    if not (activity.get('Trainer Name', '').lower() == trainer_name.lower() and
+                            activity.get('Date') == date and
+                            activity.get('Activity') == activity_name)
+                ]
+                
+                if len(self.demo_data) < original_len:
+                    return {'success': True, 'message': 'Activity deleted (DEMO MODE)'}
+                else:
+                    return {'success': False, 'message': 'Activity not found'}
+            
+            # Real mode: delete from Google Sheet
+            sheet_id = os.getenv('GOOGLE_SHEET_ID')
+            if not sheet_id or sheet_id == "demo-sheet-id":
+                raise ValueError("GOOGLE_SHEET_ID not configured")
+            
+            spreadsheet = self.client.open_by_key(sheet_id)
+            sheet = spreadsheet.worksheet(self.SHEET_NAME)
+            
+            # Get all records to find the one to delete
+            all_records = sheet.get_all_records()
+            
+            for idx, record in enumerate(all_records):
+                record_trainer = record.get('Trainer Name', '').lower()
+                record_date = record.get('Date', '')
+                record_activity = record.get('Activity', '')
+                
+                if (record_trainer == trainer_name.lower() and
+                    record_date == date and
+                    record_activity == activity_name):
+                    
+                    # Found the record, delete it
+                    row_number = idx + 2  # +1 for header, +1 for 1-indexed
+                    sheet.delete_rows(row_number)
+                    
+                    print(f"✅ Deleted activity at row {row_number}: {activity_name}")
+                    
+                    return {
+                        'success': True,
+                        'message': f'Activity deleted: {activity_name}',
+                        'data': {
+                            'trainer_name': trainer_name,
+                            'date': date,
+                            'activity': activity_name
+                        }
+                    }
+            
+            return {
+                'success': False,
+                'message': 'Activity not found'
+            }
+        except Exception as e:
+            print(f"✗ Error deleting activity: {e}")
+            import traceback
+            traceback.print_exc()
+            return {
+                'success': False,
+                'message': f'Error deleting activity: {str(e)}'
+            }
 
 
 # Initialize global instance

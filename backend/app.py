@@ -375,6 +375,25 @@ def create_app():
                 'message': f'Error updating activity: {str(e)}'
             }), 500
     
+    # Delete activity
+    @app.route('/api/activities/<trainer_name>/<date>/<activity_name>', methods=['DELETE'])
+    def delete_activity(trainer_name, date, activity_name):
+        """Delete an existing activity"""
+        try:
+            sheets = get_sheets_manager()
+            result = sheets.delete_activity(
+                trainer_name=trainer_name,
+                date=date,
+                activity_name=activity_name
+            )
+            
+            return jsonify(result), 200 if result['success'] else 400
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'message': f'Error deleting activity: {str(e)}'
+            }), 500
+    
     # Error handlers
     @app.errorhandler(404)
     def not_found(error):
