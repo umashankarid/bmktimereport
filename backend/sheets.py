@@ -30,6 +30,12 @@ class GoogleSheetsManager:
         
         if not demo_mode:
             self._authenticate()
+            # Initialize sheets structure after authentication
+            if self.authenticated and not self.demo_mode:
+                try:
+                    self._ensure_sheets_exist()
+                except Exception as e:
+                    print(f"⚠️  Could not initialize sheets structure: {e}")
         else:
             print(f"📌 DEMO MODE ENABLED: Using in-memory storage")
             print(f"   (Google Sheets connection unavailable or not configured)")
@@ -95,6 +101,57 @@ class GoogleSheetsManager:
             print(f"   Switching to DEMO MODE...")
             self.demo_mode = True
             self.authenticated = True
+    
+    def _ensure_sheets_exist(self):
+        """Ensure required sheets exist in the spreadsheet"""
+        try:
+            sheet_id = os.getenv('GOOGLE_SHEET_ID')
+            if not sheet_id or sheet_id == "demo-sheet-id":
+                return
+            
+            print(f"\n🔍 Checking sheet structure...")
+            spreadsheet = self.client.open_by_key(sheet_id)
+            all_worksheets = spreadsheet.worksheets()
+            worksheet_names = [ws.title for ws in all_worksheets]
+            print(f"   Current worksheets: {worksheet_names}")
+            
+            # Ensure Activities sheet exists
+            if self.SHEET_NAME not in worksheet_names:
+                print(f"⚠️  '{self.SHEET_NAME}' sheet not found, creating...")
+                sheet = spreadsheet.add_worksheet(title=self.SHEET_NAME, rows=1000, cols=6)
+                sheet.append_row(self.HEADERS)
+                print(f"✅ '{self.SHEET_NAME}' sheet created with headers")
+            
+            # Ensure All Activities sheet exists
+            if self.ALL_ACTIVITIES_SHEET not in worksheet_names:
+                print(f"⚠️  '{self.ALL_ACTIVITIES_SHEET}' sheet not found, creating...")
+                all_activities_sheet = spreadsheet.add_worksheet(
+                    title=self.ALL_ACTIVITIES_SHEET,
+                    rows=100,
+                    cols=1
+                )
+                # Add header
+                all_activities_sheet.append_row([self.ACTIVITIES_COLUMN])
+                
+                # Add default activities
+                default_activities = [
+                    'Practice',
+                    'Drill',
+                    'Match',
+                    'Tournament',
+                    'Conditioning',
+                    'Theory',
+                    'Other'
+                ]
+                for activity in default_activities:
+                    all_activities_sheet.append_row([activity])
+                
+                print(f"✅ '{self.ALL_ACTIVITIES_SHEET}' sheet created with {len(default_activities)} default activities")
+            else:
+                print(f"✅ '{self.ALL_ACTIVITIES_SHEET}' sheet exists")
+                
+        except Exception as e:
+            print(f"⚠️  Error ensuring sheets exist: {e}")
     
     def get_sheet(self):
         """Get or create the worksheet"""
