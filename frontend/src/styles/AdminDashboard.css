@@ -277,7 +277,8 @@
 }
 
 .reports-section .reports-header {
-  display: none;
+  display: block;
+  margin-bottom: 1.5rem;
 }
 
 .reports-section .reports-content {
