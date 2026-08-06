@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import './App.css';
 import MainLoginPage from './pages/MainLoginPage';
+import AdminDashboard from './pages/AdminDashboard';
 import ActivityForm from './components/ActivityForm';
 import ActivityList from './components/ActivityList';
 import trainerAuthService from './services/trainerAuthService';
@@ -201,8 +202,14 @@ function App() {
     return <MainLoginPage onAdminLogin={handleAdminLogin} onTrainerLogin={handleTrainerLogin} />;
   }
 
-  // Main app - ready state (skip setup page)
-  return (
+  // Admin dashboard
+  if (userType === 'admin') {
+    return <AdminDashboard onLogout={handleLogout} />;
+  }
+
+  // Trainer app - main trainer interface
+  if (userType === 'trainer') {
+    return (
     <div className="App">
       <header className="app-header">
         <div className="container">
@@ -259,6 +266,16 @@ function App() {
       <footer className="app-footer">
         <p>&copy; 2024 Badminton Activity Logger | Data stored in Google Sheets</p>
       </footer>
+    </div>
+    );
+  }
+
+  // Default/loading state
+  return (
+    <div className="App">
+      <div className="loading-screen">
+        <p>Loading...</p>
+      </div>
     </div>
   );
 }
