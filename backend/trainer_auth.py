@@ -209,6 +209,9 @@ class TrainerAuthManager:
             print(f"📋 Fetching all trainers...")
             all_trainers = login_sheet.get_all_records()
             print(f"📋 Total trainers in sheet: {len(all_trainers)}")
+            print(f"📋 Raw trainer records:")
+            for idx, record in enumerate(all_trainers):
+                print(f"     [{idx}] {record}")
             
             trainer = None
             for idx, t in enumerate(all_trainers):
