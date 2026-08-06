@@ -385,6 +385,7 @@ function ActivityForm({ onSubmit, trainers, currentTrainer }) {
                         <label>Start Time</label>
                         <input
                           type="time"
+                          lang="en-GB"
                           value={editingActivities[activity.Activity]?.start_time || ''}
                           onChange={(e) =>
                             handleExistingActivityChange(activity.Activity, 'start_time', e.target.value)
@@ -396,6 +397,7 @@ function ActivityForm({ onSubmit, trainers, currentTrainer }) {
                         <label>End Time</label>
                         <input
                           type="time"
+                          lang="en-GB"
                           value={editingActivities[activity.Activity]?.end_time || ''}
                           onChange={(e) =>
                             handleExistingActivityChange(activity.Activity, 'end_time', e.target.value)
@@ -444,6 +446,7 @@ function ActivityForm({ onSubmit, trainers, currentTrainer }) {
                                 <label>Start</label>
                                 <input
                                   type="time"
+                                  lang="en-GB"
                                   value={slot.start_time}
                                   onChange={(e) =>
                                     handleTimeSlotChange(activity, slotIndex, 'start_time', e.target.value)
@@ -456,6 +459,7 @@ function ActivityForm({ onSubmit, trainers, currentTrainer }) {
                                 <label>End</label>
                                 <input
                                   type="time"
+                                  lang="en-GB"
                                   value={slot.end_time}
                                   onChange={(e) =>
                                     handleTimeSlotChange(activity, slotIndex, 'end_time', e.target.value)
