@@ -34,90 +34,132 @@ class TrainerAuthManager:
     
     @staticmethod
     def get_login_sheet():
-        """Get or create Login sheet"""
+        """Get or create Login sheet - with robust error handling"""
         try:
             sheets_manager = get_sheets_manager()
             
             if not sheets_manager.authenticated or sheets_manager.demo_mode:
                 raise RuntimeError("Google Sheets not configured")
             
-            # Get spreadsheet
             from config import Config
             import os
+            import time
+            
             sheet_id = os.getenv('GOOGLE_SHEET_ID')
             
+            print(f"\n🔍 Attempting to get Login sheet for ID: {sheet_id}")
             spreadsheet = sheets_manager.client.open_by_key(sheet_id)
             
-            # Try to get existing Login sheet
-            login_sheet = None
-            try:
-                login_sheet = spreadsheet.worksheet(TrainerAuthManager.LOGIN_SHEET_NAME)
-                print(f"✅ Login sheet found")
-                return login_sheet
-            except gspread.exceptions.WorksheetNotFound:
-                pass
+            # Get all existing worksheets first
+            print(f"📋 Fetching all worksheets...")
+            all_worksheets = spreadsheet.worksheets()
+            worksheet_names = [ws.title for ws in all_worksheets]
+            print(f"📋 Existing worksheets: {worksheet_names}")
             
-            # If Login sheet doesn't exist, try to create it
+            # Check if Login sheet exists
+            if TrainerAuthManager.LOGIN_SHEET_NAME in worksheet_names:
+                print(f"✅ Login sheet exists, fetching it...")
+                login_sheet = spreadsheet.worksheet(TrainerAuthManager.LOGIN_SHEET_NAME)
+                print(f"✅ Login sheet retrieved successfully")
+                return login_sheet
+            
+            # If Login sheet doesn't exist, create it
+            print(f"⚠️  Login sheet doesn't exist, creating new one...")
             try:
-                print(f"⚠️  Login sheet not found, creating...")
                 login_sheet = spreadsheet.add_worksheet(
                     title=TrainerAuthManager.LOGIN_SHEET_NAME,
                     rows=1000,
                     cols=4
                 )
+                print(f"✅ Login sheet created")
+                
+                # Add headers
+                print(f"📝 Adding headers...")
                 login_sheet.append_row(TrainerAuthManager.HEADERS)
-                print(f"✅ Login sheet created with headers")
+                print(f"✅ Headers added")
+                
                 return login_sheet
             except Exception as create_error:
-                # If creation fails (e.g., sheet already exists due to race condition),
-                # try to get it again
-                print(f"⚠️  Could not create sheet: {create_error}, trying to fetch...")
-                try:
-                    login_sheet = spreadsheet.worksheet(TrainerAuthManager.LOGIN_SHEET_NAME)
-                    print(f"✅ Login sheet found on retry")
-                    return login_sheet
-                except:
-                    raise create_error
+                error_msg = str(create_error)
+                print(f"❌ Error creating sheet: {error_msg}")
+                
+                # If it's a "sheet already exists" error, retry fetching
+                if "already exists" in error_msg or "ALREADY_EXISTS" in error_msg:
+                    print(f"📍 Sheet exists but wasn't in list, retrying fetch...")
+                    time.sleep(1)  # Wait a moment
+                    
+                    # Refresh worksheet list
+                    all_worksheets = spreadsheet.worksheets()
+                    worksheet_names = [ws.title for ws in all_worksheets]
+                    print(f"📋 Updated worksheets: {worksheet_names}")
+                    
+                    if TrainerAuthManager.LOGIN_SHEET_NAME in worksheet_names:
+                        login_sheet = spreadsheet.worksheet(TrainerAuthManager.LOGIN_SHEET_NAME)
+                        print(f"✅ Login sheet retrieved on retry")
+                        return login_sheet
+                
+                raise create_error
             
         except Exception as e:
-            print(f"❌ Error getting login sheet: {e}")
+            print(f"❌ Error in get_login_sheet: {type(e).__name__}: {e}")
+            import traceback
+            traceback.print_exc()
             raise
     
     @staticmethod
     def register_trainer(trainer_name, password):
         """Register a new trainer"""
         try:
-            print(f"\n📝 REGISTERING TRAINER: {trainer_name}")
+            print(f"\n{'='*60}")
+            print(f"📝 REGISTERING TRAINER: {trainer_name}")
+            print(f"{'='*60}")
             
             # Validate input
             if not trainer_name or not password:
+                print(f"❌ Missing fields")
                 return {
                     'success': False,
                     'message': 'Trainer name and password are required'
                 }
             
             if len(password) < 6:
+                print(f"❌ Password too short")
                 return {
                     'success': False,
                     'message': 'Password must be at least 6 characters'
                 }
             
             # Get login sheet
+            print(f"🔗 Getting login sheet...")
             login_sheet = TrainerAuthManager.get_login_sheet()
+            print(f"✅ Got login sheet")
             
             # Check if trainer already exists
-            all_trainers = login_sheet.get_all_records()
-            for trainer in all_trainers:
-                if trainer.get('Trainer Name', '').lower() == trainer_name.lower():
-                    return {
-                        'success': False,
-                        'message': 'Trainer name already registered'
-                    }
+            print(f"🔍 Checking for existing trainer: {trainer_name}")
+            try:
+                all_trainers = login_sheet.get_all_records()
+                print(f"📋 Found {len(all_trainers)} existing trainers")
+                
+                for trainer in all_trainers:
+                    existing_name = trainer.get('Trainer Name', '').lower()
+                    print(f"  - Checking against: {existing_name}")
+                    if existing_name == trainer_name.lower():
+                        print(f"❌ Trainer already exists: {trainer_name}")
+                        return {
+                            'success': False,
+                            'message': 'Trainer name already registered'
+                        }
+            except Exception as check_error:
+                print(f"⚠️  Error checking existing trainers: {check_error}")
+                # Continue anyway - better to allow duplicate than fail
             
             # Hash password
+            print(f"🔐 Hashing password...")
             pwd_hash, salt = TrainerAuthManager.hash_password(password)
+            print(f"✅ Password hashed")
             
             # Add to sheet
+            print(f"📝 Preparing row data...")
             from datetime import datetime
             row = [
                 trainer_name,
@@ -125,20 +167,29 @@ class TrainerAuthManager:
                 salt,
                 datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             ]
+            print(f"📝 Row data: {row[0]}, [hash], [salt], {row[3]}")
             
+            print(f"📤 Appending to sheet...")
             login_sheet.append_row(row)
+            print(f"✅ Appended to sheet")
             
-            print(f"✅ Trainer registered: {trainer_name}")
+            print(f"✅ TRAINER REGISTERED SUCCESSFULLY: {trainer_name}")
+            print(f"{'='*60}\n")
             return {
                 'success': True,
                 'message': 'Registration successful'
             }
             
         except Exception as e:
-            print(f"❌ Registration error: {e}")
+            error_type = type(e).__name__
+            error_msg = str(e)
+            print(f"❌ ERROR in register_trainer ({error_type}): {error_msg}")
+            import traceback
+            traceback.print_exc()
+            print(f"{'='*60}\n")
             return {
                 'success': False,
-                'message': f'Registration failed: {str(e)}'
+                'message': f'Registration failed: {error_msg}'
             }
     
     @staticmethod
