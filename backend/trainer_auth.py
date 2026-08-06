@@ -207,11 +207,19 @@ class TrainerAuthManager:
             
             # Find trainer by name
             print(f"📋 Fetching all trainers...")
-            all_trainers = login_sheet.get_all_records()
-            print(f"📋 Total trainers in sheet: {len(all_trainers)}")
-            print(f"📋 Raw trainer records:")
-            for idx, record in enumerate(all_trainers):
-                print(f"     [{idx}] {record}")
+            try:
+                print(f"   Calling get_all_records()...")
+                all_trainers = login_sheet.get_all_records()
+                print(f"✅ get_all_records() returned successfully")
+                print(f"📋 Total trainers in sheet: {len(all_trainers)}")
+                print(f"📋 Raw trainer records:")
+                for idx, record in enumerate(all_trainers):
+                    print(f"     [{idx}] {record}")
+            except Exception as record_error:
+                print(f"❌ ERROR getting records: {type(record_error).__name__}: {record_error}")
+                import traceback
+                traceback.print_exc()
+                raise
             
             trainer = None
             for idx, t in enumerate(all_trainers):
