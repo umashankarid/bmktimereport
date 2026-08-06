@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en-GB">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,6 +7,12 @@
     <meta name="description" content="Badminton Activity Logger - Track and log your coaching activities">
     <title>Badminton Activity Logger</title>
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json">
+    <style>
+        /* Force 24-hour time format globally */
+        input[type="time"] {
+            /* Most browsers respect en-GB locale for 24-hour format */
+        }
+    </style>
 </head>
 <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
