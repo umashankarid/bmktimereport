@@ -176,12 +176,6 @@ function ReportsPage({ currentTrainer = null }) {
               📈 Activity Types
             </button>
             <button
-              className={`nav-item ${activeReport === 'training-hours' ? 'active' : ''}`}
-              onClick={() => setActiveReport('training-hours')}
-            >
-              ⏱️ Training Hours
-            </button>
-            <button
               className={`nav-item ${activeReport === 'monthly-trends' ? 'active' : ''}`}
               onClick={() => setActiveReport('monthly-trends')}
             >
@@ -202,9 +196,6 @@ function ReportsPage({ currentTrainer = null }) {
                 )}
                 {activeReport === 'activity-distribution' && (
                   <ActivityDistributionReport data={reports['activity-distribution']} trainerFilter={isTrainerView ? currentTrainer?.name : selectedTrainer} selectedMonth={selectedMonth} />
-                )}
-                {activeReport === 'training-hours' && (
-                  <TrainingHoursReport data={reports['training-hours']} trainerFilter={isTrainerView ? currentTrainer?.name : selectedTrainer} selectedMonth={selectedMonth} />
                 )}
                 {activeReport === 'monthly-trends' && (
                   <MonthlyTrendsReport data={reports['monthly-trends']} trainerFilter={isTrainerView ? currentTrainer?.name : selectedTrainer} selectedMonth={selectedMonth} />
@@ -234,6 +225,14 @@ function formatMonthShort(monthStr) {
   const [year, month] = monthStr.split('-');
   const date = new Date(`${monthStr}-01`);
   return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+}
+
+// Helper function to convert decimal hours to HH:MM format
+function formatHoursToHHMM(decimalHours) {
+  if (typeof decimalHours !== 'number' || decimalHours < 0) return '0:00';
+  const hours = Math.floor(decimalHours);
+  const minutes = Math.round((decimalHours - hours) * 60);
+  return `${hours}:${String(minutes).padStart(2, '0')}`;
 }
 
 // Activity Summary Report Component
@@ -273,7 +272,7 @@ function ActivitySummaryReport({ data, trainerFilter, selectedMonth }) {
             </div>
             <div className="stat-row">
               <span className="stat-label">Total Hours:</span>
-              <span className="stat-value">{typeof summary.total_hours === 'number' ? summary.total_hours.toFixed(2) : 0}h</span>
+              <span className="stat-value">{formatHoursToHHMM(summary.total_hours)}</span>
             </div>
             <div className="stat-row">
               <span className="stat-label">Active Days:</span>
@@ -306,20 +305,20 @@ function ActivitySummaryReport({ data, trainerFilter, selectedMonth }) {
               <div className="quota-stats">
                 <div className="quota-stat-row">
                   <span className="quota-label">Hours Worked:</span>
-                  <span className="quota-value">{typeof summary.current_month_hours === 'number' ? summary.current_month_hours.toFixed(1) : 0}h / {summary.current_month_quota}h</span>
+                  <span className="quota-value">{formatHoursToHHMM(summary.current_month_hours)} / {formatHoursToHHMM(summary.current_month_quota)}</span>
                 </div>
                 
                 {summary.current_month_hours_left > 0 && (
                   <div className="quota-stat-row hours-left">
                     <span className="quota-label">⏳ Hours Left:</span>
-                    <span className="quota-value-green">{typeof summary.current_month_hours_left === 'number' ? summary.current_month_hours_left.toFixed(1) : 0}h</span>
+                    <span className="quota-value-green">{formatHoursToHHMM(summary.current_month_hours_left)}</span>
                   </div>
                 )}
                 
                 {summary.current_month_overtime > 0 && (
                   <div className="quota-stat-row overtime">
                     <span className="quota-label">⚠️ Overtime:</span>
-                    <span className="quota-value-red">{typeof summary.current_month_overtime === 'number' ? summary.current_month_overtime.toFixed(1) : 0}h</span>
+                    <span className="quota-value-red">{formatHoursToHHMM(summary.current_month_overtime)}</span>
                   </div>
                 )}
               </div>
@@ -381,183 +380,12 @@ function ActivityDistributionReport({ data, trainerFilter, selectedMonth }) {
             
             <div className="distribution-stats">
               <span>📊 Count: {item.count}</span>
-              <span>⏱️ Hours: {item.hours}</span>
+              <span>⏱️ Time: {formatHoursToHHMM(item.hours)}</span>
               <span>👥 Trainers: {item.unique_trainers}</span>
             </div>
           </div>
         ))}
       </div>
-    </div>
-  );
-}
-
-// Training Hours Report Component
-function TrainingHoursReport({ data, trainerFilter, selectedMonth }) {
-  if (!data) {
-    return <div className="empty-report">Loading report data...</div>;
-  }
-
-  if (!data.data || data.data.length === 0) {
-    return <div className="empty-report">No data available</div>;
-  }
-
-  // Filter data if this is a trainer view
-  let filteredData = data.data;
-  if (trainerFilter) {
-    filteredData = data.data.filter(item => 
-      item.trainer.toLowerCase() === trainerFilter.toLowerCase()
-    );
-  }
-
-  if (filteredData.length === 0) {
-    return <div className="empty-report">No data available for {trainerFilter}</div>;
-  }
-
-  // Calculate summary for filtered data
-  let summary = {};
-  
-  if (trainerFilter && filteredData.length === 1) {
-    // For single trainer, use their data
-    const trainerData = filteredData[0];
-    summary = {
-      total_hours: trainerData.total_hours || 0,
-      total_sessions: trainerData.total_sessions || 0,
-      avg_hours_per_trainer: trainerData.avg_session_hours || 0,
-      total_overtime: trainerData.total_overtime || 0,
-      monthly_quota: data.summary?.monthly_quota || 180
-    };
-  } else {
-    // For all trainers (admin view)
-    summary = data.summary || {
-      total_hours: 0,
-      total_sessions: 0,
-      avg_hours_per_trainer: 0,
-      total_overtime: 0,
-      monthly_quota: 180
-    };
-  }
-
-  return (
-    <div className="report-section">
-      <h2>Training Hours Report {trainerFilter && `(${trainerFilter})`} {selectedMonth && `(${formatMonthShort(selectedMonth)})`}</h2>
-      
-      <div className="summary-stats">
-        <div className="stat-box">
-          <h4>Total Hours</h4>
-          <p className="stat-number">{typeof summary.total_hours === 'number' ? summary.total_hours.toFixed(2) : 0}h</p>
-        </div>
-        <div className="stat-box">
-          <h4>Total Sessions</h4>
-          <p className="stat-number">{summary.total_sessions || 0}</p>
-        </div>
-        <div className="stat-box">
-          <h4>{trainerFilter ? 'Avg Hours/Session' : 'Avg Hours/Trainer'}</h4>
-          <p className="stat-number">
-            {typeof summary.avg_hours_per_trainer === 'number' ? summary.avg_hours_per_trainer.toFixed(2) : 0}h
-          </p>
-        </div>
-        <div className="stat-box stat-box-warning">
-          <h4>Total Overtime</h4>
-          <p className="stat-number stat-overtime">
-            {typeof summary.total_overtime === 'number' ? summary.total_overtime.toFixed(2) : 0}h
-          </p>
-        </div>
-      </div>
-
-      <div className="hours-table">
-        <table>
-          <thead>
-            <tr>
-              <th>Trainer</th>
-              <th>Total Hours</th>
-              <th>Sessions</th>
-              <th>Avg/Session</th>
-              <th>Overtime</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredData.map((item, idx) => (
-              <tr key={idx}>
-                <td className="trainer-name">{item.trainer}</td>
-                <td className="hours-cell">{typeof item.total_hours === 'number' ? item.total_hours.toFixed(2) : 0}h</td>
-                <td className="sessions-cell">{item.total_sessions || 0}</td>
-                <td className="avg-cell">{typeof item.avg_session_hours === 'number' ? item.avg_session_hours.toFixed(2) : 0}h</td>
-                <td className={`overtime-cell ${item.total_overtime > 0 ? 'overtime' : ''}`}>
-                  {typeof item.total_overtime === 'number' ? item.total_overtime.toFixed(2) : 0}h
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Monthly Breakdown */}
-      {filteredData.length > 0 && filteredData[0].monthly_breakdown && (
-        <div className="monthly-breakdown">
-          <h3>📅 Monthly Breakdown & Quota Tracking</h3>
-          <div className="monthly-quota-grid">
-            {filteredData.map((trainer, idx) => (
-              <div key={idx} className="trainer-monthly-section">
-                <h4>{trainer.trainer}</h4>
-                <div className="months-list">
-                  {trainer.monthly_breakdown.map((month, mIdx) => (
-                    <div key={mIdx} className="month-quota-card">
-                      <div className="month-header">
-                        <span className="month-name">{formatMonthShort(month.month)}</span>
-                        <span className={`quota-badge ${month.overtime > 0 ? 'overtime' : 'normal'}`}>
-                          {month.overtime > 0 ? `+${month.overtime.toFixed(1)}h OT` : month.hours_left > 0 ? `${month.hours_left.toFixed(1)}h Left` : 'Met'}
-                        </span>
-                      </div>
-                      
-                      <div className="quota-bar-container">
-                        <div className="quota-bar">
-                          <div 
-                            className="quota-bar-fill"
-                            style={{ width: `${Math.min(month.percentage, 100)}%` }}
-                          >
-                            {month.percentage > 10 && <span>{month.percentage}%</span>}
-                          </div>
-                          {month.percentage > 100 && (
-                            <div 
-                              className="quota-bar-overtime"
-                              style={{ width: `${Math.min(month.percentage - 100, 100)}%` }}
-                            >
-                              {(month.percentage - 100) > 10 && <span>+{(month.percentage - 100).toFixed(0)}%</span>}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      
-                      <div className="quota-details">
-                        <div className="detail-row">
-                          <span className="detail-label">Hours:</span>
-                          <span className="detail-value">{month.hours.toFixed(1)}h / {month.quota}h</span>
-                        </div>
-                        <div className="detail-row">
-                          <span className="detail-label">Sessions:</span>
-                          <span className="detail-value">{month.sessions}</span>
-                        </div>
-                        {month.hours_left > 0 && (
-                          <div className="detail-row hours-left">
-                            <span className="detail-label">Hours Left:</span>
-                            <span className="detail-value">{month.hours_left.toFixed(1)}h</span>
-                          </div>
-                        )}
-                        {month.overtime > 0 && (
-                          <div className="detail-row overtime-row">
-                            <span className="detail-label">Overtime:</span>
-                            <span className="detail-value overtime">{month.overtime.toFixed(1)}h</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -587,8 +415,8 @@ function MonthlyTrendsReport({ data, trainerFilter, selectedMonth }) {
                 <span className="metric-value">{month.total_count || 0}</span>
               </div>
               <div className="metric">
-                <span className="metric-label">Hours:</span>
-                <span className="metric-value">{typeof month.total_hours === 'number' ? month.total_hours.toFixed(2) : 0}h</span>
+                <span className="metric-label">Time:</span>
+                <span className="metric-value">{formatHoursToHHMM(month.total_hours)}</span>
               </div>
             </div>
 
@@ -597,7 +425,7 @@ function MonthlyTrendsReport({ data, trainerFilter, selectedMonth }) {
                 <div key={i} className="activity-item">
                   <span className="activity-name">{act.activity_type}</span>
                   <span className="activity-stat">
-                    {act.count} ({typeof act.hours === 'number' ? act.hours.toFixed(2) : 0}h)
+                    {act.count} ({formatHoursToHHMM(act.hours)})
                   </span>
                 </div>
               ))}
