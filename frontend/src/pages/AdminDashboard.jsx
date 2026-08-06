@@ -193,9 +193,9 @@ function AdminDashboard({ onLogout }) {
 
         {activeTab === 'activities' && (
           <div className="activities-section">
-            <h2>All Activities</h2>
+            <h2>Activity History</h2>
             <p className="section-description">
-              View all logged activities across all trainers.
+              View and manage all logged activities across all trainers.
             </p>
 
             <div className="activities-placeholder">
