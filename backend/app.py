@@ -178,6 +178,51 @@ def create_app():
                 'message': str(e)
             }), 500
     
+    # Get activities by trainer and date
+    @app.route('/api/activities/<trainer_name>/<date>', methods=['GET'])
+    def get_activities_by_date(trainer_name, date):
+        """Get all activities for a trainer on a specific date"""
+        try:
+            sheets = get_sheets_manager()
+            result = sheets.get_activities_by_trainer_and_date(trainer_name, date)
+            
+            return jsonify(result), 200 if result['success'] else 400
+        except Exception as e:
+            return jsonify({
+                'error': 'Failed to retrieve activities',
+                'message': str(e)
+            }), 500
+    
+    # Update activity
+    @app.route('/api/activities/<trainer_name>/<date>/<activity_name>', methods=['PUT'])
+    def update_activity(trainer_name, date, activity_name):
+        """Update an existing activity"""
+        try:
+            data = request.get_json()
+            
+            if not data:
+                return jsonify({
+                    'success': False,
+                    'message': 'No data provided'
+                }), 400
+            
+            sheets = get_sheets_manager()
+            result = sheets.update_activity(
+                trainer_name=trainer_name,
+                date=date,
+                activity_name=activity_name,
+                start_time=data.get('start_time'),
+                end_time=data.get('end_time'),
+                note=data.get('note', '')
+            )
+            
+            return jsonify(result), 200 if result['success'] else 400
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'message': f'Error updating activity: {str(e)}'
+            }), 500
+    
     # Error handlers
     @app.errorhandler(404)
     def not_found(error):
