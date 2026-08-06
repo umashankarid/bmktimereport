@@ -226,10 +226,9 @@ def register_auth_routes(app, sheets_manager):
                 }), 400
             
             trainer_name = data.get('trainer_name')
-            email = data.get('email')
             password = data.get('password')
             
-            result = TrainerAuthManager.register_trainer(trainer_name, email, password)
+            result = TrainerAuthManager.register_trainer(trainer_name, password)
             
             return jsonify(result), 200 if result['success'] else 400
             
@@ -241,7 +240,7 @@ def register_auth_routes(app, sheets_manager):
 
     @app.route('/api/auth/trainer/login', methods=['POST'])
     def trainer_login():
-        """Login trainer with email and password"""
+        """Login trainer with name and password"""
         try:
             from trainer_auth import TrainerAuthManager
             import jwt
@@ -254,16 +253,15 @@ def register_auth_routes(app, sheets_manager):
                     'message': 'No data provided'
                 }), 400
             
-            email = data.get('email')
+            trainer_name = data.get('trainer_name')
             password = data.get('password')
             
-            result = TrainerAuthManager.login_trainer(email, password)
+            result = TrainerAuthManager.login_trainer(trainer_name, password)
             
             if result['success']:
                 # Generate JWT token
                 trainer_data = {
-                    'email': email,
-                    'name': result['trainer']['name'],
+                    'name': trainer_name,
                     'type': 'trainer'
                 }
                 token = generate_token(trainer_data)

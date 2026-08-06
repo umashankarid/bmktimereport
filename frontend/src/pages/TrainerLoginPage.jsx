@@ -5,7 +5,6 @@ import '../styles/TrainerLoginPage.css';
 function TrainerLoginPage({ onLoginSuccess }) {
   const [isLogin, setIsLogin] = useState(true);
   const [trainerName, setTrainerName] = useState('');
-  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -18,8 +17,8 @@ function TrainerLoginPage({ onLoginSuccess }) {
     setLoading(true);
 
     // Validation
-    if (!trainerName || !email || !password) {
-      setError('All fields are required');
+    if (!trainerName || !password) {
+      setError('Trainer name and password are required');
       setLoading(false);
       return;
     }
@@ -36,14 +35,13 @@ function TrainerLoginPage({ onLoginSuccess }) {
       return;
     }
 
-    const result = await trainerAuthService.register(trainerName, email, password);
+    const result = await trainerAuthService.register(trainerName, password);
 
     if (result.success) {
       setError('');
       alert('Registration successful! Please login with your credentials.');
       setIsLogin(true);
       setTrainerName('');
-      setEmail('');
       setPassword('');
       setConfirmPassword('');
     } else {
@@ -58,13 +56,13 @@ function TrainerLoginPage({ onLoginSuccess }) {
     setError('');
     setLoading(true);
 
-    if (!email || !password) {
-      setError('Email and password are required');
+    if (!trainerName || !password) {
+      setError('Trainer name and password are required');
       setLoading(false);
       return;
     }
 
-    const result = await trainerAuthService.login(email, password);
+    const result = await trainerAuthService.login(trainerName, password);
 
     if (result.success) {
       setError('');
@@ -117,12 +115,12 @@ function TrainerLoginPage({ onLoginSuccess }) {
             <h2>Trainer Login</h2>
 
             <div className="form-group">
-              <label>Email</label>
+              <label>Trainer Name</label>
               <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="your@email.com"
+                type="text"
+                value={trainerName}
+                onChange={(e) => setTrainerName(e.target.value)}
+                placeholder="Enter your trainer name"
                 disabled={loading}
               />
             </div>
@@ -162,18 +160,7 @@ function TrainerLoginPage({ onLoginSuccess }) {
                 type="text"
                 value={trainerName}
                 onChange={(e) => setTrainerName(e.target.value)}
-                placeholder="Your name"
-                disabled={loading}
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Email</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="your@email.com"
+                placeholder="Your trainer name"
                 disabled={loading}
               />
             </div>

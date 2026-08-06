@@ -8,7 +8,7 @@ class TrainerAuthManager:
     """Manages trainer authentication with Google Sheets"""
     
     LOGIN_SHEET_NAME = 'Login'
-    HEADERS = ['Trainer Name', 'Email', 'Password Hash', 'Salt', 'Created Date']
+    HEADERS = ['Trainer Name', 'Password Hash', 'Salt', 'Created Date']
     
     @staticmethod
     def hash_password(password, salt=None):
@@ -63,7 +63,7 @@ class TrainerAuthManager:
                 login_sheet = spreadsheet.add_worksheet(
                     title=TrainerAuthManager.LOGIN_SHEET_NAME,
                     rows=1000,
-                    cols=5
+                    cols=4
                 )
                 login_sheet.append_row(TrainerAuthManager.HEADERS)
                 print(f"✅ Login sheet created with headers")
@@ -84,16 +84,16 @@ class TrainerAuthManager:
             raise
     
     @staticmethod
-    def register_trainer(trainer_name, email, password):
+    def register_trainer(trainer_name, password):
         """Register a new trainer"""
         try:
             print(f"\n📝 REGISTERING TRAINER: {trainer_name}")
             
             # Validate input
-            if not trainer_name or not email or not password:
+            if not trainer_name or not password:
                 return {
                     'success': False,
-                    'message': 'All fields are required'
+                    'message': 'Trainer name and password are required'
                 }
             
             if len(password) < 6:
@@ -108,10 +108,10 @@ class TrainerAuthManager:
             # Check if trainer already exists
             all_trainers = login_sheet.get_all_records()
             for trainer in all_trainers:
-                if trainer.get('Email', '').lower() == email.lower():
+                if trainer.get('Trainer Name', '').lower() == trainer_name.lower():
                     return {
                         'success': False,
-                        'message': 'Email already registered'
+                        'message': 'Trainer name already registered'
                     }
             
             # Hash password
@@ -121,7 +121,6 @@ class TrainerAuthManager:
             from datetime import datetime
             row = [
                 trainer_name,
-                email,
                 pwd_hash,
                 salt,
                 datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -129,7 +128,7 @@ class TrainerAuthManager:
             
             login_sheet.append_row(row)
             
-            print(f"✅ Trainer registered: {trainer_name} ({email})")
+            print(f"✅ Trainer registered: {trainer_name}")
             return {
                 'success': True,
                 'message': 'Registration successful'
@@ -143,27 +142,27 @@ class TrainerAuthManager:
             }
     
     @staticmethod
-    def login_trainer(email, password):
-        """Authenticate trainer with email and password"""
+    def login_trainer(trainer_name, password):
+        """Authenticate trainer with name and password"""
         try:
-            print(f"\n🔐 LOGIN ATTEMPT: {email}")
+            print(f"\n🔐 LOGIN ATTEMPT: {trainer_name}")
             
             # Get login sheet
             login_sheet = TrainerAuthManager.get_login_sheet()
             
-            # Find trainer by email
+            # Find trainer by name
             all_trainers = login_sheet.get_all_records()
             trainer = None
             for t in all_trainers:
-                if t.get('Email', '').lower() == email.lower():
+                if t.get('Trainer Name', '').lower() == trainer_name.lower():
                     trainer = t
                     break
             
             if not trainer:
-                print(f"❌ Trainer not found: {email}")
+                print(f"❌ Trainer not found: {trainer_name}")
                 return {
                     'success': False,
-                    'message': 'Email or password incorrect'
+                    'message': 'Trainer name or password incorrect'
                 }
             
             # Verify password
@@ -171,19 +170,18 @@ class TrainerAuthManager:
             salt = trainer.get('Salt')
             
             if not TrainerAuthManager.verify_password(stored_hash, password, salt):
-                print(f"❌ Invalid password for: {email}")
+                print(f"❌ Invalid password for: {trainer_name}")
                 return {
                     'success': False,
-                    'message': 'Email or password incorrect'
+                    'message': 'Trainer name or password incorrect'
                 }
             
-            print(f"✅ Trainer authenticated: {trainer.get('Trainer Name')}")
+            print(f"✅ Trainer authenticated: {trainer_name}")
             return {
                 'success': True,
                 'message': 'Login successful',
                 'trainer': {
                     'name': trainer.get('Trainer Name'),
-                    'email': trainer.get('Email')
                 }
             }
             

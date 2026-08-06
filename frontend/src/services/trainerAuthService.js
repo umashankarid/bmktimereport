@@ -14,11 +14,10 @@ class TrainerAuthService {
   /**
    * Register a new trainer
    */
-  async register(trainerName, email, password) {
+  async register(trainerName, password) {
     try {
       const response = await axios.post(`${API_URL}/auth/trainer/register`, {
         trainer_name: trainerName,
-        email,
         password
       });
 
@@ -37,10 +36,10 @@ class TrainerAuthService {
   /**
    * Login trainer
    */
-  async login(email, password) {
+  async login(trainerName, password) {
     try {
       const response = await axios.post(`${API_URL}/auth/trainer/login`, {
-        email,
+        trainer_name: trainerName,
         password
       });
 
