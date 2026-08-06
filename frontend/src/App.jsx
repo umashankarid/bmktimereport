@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import './App.css';
-import LoginPage from './pages/LoginPage';
+import TrainerLoginPage from './pages/TrainerLoginPage';
 import ActivityForm from './components/ActivityForm';
 import ActivityList from './components/ActivityList';
-import authService from './services/authService';
+import trainerAuthService from './services/trainerAuthService';
 
 const API_URL = process.env.REACT_APP_API_URL || '/api';
 
@@ -23,10 +23,10 @@ function App() {
   }, []);
 
   const checkAuthStatus = async () => {
-    if (authService.isAuthenticated()) {
+    if (trainerAuthService.isAuthenticated()) {
       // Skip setup - go directly to ready state
       setAuthState('ready');
-      setAdmin(authService.getAdmin());
+      setAdmin(trainerAuthService.getTrainer());
       fetchTrainers();
       fetchActivities();
     } else {
@@ -104,7 +104,7 @@ function App() {
   };
 
   const handleLogout = () => {
-    authService.logout();
+    trainerAuthService.logout();
     setAdmin(null);
     setAuthState('login');
     setActivities([]);
@@ -123,7 +123,7 @@ function App() {
   }
 
   if (authState === 'login') {
-    return <LoginPage onLoginSuccess={handleLoginSuccess} />;
+    return <TrainerLoginPage onLoginSuccess={handleLoginSuccess} />;
   }
 
   // Main app - ready state (skip setup page)

@@ -210,3 +210,75 @@ def register_auth_routes(app, sheets_manager):
             'success': True,
             'message': 'Logged out successfully'
         }), 200
+
+    @app.route('/api/auth/trainer/register', methods=['POST'])
+    def trainer_register():
+        """Register a new trainer"""
+        try:
+            from trainer_auth import TrainerAuthManager
+            
+            data = request.get_json()
+            
+            if not data:
+                return jsonify({
+                    'success': False,
+                    'message': 'No data provided'
+                }), 400
+            
+            trainer_name = data.get('trainer_name')
+            email = data.get('email')
+            password = data.get('password')
+            
+            result = TrainerAuthManager.register_trainer(trainer_name, email, password)
+            
+            return jsonify(result), 200 if result['success'] else 400
+            
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'message': f'Registration error: {str(e)}'
+            }), 500
+
+    @app.route('/api/auth/trainer/login', methods=['POST'])
+    def trainer_login():
+        """Login trainer with email and password"""
+        try:
+            from trainer_auth import TrainerAuthManager
+            import jwt
+            
+            data = request.get_json()
+            
+            if not data:
+                return jsonify({
+                    'success': False,
+                    'message': 'No data provided'
+                }), 400
+            
+            email = data.get('email')
+            password = data.get('password')
+            
+            result = TrainerAuthManager.login_trainer(email, password)
+            
+            if result['success']:
+                # Generate JWT token
+                trainer_data = {
+                    'email': email,
+                    'name': result['trainer']['name'],
+                    'type': 'trainer'
+                }
+                token = generate_token(trainer_data)
+                
+                return jsonify({
+                    'success': True,
+                    'token': token,
+                    'trainer': result['trainer'],
+                    'message': result['message']
+                }), 200
+            else:
+                return jsonify(result), 401
+            
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'message': f'Login error: {str(e)}'
+            }), 500
