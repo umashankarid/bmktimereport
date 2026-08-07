@@ -1096,18 +1096,41 @@ class GoogleSheetsManager:
                 if record.get('Trainer Name', '').lower() == trainer_name.lower():
                     rows_to_delete.append(idx + 2)  # +2 because rows are 1-indexed and header is row 1
 
-            # Delete rows in reverse order to maintain indices
-            for row_idx in sorted(rows_to_delete, reverse=True):
-                print(f"  Deleting row {row_idx}")
-                sheet.delete_row(row_idx)
+            if not rows_to_delete:
+                print(f"⚠️  No activities found for trainer: {trainer_name}")
+            else:
+                # Delete rows in reverse order to maintain indices
+                # Batch delete with delays to avoid rate limiting
+                import time
+                sorted_rows = sorted(rows_to_delete, reverse=True)
+                batch_size = 5
+                
+                for i in range(0, len(sorted_rows), batch_size):
+                    batch = sorted_rows[i:i+batch_size]
+                    for row_idx in batch:
+                        print(f"  Deleting row {row_idx}")
+                        sheet.delete_row(row_idx)
+                    
+                    # Add delay between batches to avoid rate limiting
+                    if i + batch_size < len(sorted_rows):
+                        time.sleep(0.5)
+                
+                print(f"✅ Deleted {len(rows_to_delete)} activities for trainer {trainer_name}")
 
             # Also delete from Login sheet if it exists
             try:
-                from backend.trainer_auth import TrainerAuthManager
+                try:
+                    from trainer_auth import TrainerAuthManager
+                except ImportError:
+                    from backend.trainer_auth import TrainerAuthManager
+                
                 auth_manager = TrainerAuthManager()
                 auth_manager.delete_trainer(trainer_name)
+                print(f"✅ Deleted from Login sheet")
             except Exception as e:
                 print(f"⚠️  Warning: Could not delete from Login sheet: {e}")
+                import traceback
+                traceback.print_exc()
 
             return {
                 'success': True,
