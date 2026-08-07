@@ -738,7 +738,7 @@ class GoogleSheetsManager:
                 
                 return {
                     'success': True,
-                    'data': [{'name': t, 'email': '', 'phone': ''} for t in sorted(list(trainers))]
+                    'data': [{'name': t, 'email': '', 'phone': '', 'trainer_type': 'Assistant Trainer'} for t in sorted(list(trainers))]
                 }
 
         except Exception as e:

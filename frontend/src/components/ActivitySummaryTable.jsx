@@ -13,7 +13,7 @@ function ActivitySummaryTable({ trainerFilter, selectedMonth, trainerType = 'Ass
 
   useEffect(() => {
     fetchActivities();
-  }, [trainerFilter, selectedMonth]);
+  }, [trainerFilter, selectedMonth, trainerType];
 
   const fetchActivities = async () => {
     try {
@@ -27,6 +27,10 @@ function ActivitySummaryTable({ trainerFilter, selectedMonth, trainerType = 'Ass
       }
       if (selectedMonth) {
         params.append('month', selectedMonth);
+      }
+      // Pass trainer_type to filter by trainer type
+      if (trainerType) {
+        params.append('trainer_type', trainerType);
       }
 
       const query = params.toString();

@@ -234,6 +234,7 @@ def create_app():
         try:
             trainer_filter = request.args.get('trainer')
             month_filter = request.args.get('month')
+            trainer_type_filter = request.args.get('trainer_type')
             
             sheets = get_sheets_manager()
             
@@ -244,7 +245,18 @@ def create_app():
             
             activities = activities_result['data']
             
-            # Apply filters
+            # If trainer_type filter is set, get trainers of that type and filter activities
+            if trainer_type_filter:
+                try:
+                    # Get all trainers with their types
+                    trainers_result = sheets.get_trainers_details()
+                    if trainers_result['success']:
+                        trainers_of_type = [t['name'] for t in trainers_result['data'] if t.get('trainer_type') == trainer_type_filter]
+                        activities = [a for a in activities if a.get('Trainer Name', '') in trainers_of_type]
+                except:
+                    pass  # If trainer details fetch fails, continue without filtering
+            
+            # Apply trainer filter
             if trainer_filter:
                 activities = [a for a in activities if a.get('Trainer Name', '').lower() == trainer_filter.lower()]
             
