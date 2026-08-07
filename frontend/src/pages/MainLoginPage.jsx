@@ -2,47 +2,60 @@ import React, { useState } from 'react';
 import '../styles/MainLoginPage.css';
 
 function MainLoginPage({ onAdminLogin, onTrainerLogin }) {
-  const [view, setView] = useState('choice'); // choice, admin, trainer
-  const [adminUsername, setAdminUsername] = useState('');
-  const [adminPassword, setAdminPassword] = useState('');
-  const [trainerName, setTrainerName] = useState('');
-  const [trainerPassword, setTrainerPassword] = useState('');
   const [isRegistering, setIsRegistering] = useState(false);
-  const [trainerConfirmPassword, setTrainerConfirmPassword] = useState('');
-  const [trainerEmail, setTrainerEmail] = useState('');
-  const [trainerPhone, setTrainerPhone] = useState('');
-  const [trainerType, setTrainerType] = useState('Assistant Trainer'); // Default to Assistant
-  const [trainerPhoto, setTrainerPhoto] = useState(null);
-  const [trainerPhotoPreview, setTrainerPhotoPreview] = useState(null);
+  
+  // Login fields
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  
+  // Registration fields
+  const [regUsername, setRegUsername] = useState('');
+  const [regEmail, setRegEmail] = useState('');
+  const [regPhone, setRegPhone] = useState('');
+  const [regPassword, setRegPassword] = useState('');
+  const [regConfirmPassword, setRegConfirmPassword] = useState('');
+  const [trainerType, setTrainerType] = useState('Assistant Trainer');
+  const [regPhoto, setRegPhoto] = useState(null);
+  const [regPhotoPreview, setRegPhotoPreview] = useState(null);
+  
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
-  const handleAdminLogin = async (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
-    if (!adminUsername || !adminPassword) {
+    if (!username || !password) {
       setError('Username and password are required');
       setLoading(false);
       return;
     }
 
-    const result = await onAdminLogin(adminUsername, adminPassword);
-    if (!result.success) {
-      setError(result.message);
+    // Check if admin
+    if (username.toLowerCase() === 'admin') {
+      const result = await onAdminLogin(username, password);
+      if (!result.success) {
+        setError(result.message);
+      }
+    } else {
+      // Trainer login
+      const result = await onTrainerLogin(username, password, false);
+      if (!result.success) {
+        setError(result.message);
+      }
     }
     setLoading(false);
   };
 
-  const handleTrainerRegister = async (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
     // Validation
-    if (!trainerName || !trainerPassword || !trainerEmail || !trainerPhone) {
+    if (!regUsername || !regPassword || !regEmail || !regPhone) {
       setError('Trainer name, password, email, and phone are required');
       setLoading(false);
       return;
@@ -50,26 +63,26 @@ function MainLoginPage({ onAdminLogin, onTrainerLogin }) {
 
     // Validate email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(trainerEmail)) {
+    if (!emailRegex.test(regEmail)) {
       setError('Please enter a valid email address');
       setLoading(false);
       return;
     }
 
-    // Validate phone (basic validation)
-    if (trainerPhone.length < 10) {
+    // Validate phone
+    if (regPhone.length < 10) {
       setError('Phone number must be at least 10 digits');
       setLoading(false);
       return;
     }
 
-    if (trainerPassword !== trainerConfirmPassword) {
+    if (regPassword !== regConfirmPassword) {
       setError('Passwords do not match');
       setLoading(false);
       return;
     }
 
-    if (trainerPassword.length < 6) {
+    if (regPassword.length < 6) {
       setError('Password must be at least 6 characters');
       setLoading(false);
       return;
@@ -77,13 +90,13 @@ function MainLoginPage({ onAdminLogin, onTrainerLogin }) {
 
     // Create FormData for file upload
     const formData = new FormData();
-    formData.append('trainer_name', trainerName);
-    formData.append('password', trainerPassword);
-    formData.append('email', trainerEmail);
-    formData.append('phone', trainerPhone);
+    formData.append('trainer_name', regUsername);
+    formData.append('password', regPassword);
+    formData.append('email', regEmail);
+    formData.append('phone', regPhone);
     formData.append('trainer_type', trainerType);
-    if (trainerPhoto) {
-      formData.append('photo', trainerPhoto);
+    if (regPhoto) {
+      formData.append('photo', regPhoto);
     }
 
     try {
@@ -98,14 +111,14 @@ function MainLoginPage({ onAdminLogin, onTrainerLogin }) {
         setError('');
         alert('Registration successful! Please login with your credentials.');
         setIsRegistering(false);
-        setTrainerName('');
-        setTrainerPassword('');
-        setTrainerConfirmPassword('');
-        setTrainerEmail('');
-        setTrainerPhone('');
+        setRegUsername('');
+        setRegPassword('');
+        setRegConfirmPassword('');
+        setRegEmail('');
+        setRegPhone('');
         setTrainerType('Assistant Trainer');
-        setTrainerPhoto(null);
-        setTrainerPhotoPreview(null);
+        setRegPhoto(null);
+        setRegPhotoPreview(null);
       } else {
         setError(result.message);
       }
@@ -131,43 +144,15 @@ function MainLoginPage({ onAdminLogin, onTrainerLogin }) {
         return;
       }
 
-      setTrainerPhoto(file);
+      setRegPhoto(file);
       
       // Create preview
       const reader = new FileReader();
       reader.onload = (e) => {
-        setTrainerPhotoPreview(e.target.result);
+        setRegPhotoPreview(e.target.result);
       };
       reader.readAsDataURL(file);
     }
-  };
-
-  const handleTrainerLogin = async (e) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-    
-    console.log(`[TRAINER LOGIN] Starting login for: ${trainerName}`);
-
-    if (!trainerName || !trainerPassword) {
-      console.log(`[TRAINER LOGIN] Validation failed - empty fields`);
-      setError('Trainer name and password are required');
-      setLoading(false);
-      return;
-    }
-
-    console.log(`[TRAINER LOGIN] Calling onTrainerLogin...`);
-    const result = await onTrainerLogin(trainerName, trainerPassword, false);
-    
-    console.log(`[TRAINER LOGIN] Result:`, result);
-    
-    if (!result.success) {
-      console.log(`[TRAINER LOGIN] Login failed: ${result.message}`);
-      setError(result.message);
-    } else {
-      console.log(`[TRAINER LOGIN] Login successful!`);
-    }
-    setLoading(false);
   };
 
   return (
@@ -175,7 +160,7 @@ function MainLoginPage({ onAdminLogin, onTrainerLogin }) {
       <div className="main-login-card">
         <div className="login-header">
           <h1>🏸 BMK KOMET ACTIVITIES</h1>
-          <p>Login to your account</p>
+          <p>{isRegistering ? 'Create your account' : 'Login to your account'}</p>
         </div>
 
         {error && (
@@ -185,55 +170,17 @@ function MainLoginPage({ onAdminLogin, onTrainerLogin }) {
           </div>
         )}
 
-        {view === 'choice' && (
-          <div className="login-choice">
-            <button
-              className="choice-btn admin-btn"
-              onClick={() => {
-                setView('admin');
-                setError('');
-              }}
-            >
-              <span className="choice-icon">👨‍💼</span>
-              <span className="choice-text">Admin Login</span>
-            </button>
-            <button
-              className="choice-btn trainer-btn"
-              onClick={() => {
-                setView('trainer');
-                setError('');
-              }}
-            >
-              <span className="choice-icon">🏸</span>
-              <span className="choice-text">Trainer Login</span>
-            </button>
-          </div>
-        )}
-
-        {view === 'admin' && (
-          <form onSubmit={handleAdminLogin} className="login-form">
-            <button
-              type="button"
-              className="back-btn"
-              onClick={() => {
-                setView('choice');
-                setError('');
-                setAdminUsername('');
-                setAdminPassword('');
-              }}
-            >
-              ← Back
-            </button>
-
-            <h2>Admin Login</h2>
+        {!isRegistering ? (
+          <form onSubmit={handleLogin} className="login-form">
+            <h2>Login</h2>
 
             <div className="form-group">
               <label>Username</label>
               <input
                 type="text"
-                value={adminUsername}
-                onChange={(e) => setAdminUsername(e.target.value)}
-                placeholder="Enter admin username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Enter your username (or 'admin')"
                 disabled={loading}
               />
             </div>
@@ -243,9 +190,9 @@ function MainLoginPage({ onAdminLogin, onTrainerLogin }) {
               <div className="password-input-group">
                 <input
                   type={showPassword ? 'text' : 'password'}
-                  value={adminPassword}
-                  onChange={(e) => setAdminPassword(e.target.value)}
-                  placeholder="Enter admin password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter your password"
                   disabled={loading}
                 />
                 <button
@@ -262,213 +209,123 @@ function MainLoginPage({ onAdminLogin, onTrainerLogin }) {
             <button type="submit" className="btn btn-primary" disabled={loading}>
               {loading ? 'Logging in...' : 'Login'}
             </button>
-          </form>
-        )}
 
-        {view === 'trainer' && (
-          <div>
-            <div className="trainer-toggle">
-              <button
-                className={`toggle-btn ${!isRegistering ? 'active' : ''}`}
-                onClick={() => {
-                  setIsRegistering(false);
-                  setError('');
-                }}
-              >
-                Login
-              </button>
-              <button
-                className={`toggle-btn ${isRegistering ? 'active' : ''}`}
-                onClick={() => {
-                  setIsRegistering(true);
-                  setError('');
-                }}
-              >
-                Register
-              </button>
+            <div className="form-toggle">
+              <p>Don't have an account? <button type="button" className="link-btn" onClick={() => { setIsRegistering(true); setError(''); }}>Register as Trainer</button></p>
+            </div>
+          </form>
+        ) : (
+          <form onSubmit={handleRegister} className="login-form">
+            <h2>Register as Trainer</h2>
+
+            <div className="form-group">
+              <label>Trainer Name</label>
+              <input
+                type="text"
+                value={regUsername}
+                onChange={(e) => setRegUsername(e.target.value)}
+                placeholder="Your trainer name"
+                disabled={loading}
+              />
             </div>
 
-            {!isRegistering ? (
-              <form onSubmit={handleTrainerLogin} className="login-form">
+            <div className="form-group">
+              <label>Email</label>
+              <input
+                type="email"
+                value={regEmail}
+                onChange={(e) => setRegEmail(e.target.value)}
+                placeholder="your.email@example.com"
+                disabled={loading}
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Phone Number</label>
+              <input
+                type="tel"
+                value={regPhone}
+                onChange={(e) => setRegPhone(e.target.value)}
+                placeholder="Your phone number"
+                disabled={loading}
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Trainer Type</label>
+              <select
+                value={trainerType}
+                onChange={(e) => setTrainerType(e.target.value)}
+                disabled={loading}
+                className="trainer-type-select"
+              >
+                <option value="Assistant Trainer">Assistant Trainer</option>
+                <option value="Junior Trainer">Junior Trainer</option>
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label>Password</label>
+              <div className="password-input-group">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={regPassword}
+                  onChange={(e) => setRegPassword(e.target.value)}
+                  placeholder="At least 6 characters"
+                  disabled={loading}
+                />
                 <button
                   type="button"
-                  className="back-btn"
-                  onClick={() => {
-                    setView('choice');
-                    setError('');
-                    setTrainerName('');
-                    setTrainerPassword('');
-                  }}
+                  className="password-toggle"
+                  onClick={() => setShowPassword(!showPassword)}
+                  disabled={loading}
                 >
-                  ← Back
+                  {showPassword ? '👁️' : '👁️‍🗨️'}
                 </button>
+              </div>
+            </div>
 
-                <h2>Trainer Login</h2>
+            <div className="form-group">
+              <label>Confirm Password</label>
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={regConfirmPassword}
+                onChange={(e) => setRegConfirmPassword(e.target.value)}
+                placeholder="Confirm your password"
+                disabled={loading}
+              />
+            </div>
 
-                <div className="form-group">
-                  <label>Trainer Name</label>
-                  <input
-                    type="text"
-                    value={trainerName}
-                    onChange={(e) => setTrainerName(e.target.value)}
-                    placeholder="Enter your trainer name"
-                    disabled={loading}
-                  />
+            <div className="form-group">
+              <label>Profile Photo (Optional)</label>
+              <div className="photo-upload-group">
+                <input
+                  type="file"
+                  id="photo-input"
+                  accept="image/*"
+                  onChange={handlePhotoChange}
+                  disabled={loading}
+                  className="photo-input"
+                />
+                <label htmlFor="photo-input" className="photo-input-label">
+                  {regPhotoPreview ? '✓ Photo selected' : '📷 Choose photo (max 5MB)'}
+                </label>
+              </div>
+              {regPhotoPreview && (
+                <div className="photo-preview">
+                  <img src={regPhotoPreview} alt="Preview" />
                 </div>
+              )}
+            </div>
 
-                <div className="form-group">
-                  <label>Password</label>
-                  <div className="password-input-group">
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      value={trainerPassword}
-                      onChange={(e) => setTrainerPassword(e.target.value)}
-                      placeholder="Enter your password"
-                      disabled={loading}
-                    />
-                    <button
-                      type="button"
-                      className="password-toggle"
-                      onClick={() => setShowPassword(!showPassword)}
-                      disabled={loading}
-                    >
-                      {showPassword ? '👁️' : '👁️‍🗨️'}
-                    </button>
-                  </div>
-                </div>
+            <button type="submit" className="btn btn-primary" disabled={loading}>
+              {loading ? 'Registering...' : 'Register'}
+            </button>
 
-                <button type="submit" className="btn btn-primary" disabled={loading}>
-                  {loading ? 'Logging in...' : 'Login'}
-                </button>
-              </form>
-            ) : (
-              <form onSubmit={handleTrainerRegister} className="login-form">
-                <button
-                  type="button"
-                  className="back-btn"
-                  onClick={() => {
-                    setView('choice');
-                    setError('');
-                    setTrainerName('');
-                    setTrainerPassword('');
-                    setTrainerConfirmPassword('');
-                    setTrainerEmail('');
-                    setTrainerPhone('');
-                    setTrainerPhoto(null);
-                    setTrainerPhotoPreview(null);
-                  }}
-                >
-                  ← Back
-                </button>
-
-                <h2>Trainer Registration</h2>
-
-                <div className="form-group">
-                  <label>Trainer Name</label>
-                  <input
-                    type="text"
-                    value={trainerName}
-                    onChange={(e) => setTrainerName(e.target.value)}
-                    placeholder="Your trainer name"
-                    disabled={loading}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Email</label>
-                  <input
-                    type="email"
-                    value={trainerEmail}
-                    onChange={(e) => setTrainerEmail(e.target.value)}
-                    placeholder="your.email@example.com"
-                    disabled={loading}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Phone Number</label>
-                  <input
-                    type="tel"
-                    value={trainerPhone}
-                    onChange={(e) => setTrainerPhone(e.target.value)}
-                    placeholder="Your phone number"
-                    disabled={loading}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Trainer Type</label>
-                  <select
-                    value={trainerType}
-                    onChange={(e) => setTrainerType(e.target.value)}
-                    disabled={loading}
-                    className="trainer-type-select"
-                  >
-                    <option value="Assistant Trainer">Assistant Trainer</option>
-                    <option value="Junior Trainer">Junior Trainer</option>
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label>Password</label>
-                  <div className="password-input-group">
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      value={trainerPassword}
-                      onChange={(e) => setTrainerPassword(e.target.value)}
-                      placeholder="At least 6 characters"
-                      disabled={loading}
-                    />
-                    <button
-                      type="button"
-                      className="password-toggle"
-                      onClick={() => setShowPassword(!showPassword)}
-                      disabled={loading}
-                    >
-                      {showPassword ? '👁️' : '👁️‍🗨️'}
-                    </button>
-                  </div>
-                </div>
-
-                <div className="form-group">
-                  <label>Confirm Password</label>
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    value={trainerConfirmPassword}
-                    onChange={(e) => setTrainerConfirmPassword(e.target.value)}
-                    placeholder="Confirm your password"
-                    disabled={loading}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Profile Photo (Optional)</label>
-                  <div className="photo-upload-group">
-                    <input
-                      type="file"
-                      id="photo-input"
-                      accept="image/*"
-                      onChange={handlePhotoChange}
-                      disabled={loading}
-                      className="photo-input"
-                    />
-                    <label htmlFor="photo-input" className="photo-input-label">
-                      {trainerPhotoPreview ? '✓ Photo selected' : '📷 Choose photo (max 5MB)'}
-                    </label>
-                  </div>
-                  {trainerPhotoPreview && (
-                    <div className="photo-preview">
-                      <img src={trainerPhotoPreview} alt="Preview" />
-                    </div>
-                  )}
-                </div>
-
-                <button type="submit" className="btn btn-primary" disabled={loading}>
-                  {loading ? 'Registering...' : 'Register'}
-                </button>
-              </form>
-            )}
-          </div>
+            <div className="form-toggle">
+              <p>Already have an account? <button type="button" className="link-btn" onClick={() => { setIsRegistering(false); setError(''); }}>Login here</button></p>
+            </div>
+          </form>
         )}
 
         <div className="login-footer">
