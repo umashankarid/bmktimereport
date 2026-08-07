@@ -689,6 +689,8 @@ class GoogleSheetsManager:
             
             # Real mode: delete from Google Sheets
             sheet = self.get_sheet()
+            
+            # Use batch delete approach - only read once
             all_rows = sheet.get_all_records()
             
             # Find rows to delete (in reverse order to maintain indices)
@@ -708,14 +710,36 @@ class GoogleSheetsManager:
                 if should_delete:
                     rows_to_delete.append(idx + 2)  # +2 for 1-indexed and header
             
+            if not rows_to_delete:
+                return {
+                    'success': True,
+                    'deleted_count': 0,
+                    'message': 'No activities matched the filter criteria'
+                }
+            
             # Delete in reverse order to maintain indices
+            # Batch delete to reduce API calls: delete up to 5 rows at a time
             deleted_count = 0
-            for row_idx in sorted(rows_to_delete, reverse=True):
-                try:
-                    sheet.delete_rows(row_idx)
-                    deleted_count += 1
-                except Exception as e:
-                    print(f"⚠️  Failed to delete row {row_idx}: {e}")
+            sorted_rows = sorted(rows_to_delete, reverse=True)
+            
+            # Delete in batches to avoid rate limiting
+            import time
+            batch_size = 5
+            for i in range(0, len(sorted_rows), batch_size):
+                batch = sorted_rows[i:i+batch_size]
+                for row_idx in batch:
+                    try:
+                        sheet.delete_rows(row_idx)
+                        deleted_count += 1
+                        print(f"✅ Deleted row {row_idx} ({deleted_count}/{len(sorted_rows)})")
+                    except Exception as e:
+                        print(f"⚠️  Failed to delete row {row_idx}: {e}")
+                        import traceback
+                        traceback.print_exc()
+                
+                # Add small delay between batches to avoid rate limiting
+                if i + batch_size < len(sorted_rows):
+                    time.sleep(0.5)
             
             if deleted_count > 0:
                 self._invalidate_cache()
