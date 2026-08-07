@@ -100,6 +100,12 @@ main.container {
   margin-bottom: 2rem;
 }
 
+.calendar-section {
+  display: flex;
+  justify-content: center;
+  padding: 2rem 0;
+}
+
 /* Tabs Navigation */
 .tabs {
   display: flex;

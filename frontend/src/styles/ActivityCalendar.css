@@ -1,0 +1,254 @@
+/* Activity Calendar Styles */
+.activity-calendar {
+  background: white;
+  border-radius: 8px;
+  padding: 2rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  max-width: 600px;
+}
+
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  gap: 1rem;
+}
+
+.calendar-header h3 {
+  margin: 0;
+  color: #333;
+  font-size: 1.5rem;
+  min-width: 150px;
+  text-align: center;
+}
+
+.calendar-month-year {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+}
+
+.btn-nav {
+  background: #667eea;
+  color: white;
+  border: none;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
+}
+
+.btn-nav:hover {
+  background: #5568d3;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.btn-today {
+  background: #4caf50;
+  color: white;
+  border: none;
+  padding: 0.5rem 0.75rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.btn-today:hover {
+  background: #45a049;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(76, 175, 80, 0.3);
+}
+
+.calendar-loading {
+  text-align: center;
+  padding: 2rem;
+  color: #666;
+  font-style: italic;
+}
+
+.calendar-grid {
+  margin-bottom: 1.5rem;
+}
+
+.calendar-day-names {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.day-name {
+  text-align: center;
+  font-weight: 600;
+  color: #667eea;
+  font-size: 0.9rem;
+  padding: 0.5rem 0;
+  border-bottom: 2px solid #667eea;
+}
+
+.calendar-days {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.calendar-week {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.5rem;
+}
+
+.calendar-day {
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #e0e0e0;
+  border-radius: 6px;
+  background: #fafafa;
+  transition: all 0.2s ease;
+  position: relative;
+  cursor: default;
+}
+
+.calendar-day.empty {
+  background: transparent;
+  border: none;
+  cursor: default;
+}
+
+.calendar-day.active {
+  background: white;
+  border: 2px solid #ddd;
+  font-weight: 500;
+}
+
+.calendar-day.active:hover {
+  border-color: #667eea;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15);
+  background: #f9f9ff;
+}
+
+.calendar-day.today {
+  background: #e3f2fd;
+  border: 2px solid #2196f3;
+  font-weight: 600;
+}
+
+.calendar-day.today .day-number {
+  color: #2196f3;
+}
+
+.calendar-day.has-activity {
+  background: #e8f5e9;
+  border: 2px solid #4caf50;
+}
+
+.calendar-day.has-activity.today {
+  background: linear-gradient(135deg, #e3f2fd 50%, #e8f5e9 50%);
+  border: 2px solid #4caf50;
+}
+
+.day-number {
+  color: #333;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.activity-indicator {
+  position: absolute;
+  bottom: 4px;
+  color: #4caf50;
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.calendar-day.today .activity-indicator {
+  color: #2196f3;
+}
+
+.calendar-legend {
+  display: flex;
+  gap: 2rem;
+  justify-content: center;
+  padding-top: 1rem;
+  border-top: 1px solid #e0e0e0;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.legend-color {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  border: 2px solid;
+}
+
+.legend-color.today {
+  background: #e3f2fd;
+  border-color: #2196f3;
+}
+
+.legend-color.has-activity {
+  background: #e8f5e9;
+  border-color: #4caf50;
+}
+
+@media (max-width: 600px) {
+  .activity-calendar {
+    padding: 1.5rem;
+  }
+
+  .calendar-header {
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+  }
+
+  .calendar-header h3 {
+    min-width: 120px;
+    font-size: 1.25rem;
+  }
+
+  .btn-nav {
+    padding: 0.6rem 0.8rem;
+    font-size: 0.85rem;
+  }
+
+  .btn-today {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.8rem;
+  }
+
+  .day-number {
+    font-size: 0.95rem;
+  }
+
+  .activity-indicator {
+    font-size: 1rem;
+  }
+
+  .calendar-legend {
+    gap: 1rem;
+    font-size: 0.85rem;
+  }
+
+  .legend-color {
+    width: 20px;
+    height: 20px;
+  }
+}
