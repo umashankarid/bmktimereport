@@ -87,53 +87,47 @@
 
 .btn {
   border: none;
-  padding: 0.6rem 1.2rem;
-  border-radius: 6px;
+  background: none;
+  padding: 0.4rem 0.8rem;
   cursor: pointer;
   font-size: 0.9rem;
   font-weight: 500;
   transition: all 0.2s ease;
   white-space: nowrap;
-  min-width: 100px;
   text-align: center;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.4rem;
+  color: #333;
 }
 
 .btn-edit {
-  background: #667eea;
-  color: white;
+  color: #333;
 }
 
 .btn-edit:hover {
-  background: #5568d3;
-  transform: translateY(-2px);
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+  color: #667eea;
+  text-decoration: underline;
 }
 
 .btn-edit:disabled {
   opacity: 0.6;
   cursor: not-allowed;
-  transform: none;
 }
 
 .btn-delete {
-  background: #ff6b6b;
-  color: white;
+  color: #ff6b6b;
 }
 
 .btn-delete:hover {
-  background: #ee5a52;
-  transform: translateY(-2px);
-  box-shadow: 0 2px 8px rgba(255, 107, 107, 0.3);
+  color: #d32f2f;
+  text-decoration: underline;
 }
 
 .btn-delete:disabled {
   opacity: 0.6;
   cursor: not-allowed;
-  transform: none;
 }
 
 /* Modal Styles */
