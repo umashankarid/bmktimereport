@@ -418,56 +418,60 @@ function ActivityForm({ onSubmit, trainers, currentTrainer }) {
                 📝 Today's Activities ({existingActivities.length} session{existingActivities.length !== 1 ? 's' : ''})
               </label>
               <div className="existing-activities-list">
-                {Object.entries(editingActivities).map(([activityType, activityData]) => (
-                  <div key={activityType} className="existing-activity-card">
-                    <div className="activity-header">
-                      <h4>{activityType}</h4>
-                      <button
-                        type="button"
-                        className="btn-delete"
-                        onClick={() => handleDeleteActivity(activityType)}
-                        title="Delete all time slots for this activity"
-                      >
-                        🗑️
-                      </button>
-                    </div>
-                    
-                    {/* Display all time slots for this activity */}
-                    <div className="activity-time-slots-edit">
-                      {activityData.time_slots && activityData.time_slots.map((slot, slotIdx) => (
-                        <div key={slotIdx} className="activity-times-edit">
-                          <div className="time-input">
-                            <TimeInput
-                              label="Start"
-                              value={slot.start_time || ''}
-                              onChange={(e) =>
-                                handleExistingActivityChange(activityType, 'start_time', slotIdx, e.target.value)
-                              }
-                            />
-                          </div>
+                {console.log('DEBUG: editingActivities keys:', Object.keys(editingActivities))}
+                {Object.keys(editingActivities).length === 0 ? (
+                  <div>No grouped activities found</div>
+                ) : (
+                  Object.entries(editingActivities).map(([activityType, activityData]) => (
+                    <div key={activityType} className="existing-activity-card">
+                      <div className="activity-header">
+                        <h4>{activityType}</h4>
+                        <button
+                          type="button"
+                          className="btn-delete"
+                          onClick={() => handleDeleteActivity(activityType)}
+                          title="Delete all time slots for this activity"
+                        >
+                          🗑️
+                        </button>
+                      </div>
+                      
+                      {/* Display all time slots for this activity */}
+                      <div className="activity-time-slots-edit">
+                        {activityData.time_slots && activityData.time_slots.map((slot, slotIdx) => (
+                          <div key={slotIdx} className="activity-times-edit">
+                            <div className="time-input">
+                              <TimeInput
+                                label="Start"
+                                value={slot.start_time || ''}
+                                onChange={(e) =>
+                                  handleExistingActivityChange(activityType, 'start_time', slotIdx, e.target.value)
+                                }
+                              />
+                            </div>
 
-                          <div className="time-input">
-                            <TimeInput
-                              label="End"
-                              value={slot.end_time || ''}
-                              onChange={(e) =>
-                                handleExistingActivityChange(activityType, 'end_time', slotIdx, e.target.value)
-                              }
-                            />
-                          </div>
+                            <div className="time-input">
+                              <TimeInput
+                                label="End"
+                                value={slot.end_time || ''}
+                                onChange={(e) =>
+                                  handleExistingActivityChange(activityType, 'end_time', slotIdx, e.target.value)
+                                }
+                              />
+                            </div>
 
-                          {activityData.time_slots.length > 1 && (
-                            <button
-                              type="button"
-                              className="btn-remove-time-slot"
-                              onClick={() => handleRemoveTimeSlot(activityType, slotIdx)}
-                              title="Remove this time slot"
-                            >
-                              ✕
-                            </button>
-                          )}
-                        </div>
-                      ))}
+                            {activityData.time_slots.length > 1 && (
+                              <button
+                                type="button"
+                                className="btn-remove-time-slot"
+                                onClick={() => handleRemoveTimeSlot(activityType, slotIdx)}
+                                title="Remove this time slot"
+                              >
+                                ✕
+                              </button>
+                            )}
+                          </div>
+                        ))}
                     </div>
                     
                     <button
