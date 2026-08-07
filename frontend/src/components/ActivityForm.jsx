@@ -579,7 +579,8 @@ function ActivityForm({ onSubmit, trainers, currentTrainer }) {
           {/* Summary of selected activities */}
           {Object.keys(selectedActivities).length > 0 && (
             <div className="selected-summary">
-              <h3>New Activities ({Object.keys(selectedActivities).length}):</h3>
+              <h3>⚠️ New Activities to Save ({Object.keys(selectedActivities).length}):</h3>
+              <p className="summary-info">These activities have not been saved yet. Please click the "Save Activities" button below to save them.</p>
               <ul>
                 {Object.entries(selectedActivities).map(([activity, slots]) => (
                   <li key={activity}>

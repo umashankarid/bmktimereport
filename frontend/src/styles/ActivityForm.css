@@ -471,6 +471,16 @@
   font-size: 0.95rem;
 }
 
+.summary-info {
+  color: #0096c7;
+  font-size: 0.85rem;
+  margin: 0 0 0.75rem 0;
+  padding: 0.5rem;
+  background: #e0f7ff;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
 .selected-summary ul {
   margin: 0;
   padding-left: 1.5rem;
