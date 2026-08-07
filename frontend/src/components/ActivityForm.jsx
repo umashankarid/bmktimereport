@@ -323,6 +323,17 @@ function ActivityForm({ onSubmit, trainers, currentTrainer }) {
           setError(`Please set start and end times for all time slots of ${activityName}`);
           return;
         }
+        
+        // Validate end time is after start time
+        const [startH, startM] = slots[i].start_time.split(':').map(Number);
+        const [endH, endM] = slots[i].end_time.split(':').map(Number);
+        const startMinutes = startH * 60 + startM;
+        const endMinutes = endH * 60 + endM;
+        
+        if (endMinutes <= startMinutes) {
+          setError(`Invalid time range for ${activityName} (Slot ${i + 1}): End time must be after start time`);
+          return;
+        }
       }
     }
 
