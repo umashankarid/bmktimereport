@@ -11,6 +11,7 @@ function MainLoginPage({ onAdminLogin, onTrainerLogin }) {
   const [trainerConfirmPassword, setTrainerConfirmPassword] = useState('');
   const [trainerEmail, setTrainerEmail] = useState('');
   const [trainerPhone, setTrainerPhone] = useState('');
+  const [trainerType, setTrainerType] = useState('Senior Trainer'); // Default to Senior
   const [trainerPhoto, setTrainerPhoto] = useState(null);
   const [trainerPhotoPreview, setTrainerPhotoPreview] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -80,6 +81,7 @@ function MainLoginPage({ onAdminLogin, onTrainerLogin }) {
     formData.append('password', trainerPassword);
     formData.append('email', trainerEmail);
     formData.append('phone', trainerPhone);
+    formData.append('trainer_type', trainerType);
     if (trainerPhoto) {
       formData.append('photo', trainerPhoto);
     }
@@ -101,6 +103,7 @@ function MainLoginPage({ onAdminLogin, onTrainerLogin }) {
         setTrainerConfirmPassword('');
         setTrainerEmail('');
         setTrainerPhone('');
+        setTrainerType('Senior Trainer');
         setTrainerPhoto(null);
         setTrainerPhotoPreview(null);
       } else {
@@ -391,6 +394,20 @@ function MainLoginPage({ onAdminLogin, onTrainerLogin }) {
                     placeholder="Your phone number"
                     disabled={loading}
                   />
+                </div>
+
+                <div className="form-group">
+                  <label>Trainer Type</label>
+                  <select
+                    value={trainerType}
+                    onChange={(e) => setTrainerType(e.target.value)}
+                    disabled={loading}
+                    className="trainer-type-select"
+                  >
+                    <option value="Assistant Trainer">Assistant Trainer</option>
+                    <option value="Junior Trainer">Junior Trainer</option>
+                    <option value="Senior Trainer">Senior Trainer</option>
+                  </select>
                 </div>
 
                 <div className="form-group">

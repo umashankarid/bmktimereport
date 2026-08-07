@@ -23,7 +23,7 @@ function ActivityForm({ onSubmit, trainers, currentTrainer }) {
   // Fetch activity list on mount
   useEffect(() => {
     fetchActivityList();
-  }, []);
+  }, [currentTrainer?.type]);
 
   // Update trainer name if it changes
   useEffect(() => {
@@ -49,8 +49,15 @@ function ActivityForm({ onSubmit, trainers, currentTrainer }) {
       const result = await response.json();
       
       if (result.success && result.data) {
-        setActivities(result.data);
-        console.log('📋 Loaded activities:', result.data);
+        // Filter activities based on trainer type
+        let filteredActivities = result.data;
+        if (currentTrainer?.type === 'Junior Trainer') {
+          // Junior Trainers only see "Training"
+          filteredActivities = result.data.filter(activity => activity === 'Training');
+        }
+        
+        setActivities(filteredActivities);
+        console.log('📋 Loaded activities:', filteredActivities, 'Trainer type:', currentTrainer?.type);
       } else {
         console.error('Failed to load activities:', result.message);
         setError('Failed to load activities');

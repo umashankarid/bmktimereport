@@ -12,7 +12,7 @@ class TrainerAuthManager:
     """Manages trainer authentication with Google Sheets"""
     
     LOGIN_SHEET_NAME = 'Login'
-    HEADERS = ['Trainer Name', 'Email', 'Phone', 'Photo', 'Password Hash', 'Salt', 'Created Date']
+    HEADERS = ['Trainer Name', 'Email', 'Phone', 'Trainer Type', 'Photo', 'Password Hash', 'Salt', 'Created Date']
     
     @staticmethod
     def hash_password(password, salt=None):
@@ -137,7 +137,7 @@ class TrainerAuthManager:
             raise
     
     @staticmethod
-    def register_trainer(trainer_name, password, email='', phone='', photo_base64=None):
+    def register_trainer(trainer_name, password, email='', phone='', photo_base64=None, trainer_type='Senior Trainer'):
         """Register a new trainer"""
         try:
             print(f"\n{'='*60}")
@@ -195,12 +195,13 @@ class TrainerAuthManager:
                 trainer_name,
                 email,
                 phone,
+                trainer_type,
                 photo_base64 or '',
                 pwd_hash,
                 salt,
                 datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             ]
-            print(f"📝 Row data: {row[0]}, {row[1]}, {row[2]}, {'[photo base64]' if photo_base64 else '[no photo]'}, [hash], [salt], {row[6]}")
+            print(f"📝 Row data: {row[0]}, {row[1]}, {row[2]}, {row[3]}, {'[photo base64]' if photo_base64 else '[no photo]'}, [hash], [salt], {row[7]}")
             
             print(f"📤 Appending to sheet...")
             login_sheet.append_row(row)
@@ -317,6 +318,7 @@ class TrainerAuthManager:
                 'message': 'Login successful',
                 'trainer': {
                     'name': trainer.get('Trainer Name'),
+                    'type': trainer.get('Trainer Type', 'Senior Trainer')
                 }
             }
             

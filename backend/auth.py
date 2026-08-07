@@ -218,7 +218,7 @@ def register_auth_routes(app, sheets_manager):
 
     @app.route('/api/auth/trainer/register', methods=['POST'])
     def trainer_register():
-        """Register a new trainer with email, phone, and optional photo (stored as base64)"""
+        """Register a new trainer with email, phone, trainer type, and optional photo (stored as base64)"""
         try:
             from trainer_auth import TrainerAuthManager
             import base64
@@ -228,6 +228,7 @@ def register_auth_routes(app, sheets_manager):
             password = request.form.get('password')
             email = request.form.get('email')
             phone = request.form.get('phone')
+            trainer_type = request.form.get('trainer_type', 'Senior Trainer')  # Default to Senior
             photo_file = request.files.get('photo')
             
             # Validation
@@ -256,8 +257,8 @@ def register_auth_routes(app, sheets_manager):
                         'message': f'Failed to process photo: {str(e)}'
                     }), 400
             
-            # Register trainer with base64 photo
-            result = TrainerAuthManager.register_trainer(trainer_name, password, email, phone, photo_base64)
+            # Register trainer with base64 photo and trainer type
+            result = TrainerAuthManager.register_trainer(trainer_name, password, email, phone, photo_base64, trainer_type)
             
             return jsonify(result), 200 if result['success'] else 400
             
