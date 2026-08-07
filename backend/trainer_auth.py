@@ -331,3 +331,67 @@ class TrainerAuthManager:
                 'success': False,
                 'message': f'Login failed: {error_msg}'
             }
+
+    @staticmethod
+    def update_trainer_info(old_name, new_name, email='', phone=''):
+        """Update trainer information in Login sheet"""
+        try:
+            login_sheet = TrainerAuthManager.get_login_sheet()
+            all_trainers = login_sheet.get_all_records()
+            
+            # Find trainer row
+            for idx, trainer in enumerate(all_trainers):
+                if trainer.get('Trainer Name', '').lower() == old_name.lower():
+                    row_idx = idx + 2  # +1 for header, +1 for 1-indexed
+                    
+                    # Update the cells
+                    login_sheet.update_cell(row_idx, 1, new_name)  # Column A: Trainer Name
+                    if email:
+                        login_sheet.update_cell(row_idx, 2, email)  # Column B: Email
+                    if phone:
+                        login_sheet.update_cell(row_idx, 3, phone)  # Column C: Phone
+                    
+                    return {
+                        'success': True,
+                        'message': f'Updated trainer {old_name} to {new_name}'
+                    }
+            
+            return {
+                'success': False,
+                'message': f'Trainer {old_name} not found'
+            }
+        
+        except Exception as e:
+            return {
+                'success': False,
+                'message': f'Error updating trainer: {str(e)}'
+            }
+
+    @staticmethod
+    def delete_trainer(trainer_name):
+        """Delete trainer from Login sheet"""
+        try:
+            login_sheet = TrainerAuthManager.get_login_sheet()
+            all_trainers = login_sheet.get_all_records()
+            
+            # Find trainer row
+            for idx, trainer in enumerate(all_trainers):
+                if trainer.get('Trainer Name', '').lower() == trainer_name.lower():
+                    row_idx = idx + 2  # +1 for header, +1 for 1-indexed
+                    login_sheet.delete_row(row_idx)
+                    
+                    return {
+                        'success': True,
+                        'message': f'Deleted trainer {trainer_name}'
+                    }
+            
+            return {
+                'success': False,
+                'message': f'Trainer {trainer_name} not found'
+            }
+        
+        except Exception as e:
+            return {
+                'success': False,
+                'message': f'Error deleting trainer: {str(e)}'
+            }

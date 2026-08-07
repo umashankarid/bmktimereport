@@ -9,14 +9,14 @@ function TimeInput({ value = '', onChange, label = '', required = false }) {
     if (value && value.includes(':')) {
       return value.split(':')[0];
     }
-    return '';
+    return ''; // Default to empty, user must select
   });
 
   const [minutes, setMinutes] = useState(() => {
     if (value && value.includes(':')) {
       return value.split(':')[1];
     }
-    return '';
+    return '00'; // Default to 00 minutes
   });
 
   // Generate hour options (01-24, but 00 is also valid)
@@ -29,14 +29,9 @@ function TimeInput({ value = '', onChange, label = '', required = false }) {
     return options;
   }, []);
 
-  // Generate minute options (00-59)
+  // Generate minute options (00, 15, 30, 45 only)
   const minuteOptions = useMemo(() => {
-    const options = [];
-    for (let i = 0; i < 60; i++) {
-      const minute = i.toString().padStart(2, '0');
-      options.push(minute);
-    }
-    return options;
+    return ['00', '15', '30', '45'];
   }, []);
 
   const handleHourChange = (e) => {
@@ -83,7 +78,7 @@ function TimeInput({ value = '', onChange, label = '', required = false }) {
           onChange={handleMinuteChange}
           required={required}
         >
-          <option value="">MM</option>
+          <option value="00">00 (default)</option>
           {minuteOptions.map((minute) => (
             <option key={minute} value={minute}>
               {minute}

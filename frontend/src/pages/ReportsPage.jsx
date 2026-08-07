@@ -16,6 +16,14 @@ function ReportsPage({ currentTrainer = null }) {
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   });
 
+  // Date filter for specific day
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const now = new Date();
+    return now.toISOString().split('T')[0];
+  });
+  
+  const [useDateFilter, setUseDateFilter] = useState(false);
+
   useEffect(() => {
     // Check if this is a trainer view (not admin)
     if (currentTrainer && currentTrainer.name) {
@@ -47,7 +55,7 @@ function ReportsPage({ currentTrainer = null }) {
 
   useEffect(() => {
     fetchReports();
-  }, [activeReport, selectedTrainer, selectedMonth]);
+  }, [activeReport, selectedTrainer, selectedMonth, selectedDate, useDateFilter];
 
   const fetchReports = async () => {
     setLoading(true);
@@ -69,7 +77,10 @@ function ReportsPage({ currentTrainer = null }) {
       if (selectedTrainer) {
         params.append('trainer', selectedTrainer);
       }
-      if (selectedMonth) {
+      // Use date filter if enabled, otherwise use month filter
+      if (useDateFilter && selectedDate) {
+        params.append('date', selectedDate);
+      } else if (selectedMonth) {
         params.append('month', selectedMonth);
       }
       
@@ -152,15 +163,41 @@ function ReportsPage({ currentTrainer = null }) {
               </div>
               
               <div className="filter-group">
-                <label htmlFor="month-filter">Month & Year:</label>
-                <input
-                  type="month"
-                  id="month-filter"
-                  value={selectedMonth}
-                  onChange={(e) => setSelectedMonth(e.target.value)}
-                  className="filter-input"
-                />
+                <label htmlFor="date-toggle" className="date-toggle-label">
+                  <input
+                    type="checkbox"
+                    id="date-toggle"
+                    checked={useDateFilter}
+                    onChange={(e) => setUseDateFilter(e.target.checked)}
+                    className="date-toggle-checkbox"
+                  />
+                  <span>Filter by specific date</span>
+                </label>
               </div>
+
+              {useDateFilter ? (
+                <div className="filter-group">
+                  <label htmlFor="date-filter">Date:</label>
+                  <input
+                    type="date"
+                    id="date-filter"
+                    value={selectedDate}
+                    onChange={(e) => setSelectedDate(e.target.value)}
+                    className="filter-input"
+                  />
+                </div>
+              ) : (
+                <div className="filter-group">
+                  <label htmlFor="month-filter">Month & Year:</label>
+                  <input
+                    type="month"
+                    id="month-filter"
+                    value={selectedMonth}
+                    onChange={(e) => setSelectedMonth(e.target.value)}
+                    className="filter-input"
+                  />
+                </div>
+              )}
             </div>
           )}
         </header>

@@ -47,17 +47,21 @@ function ActivitySummaryTable({ trainerFilter, selectedMonth }) {
           groupIndex++;
         }
 
-        // Group activities by type
+        // Group activities by type and calculate subtotals
         const grouped = {};
+        const activitySubtotals = {}; // Store subtotals per activity type
+        
         formattedActivities.forEach(act => {
           const key = act.Activity;
           if (!grouped[key]) {
             grouped[key] = [];
+            activitySubtotals[key] = 0;
           }
           grouped[key].push(act);
+          activitySubtotals[key] += (act.hours || 0);
         });
 
-        // Flatten with merge info
+        // Flatten with merge info and add subtotal rows
         const flatActivities = [];
         for (const [actType, acts] of Object.entries(grouped)) {
           acts.forEach((act, idx) => {
@@ -65,8 +69,16 @@ function ActivitySummaryTable({ trainerFilter, selectedMonth }) {
               ...act,
               merge_size: acts.length,
               merge_index: idx,
-              should_show_activity: idx === 0 // Show activity name only for first row in group
+              should_show_activity: idx === 0, // Show activity name only for first row in group
+              activity_subtotal: activitySubtotals[actType]
             });
+          });
+          
+          // Add subtotal row for this activity type
+          flatActivities.push({
+            is_subtotal: true,
+            activity_type: actType,
+            subtotal_hours: activitySubtotals[actType]
           });
         }
 
@@ -118,24 +130,40 @@ function ActivitySummaryTable({ trainerFilter, selectedMonth }) {
         </thead>
         <tbody>
           {activities.length > 0 ? (
-            activities.map((activity, idx) => (
-              <tr key={idx} className="activity-row">
-                {!trainerFilter && <td>{activity['Trainer Name']}</td>}
-                {activity.should_show_activity && (
-                  <td
-                    rowSpan={activity.merge_size}
-                    className="activity-merged"
-                  >
-                    {activity.Activity}
-                  </td>
-                )}
-                <td>{activity.Date}</td>
-                <td>{activity['Start Time']}</td>
-                <td>{activity['End Time']}</td>
-                <td className="hours">{formatHours(activity.hours || 0)}</td>
-                <td>{activity.Note || '-'}</td>
-              </tr>
-            ))
+            activities.map((activity, idx) => {
+              // Render subtotal rows
+              if (activity.is_subtotal) {
+                return (
+                  <tr key={idx} className="activity-subtotal-row">
+                    <td colSpan={!trainerFilter ? 5 : 4} className="subtotal-label">
+                      {activity.activity_type} Subtotal
+                    </td>
+                    <td className="hours subtotal-value">{formatHours(activity.subtotal_hours)}</td>
+                    <td></td>
+                  </tr>
+                );
+              }
+              
+              // Render regular activity rows
+              return (
+                <tr key={idx} className="activity-row">
+                  {!trainerFilter && <td>{activity['Trainer Name']}</td>}
+                  {activity.should_show_activity && (
+                    <td
+                      rowSpan={activity.merge_size}
+                      className="activity-merged"
+                    >
+                      {activity.Activity}
+                    </td>
+                  )}
+                  <td>{activity.Date}</td>
+                  <td>{activity['Start Time']}</td>
+                  <td>{activity['End Time']}</td>
+                  <td className="hours">{formatHours(activity.hours || 0)}</td>
+                  <td>{activity.Note || '-'}</td>
+                </tr>
+              );
+            })
           ) : (
             <tr>
               <td colSpan={!trainerFilter ? 7 : 6} className="no-data">No activities found</td>

@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import '../styles/AdminDashboard.css';
 import ActivityHistoryView from '../components/ActivityHistoryView';
 import ActivitySummaryTable from '../components/ActivitySummaryTable';
+import ManageTrainers from '../components/ManageTrainers';
+import TimeReportStatus from '../components/TimeReportStatus';
 
 function AdminDashboard({ onLogout }) {
   const [activeTab, setActiveTab] = useState('reports'); // reports, activities, config
@@ -114,10 +116,22 @@ function AdminDashboard({ onLogout }) {
           📊 Reports
         </button>
         <button
+          className={`tab-btn ${activeTab === 'status' ? 'active' : ''}`}
+          onClick={() => setActiveTab('status')}
+        >
+          📋 Time Report Status
+        </button>
+        <button
           className={`tab-btn ${activeTab === 'activities' ? 'active' : ''}`}
           onClick={() => setActiveTab('activities')}
         >
           📝 Activity History
+        </button>
+        <button
+          className={`tab-btn ${activeTab === 'trainers' ? 'active' : ''}`}
+          onClick={() => setActiveTab('trainers')}
+        >
+          👥 Manage Trainers
         </button>
         <button
           className={`tab-btn ${activeTab === 'config' ? 'active' : ''}`}
@@ -249,9 +263,21 @@ function AdminDashboard({ onLogout }) {
           </div>
         )}
 
+        {activeTab === 'status' && (
+          <div className="status-section">
+            <TimeReportStatus />
+          </div>
+        )}
+
         {activeTab === 'activities' && (
           <div className="activities-section">
             <ActivityHistoryView isAdminView={true} />
+          </div>
+        )}
+
+        {activeTab === 'trainers' && (
+          <div className="trainers-section">
+            <ManageTrainers />
           </div>
         )}
       </div>

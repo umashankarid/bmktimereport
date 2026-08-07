@@ -683,6 +683,181 @@ class GoogleSheetsManager:
                 'data': [],
                 'message': f'Error retrieving trainers: {str(e)}'
             }
+
+    def get_time_report_status(self, month):
+        """Get daily time report status for all trainers in a month
+        
+        Returns: {
+            'success': True,
+            'data': {
+                'trainer_name': {
+                    'activities': ['2026-08-01', '2026-08-02', ...]
+                },
+                ...
+            }
+        }
+        """
+        try:
+            if not self.authenticated:
+                return {
+                    'success': False,
+                    'data': {},
+                    'message': 'Google Sheets not configured'
+                }
+
+            # Parse month
+            from datetime import datetime
+            month_date = datetime.strptime(month, '%Y-%m')
+            year = month_date.year
+            month_num = month_date.month
+
+            if self.demo_mode:
+                # Demo mode: extract from memory
+                status = {}
+                for activity in self.demo_data:
+                    trainer = activity.get('Trainer Name')
+                    date = activity.get('Date')
+                    
+                    if trainer and date:
+                        # Check if date is in the requested month
+                        try:
+                            activity_date = datetime.strptime(date, '%Y-%m-%d')
+                            if activity_date.year == year and activity_date.month == month_num:
+                                if trainer not in status:
+                                    status[trainer] = {'activities': []}
+                                if date not in status[trainer]['activities']:
+                                    status[trainer]['activities'].append(date)
+                        except ValueError:
+                            pass
+                
+                return {
+                    'success': True,
+                    'data': status
+                }
+
+            # Real mode: fetch from Google Sheets
+            sheet = self.get_sheet()
+            all_records = sheet.get_all_records()
+
+            status = {}
+            for record in all_records:
+                trainer = record.get('Trainer Name')
+                date = record.get('Date')
+                
+                if trainer and date:
+                    # Check if date is in the requested month
+                    try:
+                        activity_date = datetime.strptime(date, '%Y-%m-%d')
+                        if activity_date.year == year and activity_date.month == month_num:
+                            if trainer not in status:
+                                status[trainer] = {'activities': []}
+                            if date not in status[trainer]['activities']:
+                                status[trainer]['activities'].append(date)
+                    except ValueError:
+                        pass
+
+            return {
+                'success': True,
+                'data': status
+            }
+
+        except Exception as e:
+            print(f"✗ Error retrieving time report status: {e}")
+            import traceback
+            traceback.print_exc()
+            return {
+                'success': False,
+                'data': {},
+                'message': f'Error retrieving time report status: {str(e)}'
+            }
+
+    def update_trainer(self, old_name, new_name, email='', phone=''):
+        """Update trainer information in Login sheet"""
+        try:
+            if not self.authenticated:
+                return {
+                    'success': False,
+                    'message': 'Google Sheets not configured'
+                }
+
+            if self.demo_mode:
+                # Demo mode: update in memory
+                for activity in self.demo_data:
+                    if activity.get('Trainer Name') == old_name:
+                        activity['Trainer Name'] = new_name
+                return {
+                    'success': True,
+                    'message': f'Updated trainer {old_name} to {new_name}'
+                }
+
+            # Real mode: update in Login sheet (trainer auth data)
+            from backend.trainer_auth import TrainerAuthManager
+            auth_manager = TrainerAuthManager()
+            result = auth_manager.update_trainer_info(old_name, new_name, email, phone)
+            return result
+
+        except Exception as e:
+            print(f"✗ Error updating trainer: {e}")
+            return {
+                'success': False,
+                'message': f'Error updating trainer: {str(e)}'
+            }
+
+    def delete_trainer(self, trainer_name):
+        """Delete trainer and all their activities"""
+        try:
+            if not self.authenticated:
+                return {
+                    'success': False,
+                    'message': 'Google Sheets not configured'
+                }
+
+            if self.demo_mode:
+                # Demo mode: remove from memory
+                self.demo_data = [
+                    act for act in self.demo_data
+                    if act.get('Trainer Name') != trainer_name
+                ]
+                return {
+                    'success': True,
+                    'message': f'Deleted trainer {trainer_name} and all their activities'
+                }
+
+            # Real mode: delete from both sheets
+            print(f"🗑️  Deleting trainer: {trainer_name}")
+            sheet = self.get_sheet()
+            all_records = sheet.get_all_records()
+
+            # Find and delete all rows for this trainer
+            rows_to_delete = []
+            for idx, record in enumerate(all_records):
+                if record.get('Trainer Name', '').lower() == trainer_name.lower():
+                    rows_to_delete.append(idx + 2)  # +2 because rows are 1-indexed and header is row 1
+
+            # Delete rows in reverse order to maintain indices
+            for row_idx in sorted(rows_to_delete, reverse=True):
+                print(f"  Deleting row {row_idx}")
+                sheet.delete_row(row_idx)
+
+            # Also delete from Login sheet if it exists
+            try:
+                from backend.trainer_auth import TrainerAuthManager
+                auth_manager = TrainerAuthManager()
+                auth_manager.delete_trainer(trainer_name)
+            except Exception as e:
+                print(f"⚠️  Warning: Could not delete from Login sheet: {e}")
+
+            return {
+                'success': True,
+                'message': f'Deleted trainer {trainer_name} and all their activities'
+            }
+
+        except Exception as e:
+            print(f"✗ Error deleting trainer: {e}")
+            return {
+                'success': False,
+                'message': f'Error deleting trainer: {str(e)}'
+            }
     
     def get_activity_list(self):
         """Get list of all activities from 'All Activities' sheet"""

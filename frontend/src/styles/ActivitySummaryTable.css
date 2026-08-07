@@ -47,6 +47,29 @@
   background-color: #fafbff;
 }
 
+.activity-subtotal-row {
+  background: #e8f4f8;
+  border: 2px solid #00b4d8;
+  font-weight: 600;
+}
+
+.activity-subtotal-row:hover {
+  background: #d0e8f2;
+}
+
+.subtotal-label {
+  color: #0096c7;
+  font-weight: 600;
+}
+
+.subtotal-value {
+  color: #0096c7;
+  font-weight: 700;
+  background: #e0f7ff;
+  border-radius: 4px;
+  padding: 0.75rem 1rem;
+}
+
 .activity-merged {
   font-weight: 600;
   background: #f0f4ff;

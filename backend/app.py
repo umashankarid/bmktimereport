@@ -162,6 +162,40 @@ def create_app():
                 'error': 'Failed to retrieve trainers',
                 'message': str(e)
             }), 500
+
+    # Update trainer information
+    @app.route('/api/trainers/<trainer_name>/update', methods=['PUT'])
+    def update_trainer(trainer_name):
+        """Update trainer information (email, phone)"""
+        try:
+            data = request.get_json()
+            sheets = get_sheets_manager()
+            
+            new_name = data.get('new_name', trainer_name)
+            email = data.get('email', '')
+            phone = data.get('phone', '')
+            
+            result = sheets.update_trainer(trainer_name, new_name, email, phone)
+            return jsonify(result), 200 if result['success'] else 400
+        except Exception as e:
+            return jsonify({
+                'error': 'Failed to update trainer',
+                'message': str(e)
+            }), 500
+
+    # Delete trainer
+    @app.route('/api/trainers/<trainer_name>/delete', methods=['DELETE'])
+    def delete_trainer(trainer_name):
+        """Delete a trainer and all their activities"""
+        try:
+            sheets = get_sheets_manager()
+            result = sheets.delete_trainer(trainer_name)
+            return jsonify(result), 200 if result['success'] else 400
+        except Exception as e:
+            return jsonify({
+                'error': 'Failed to delete trainer',
+                'message': str(e)
+            }), 500
     
     # Get activity list
     @app.route('/api/activity-list', methods=['GET'])
@@ -405,6 +439,26 @@ def create_app():
                 return response
             else:
                 return jsonify(result), 400
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'error': str(e)
+            }), 500
+
+    # Get time report status for trainers
+    @app.route('/api/reports/time-status', methods=['GET'])
+    def get_time_status():
+        """Get daily time report status for all trainers in a month"""
+        try:
+            month = request.args.get('month')
+            if not month:
+                # Default to current month
+                from datetime import datetime
+                month = datetime.now().strftime('%Y-%m')
+            
+            sheets = get_sheets_manager()
+            result = sheets.get_time_report_status(month)
+            return jsonify(result), 200 if result['success'] else 400
         except Exception as e:
             return jsonify({
                 'success': False,
