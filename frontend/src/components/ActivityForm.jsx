@@ -422,11 +422,7 @@ function ActivityForm({ onSubmit, trainers, currentTrainer }) {
                 📝 Today's Activities ({existingActivities.length} session{existingActivities.length !== 1 ? 's' : ''})
               </label>
               <div className="existing-activities-list">
-                {console.log('DEBUG: editingActivities keys:', Object.keys(editingActivities))}
-                {Object.keys(editingActivities).length === 0 ? (
-                  <div>No grouped activities found</div>
-                ) : (
-                  Object.entries(editingActivities).map(([activityType, activityData]) => (
+                {Object.entries(editingActivities).map(([activityType, activityData]) => (
                     <div key={activityType} className="existing-activity-card">
                       <div className="activity-header">
                         <h4>{activityType}</h4>
@@ -476,16 +472,16 @@ function ActivityForm({ onSubmit, trainers, currentTrainer }) {
                             )}
                           </div>
                         ))}
-                    </div>
-                    
-                    <button
-                      type="button"
-                      className="btn-save"
-                      onClick={() => handleUpdateActivity(activityType)}
-                      disabled={submitting}
-                    >
-                      {submitting ? '💾...' : '💾 Save'}
-                    </button>
+                      </div>
+                      
+                      <button
+                        type="button"
+                        className="btn-save"
+                        onClick={() => handleUpdateActivity(activityType)}
+                        disabled={submitting}
+                      >
+                        {submitting ? '💾...' : '💾 Save'}
+                      </button>
                   </div>
                 ))}
               </div>
