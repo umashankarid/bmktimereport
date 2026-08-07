@@ -1,0 +1,105 @@
+.responsibilities-container {
+  background: white;
+  border-radius: 8px;
+  padding: 2rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.responsibilities-container h2 {
+  color: #333;
+  margin: 0 0 2rem 0;
+  font-size: 1.8rem;
+}
+
+.responsibilities-content {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2.5rem;
+}
+
+.responsibility-card {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+  transition: all 0.3s ease;
+}
+
+.responsibility-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+}
+
+.card-icon {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+  display: inline-block;
+}
+
+.responsibility-card h3 {
+  margin: 0 0 0.75rem 0;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.responsibility-card p {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  opacity: 0.95;
+}
+
+.responsibilities-guidelines {
+  background: #f5f7ff;
+  border-left: 4px solid #667eea;
+  border-radius: 4px;
+  padding: 1.5rem;
+}
+
+.responsibilities-guidelines h3 {
+  color: #667eea;
+  margin: 0 0 1rem 0;
+  font-size: 1.1rem;
+}
+
+.responsibilities-guidelines ul {
+  margin: 0;
+  padding-left: 1.5rem;
+  list-style-type: none;
+}
+
+.responsibilities-guidelines li {
+  color: #555;
+  margin-bottom: 0.75rem;
+  padding-left: 1.5rem;
+  position: relative;
+}
+
+.responsibilities-guidelines li:before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+  color: #667eea;
+  font-weight: bold;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .responsibilities-container {
+    padding: 1.5rem;
+  }
+
+  .responsibilities-content {
+    grid-template-columns: 1fr;
+  }
+
+  .responsibility-card {
+    padding: 1.25rem;
+  }
+
+  .card-icon {
+    font-size: 2rem;
+  }
+}

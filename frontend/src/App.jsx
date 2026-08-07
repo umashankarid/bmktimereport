@@ -6,6 +6,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import ReportsPage from './pages/ReportsPage';
 import ActivityForm from './components/ActivityForm';
 import ActivityHistoryView from './components/ActivityHistoryView';
+import Responsibilities from './components/Responsibilities';
 
 const API_URL = process.env.REACT_APP_API_URL || '/api';
 
@@ -278,7 +279,13 @@ function App() {
           className={`tab ${activeTab === 'form' ? 'active' : ''}`}
           onClick={() => setActiveTab('form')}
         >
-          Log Activity
+          📝 Log Activities
+        </button>
+        <button
+          className={`tab ${activeTab === 'responsibilities' ? 'active' : ''}`}
+          onClick={() => setActiveTab('responsibilities')}
+        >
+          📋 Responsibilities
         </button>
       </nav>
 
@@ -292,6 +299,10 @@ function App() {
 
         {activeTab === 'form' && (
           <ActivityForm onSubmit={handleActivitySubmit} trainers={trainers} currentTrainer={admin} />
+        )}
+
+        {activeTab === 'responsibilities' && (
+          <Responsibilities />
         )}
       </main>
 
