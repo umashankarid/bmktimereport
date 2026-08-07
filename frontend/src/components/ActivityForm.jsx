@@ -92,6 +92,7 @@ function ActivityForm({ onSubmit, trainers, currentTrainer }) {
             end_time: act['End Time']
           });
         });
+        console.log('📊 Grouped editing activities:', editing);
         setEditingActivities(editing);
       } else {
         console.log('No existing activities found for this date');
