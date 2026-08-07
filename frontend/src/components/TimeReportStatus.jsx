@@ -71,15 +71,17 @@ function TimeReportStatus({ trainerType = 'Assistant Trainer' }) {
     const lastDate = getLastActivityDate(trainer);
     if (!lastDate) return 999; // No reports at all
 
-    // For the time report, calculate days from last activity to end of current month
-    // This gives a snapshot of the month, not relative to today
-    const [year, monthStr] = selectedMonth.split('-');
-    const lastDayOfMonth = new Date(year, monthStr, 0); // Last day of the selected month
-    
+    // Calculate days since last activity to today (for current month context)
     const last = new Date(lastDate);
-    const diffTime = lastDayOfMonth - last;
+    const today = new Date();
+    
+    // Set both times to midnight for accurate day count
+    last.setHours(0, 0, 0, 0);
+    today.setHours(0, 0, 0, 0);
+    
+    const diffTime = today - last;
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return Math.max(0, diffDays); // Return 0 if last report is on or after last day
+    return diffDays;
   };
 
   const isHighlighted = (trainer) => {
