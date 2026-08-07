@@ -236,6 +236,8 @@ def create_app():
             month_filter = request.args.get('month')
             trainer_type_filter = request.args.get('trainer_type')
             
+            print(f"📊 get_activity_summary called with: trainer={trainer_filter}, month={month_filter}, trainer_type={trainer_type_filter}")
+            
             sheets = get_sheets_manager()
             
             # Get all activities
@@ -244,17 +246,24 @@ def create_app():
                 return jsonify(activities_result), 400
             
             activities = activities_result['data']
+            print(f"📊 Total activities in sheet: {len(activities)}")
             
             # If trainer_type filter is set, get trainers of that type and filter activities
             if trainer_type_filter:
                 try:
-                    # Get all trainers with their types
+                    # Get all trainers with their types from Login sheet
                     trainers_result = sheets.get_trainers_details()
                     if trainers_result['success']:
                         trainers_of_type = [t['name'] for t in trainers_result['data'] if t.get('trainer_type') == trainer_type_filter]
+                        print(f"📊 Filtering by trainer type '{trainer_type_filter}': found {len(trainers_of_type)} trainers - {trainers_of_type}")
                         activities = [a for a in activities if a.get('Trainer Name', '') in trainers_of_type]
-                except:
-                    pass  # If trainer details fetch fails, continue without filtering
+                        print(f"📊 After type filter: {len(activities)} activities")
+                    else:
+                        print(f"⚠️  Could not get trainers details: {trainers_result}")
+                except Exception as e:
+                    print(f"❌ Error filtering by trainer type: {e}")
+                    import traceback
+                    traceback.print_exc()
             
             # Apply trainer filter
             if trainer_filter:

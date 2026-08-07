@@ -702,7 +702,7 @@ class GoogleSheetsManager:
                         trainers.add(activity['Trainer Name'])
                 return {
                     'success': True,
-                    'data': [{'name': t, 'email': '', 'phone': ''} for t in sorted(list(trainers))],
+                    'data': [{'name': t, 'email': '', 'phone': '', 'trainer_type': 'Assistant Trainer'} for t in sorted(list(trainers))],
                     'note': 'DEMO MODE'
                 }
 
@@ -726,19 +726,17 @@ class GoogleSheetsManager:
                     'data': trainers_data
                 }
             except Exception as e:
-                # Fallback: just return trainer names without details
+                # Fallback: try again with error logging, but don't use activities sheet
                 print(f"⚠️  Could not fetch from Login sheet: {e}")
-                sheet = self.get_sheet()
-                all_rows = sheet.get_all_records()
+                import traceback
+                traceback.print_exc()
                 
-                trainers = set()
-                for row in all_rows:
-                    if row.get('Trainer Name'):
-                        trainers.add(row['Trainer Name'])
-                
+                # Return empty list rather than falling back to activities sheet
+                # This ensures we only show currently active trainers from Login sheet
                 return {
                     'success': True,
-                    'data': [{'name': t, 'email': '', 'phone': '', 'trainer_type': 'Assistant Trainer'} for t in sorted(list(trainers))]
+                    'data': [],
+                    'message': 'Could not fetch trainers from Login sheet'
                 }
 
         except Exception as e:
