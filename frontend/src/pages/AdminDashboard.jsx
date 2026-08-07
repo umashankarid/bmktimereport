@@ -15,6 +15,7 @@ function AdminDashboard({ onLogout }) {
   const [selectedTrainer, setSelectedTrainer] = useState('');
   const [selectedMonth, setSelectedMonth] = useState('');
   const [trainers, setTrainers] = useState([]);
+  const [reportTrainerType, setReportTrainerType] = useState('Assistant Trainer');
 
   // Fetch trainers on mount
   React.useEffect(() => {
@@ -23,7 +24,7 @@ function AdminDashboard({ onLogout }) {
 
   const fetchTrainers = async () => {
     try {
-      const response = await fetch('/api/trainers');
+      const response = await fetch('/api/trainers/details/all');
       const result = await response.json();
       if (result.success && result.data) {
         setTrainers(result.data);
@@ -226,6 +227,31 @@ function AdminDashboard({ onLogout }) {
           <div className="reports-section">
             <h2>Activity Summary Report</h2>
             
+            {/* Trainer Type Selector */}
+            <div className="trainer-type-selector">
+              <label>Report Type:</label>
+              <div className="type-radio-group">
+                <label className="radio-option">
+                  <input
+                    type="radio"
+                    value="Assistant Trainer"
+                    checked={reportTrainerType === 'Assistant Trainer'}
+                    onChange={(e) => setReportTrainerType(e.target.value)}
+                  />
+                  <span>📊 Assistant Trainer Reports</span>
+                </label>
+                <label className="radio-option">
+                  <input
+                    type="radio"
+                    value="Junior Trainer"
+                    checked={reportTrainerType === 'Junior Trainer'}
+                    onChange={(e) => setReportTrainerType(e.target.value)}
+                  />
+                  <span>👶 Junior Trainer Reports</span>
+                </label>
+              </div>
+            </div>
+            
             <div className="report-filters">
               <div className="filter-group">
                 <label htmlFor="trainer-filter">Trainer:</label>
@@ -235,12 +261,14 @@ function AdminDashboard({ onLogout }) {
                   onChange={(e) => setSelectedTrainer(e.target.value)}
                   className="filter-select"
                 >
-                  <option value="">All Trainers</option>
-                  {trainers.map((trainer) => (
-                    <option key={trainer} value={trainer}>
-                      {trainer}
-                    </option>
-                  ))}
+                  <option value="">All {reportTrainerType}s</option>
+                  {trainers
+                    .filter(trainer => trainer.trainer_type === reportTrainerType)
+                    .map((trainer) => (
+                      <option key={trainer.name} value={trainer.name}>
+                        {trainer.name}
+                      </option>
+                    ))}
                 </select>
               </div>
               
@@ -259,6 +287,7 @@ function AdminDashboard({ onLogout }) {
             <ActivitySummaryTable 
               trainerFilter={selectedTrainer} 
               selectedMonth={selectedMonth}
+              trainerType={reportTrainerType}
             />
           </div>
         )}

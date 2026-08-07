@@ -14,14 +14,16 @@ function TimeReportStatus({ trainerType = 'Assistant Trainer' }) {
   useEffect(() => {
     fetchReportStatus();
     fetchTrainers();
-  }, [selectedMonth]);
+  }, [selectedMonth, trainerType]);
 
   const fetchTrainers = async () => {
     try {
-      const response = await fetch('/api/trainers');
+      const response = await fetch('/api/trainers/details/all');
       const result = await response.json();
       if (result.success && result.data) {
-        setTrainers(result.data);
+        // Filter trainers based on trainer type
+        const filteredTrainers = result.data.filter(t => t.trainer_type === trainerType);
+        setTrainers(filteredTrainers);
       }
     } catch (err) {
       console.error('Error fetching trainers:', err);
