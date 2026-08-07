@@ -13,62 +13,94 @@
   margin-bottom: 0.35rem;
 }
 
-.time-input-wrapper-simple {
+.time-input-wrapper-dropdowns {
   position: relative;
   display: flex;
   align-items: center;
   gap: 0.5rem;
 }
 
-.time-input-simple {
+.time-select {
   flex: 1;
   padding: 0.75rem;
   border: 2px solid #667eea;
   border-radius: 6px;
-  font-size: 1.2rem;
+  font-size: 1rem;
   font-weight: 600;
   text-align: center;
   font-family: 'Courier New', monospace;
   background: white;
   color: #333;
   transition: all 0.3s ease;
-  letter-spacing: 0.1em;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23667eea' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 0.5rem center;
+  background-size: 1.2em 1.2em;
+  padding-right: 2rem;
 }
 
-.time-input-simple:focus {
+.time-select:focus {
   outline: none;
   border-color: #764ba2;
   box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-  background: #fafbff;
+  background-color: #fafbff;
 }
 
-.time-input-simple:hover {
+.time-select:hover {
   border-color: #764ba2;
-  background: #f5f7ff;
+  background-color: #f5f7ff;
 }
 
-.time-input-simple::placeholder {
-  color: #ccc;
-  font-style: italic;
+.time-select.hours {
+  max-width: 80px;
+}
+
+.time-select.minutes {
+  max-width: 80px;
+}
+
+.time-separator {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #667eea;
+  padding: 0 0.25rem;
+  user-select: none;
 }
 
 /* Responsive */
 @media (max-width: 768px) {
-  .time-input-simple {
-    font-size: 1.1rem;
+  .time-select {
+    font-size: 0.95rem;
     padding: 0.65rem;
+    padding-right: 1.8rem;
+  }
+  
+  .time-select.hours,
+  .time-select.minutes {
+    max-width: 70px;
   }
 }
 
 @media (max-width: 480px) {
-  .time-input-simple {
-    font-size: 0.9rem;
+  .time-select {
+    font-size: 0.85rem;
     padding: 0.5rem;
-    letter-spacing: 0.05em;
+    padding-right: 1.5rem;
   }
   
   .time-label {
     font-size: 0.75rem;
     margin-bottom: 0.25rem;
+  }
+  
+  .time-select.hours,
+  .time-select.minutes {
+    max-width: 60px;
+  }
+  
+  .time-separator {
+    font-size: 1rem;
   }
 }
