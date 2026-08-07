@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import '../styles/ActivityForm.css';
 import TimeInput from './TimeInput';
-import ActivityHistoryTable from './ActivityHistoryTable';
 
 function ActivityForm({ onSubmit, trainers, currentTrainer }) {
   const [formData, setFormData] = useState({
@@ -500,14 +499,6 @@ function ActivityForm({ onSubmit, trainers, currentTrainer }) {
             </div>
           ) : null}
 
-          {/* Activity History Table for today */}
-          {existingActivities.length > 0 && (
-            <ActivityHistoryTable 
-              activities={existingActivities}
-              date={formData.date}
-            />
-          )}
-
           {/* New Activities Checkboxes Section */}
           <div className="activities-section">
             <label className="section-label">Add New Activities</label>
@@ -616,7 +607,7 @@ function ActivityForm({ onSubmit, trainers, currentTrainer }) {
               className="btn btn-primary"
               disabled={submitting}
             >
-              {submitting ? 'Logging...' : `Log ${Object.keys(selectedActivities).length} Activity/ies`}
+              {submitting ? 'Saving...' : 'Save Activities'}
             </button>
           )}
         </form>
