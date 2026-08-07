@@ -11,7 +11,7 @@ function MainLoginPage({ onAdminLogin, onTrainerLogin }) {
   const [trainerConfirmPassword, setTrainerConfirmPassword] = useState('');
   const [trainerEmail, setTrainerEmail] = useState('');
   const [trainerPhone, setTrainerPhone] = useState('');
-  const [trainerType, setTrainerType] = useState('Senior Trainer'); // Default to Senior
+  const [trainerType, setTrainerType] = useState('Assistant Trainer'); // Default to Assistant
   const [trainerPhoto, setTrainerPhoto] = useState(null);
   const [trainerPhotoPreview, setTrainerPhotoPreview] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -103,7 +103,7 @@ function MainLoginPage({ onAdminLogin, onTrainerLogin }) {
         setTrainerConfirmPassword('');
         setTrainerEmail('');
         setTrainerPhone('');
-        setTrainerType('Senior Trainer');
+        setTrainerType('Assistant Trainer');
         setTrainerPhoto(null);
         setTrainerPhotoPreview(null);
       } else {
@@ -406,7 +406,6 @@ function MainLoginPage({ onAdminLogin, onTrainerLogin }) {
                   >
                     <option value="Assistant Trainer">Assistant Trainer</option>
                     <option value="Junior Trainer">Junior Trainer</option>
-                    <option value="Senior Trainer">Senior Trainer</option>
                   </select>
                 </div>
 

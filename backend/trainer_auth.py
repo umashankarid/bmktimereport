@@ -137,7 +137,7 @@ class TrainerAuthManager:
             raise
     
     @staticmethod
-    def register_trainer(trainer_name, password, email='', phone='', photo_base64=None, trainer_type='Senior Trainer'):
+    def register_trainer(trainer_name, password, email='', phone='', photo_base64=None, trainer_type='Assistant Trainer'):
         """Register a new trainer"""
         try:
             print(f"\n{'='*60}")
@@ -318,7 +318,7 @@ class TrainerAuthManager:
                 'message': 'Login successful',
                 'trainer': {
                     'name': trainer.get('Trainer Name'),
-                    'type': trainer.get('Trainer Type', 'Senior Trainer')
+                    'type': trainer.get('Trainer Type', 'Assistant Trainer')
                 }
             }
             

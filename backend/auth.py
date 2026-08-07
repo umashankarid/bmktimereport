@@ -228,7 +228,7 @@ def register_auth_routes(app, sheets_manager):
             password = request.form.get('password')
             email = request.form.get('email')
             phone = request.form.get('phone')
-            trainer_type = request.form.get('trainer_type', 'Senior Trainer')  # Default to Senior
+            trainer_type = request.form.get('trainer_type', 'Assistant Trainer')  # Default to Assistant
             photo_file = request.files.get('photo')
             
             # Validation
