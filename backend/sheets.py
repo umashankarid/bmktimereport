@@ -384,6 +384,25 @@ class GoogleSheetsManager:
             print(f"📝 Trainer: {activity_data['trainer_name']}")
             print(f"📅 Date: {activity_data['date']}")
             
+            # Validate date is not in the future
+            from datetime import datetime, date as date_type
+            try:
+                activity_date = datetime.strptime(activity_data['date'], '%Y-%m-%d').date()
+                today = date_type.today()
+                if activity_date > today:
+                    print(f"❌ FUTURE DATE NOT ALLOWED: {activity_data['date']} is after {today}")
+                    return {
+                        'success': False,
+                        'message': f"Cannot log activities for future dates. Date must be today or earlier."
+                    }
+                print(f"✅ Date validation passed: {activity_date} <= {today}")
+            except ValueError as e:
+                print(f"❌ INVALID DATE FORMAT: {activity_data['date']}")
+                return {
+                    'success': False,
+                    'message': f"Invalid date format. Please use YYYY-MM-DD format."
+                }
+            
             # Validate time ranges for all activities
             print(f"\n⏱️  VALIDATING TIME RANGES")
             for idx, activity_item in enumerate(activities_to_log):

@@ -491,12 +491,13 @@ function ActivityForm({ onSubmit, trainers, currentTrainer }) {
           </div>
 
           <div className="form-group">
-            <label htmlFor="date">Date *</label>
+            <label htmlFor="date">Date * (Today or earlier)</label>
             <input
               type="date"
               id="date"
               value={formData.date}
               onChange={handleDateChange}
+              max={new Date().toISOString().split('T')[0]}
               required
             />
           </div>
