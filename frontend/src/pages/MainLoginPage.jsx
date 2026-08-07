@@ -3,12 +3,13 @@ import '../styles/MainLoginPage.css';
 
 function MainLoginPage({ onAdminLogin, onTrainerLogin }) {
   const [isRegistering, setIsRegistering] = useState(false);
+  const [registrationType, setRegistrationType] = useState('trainer'); // 'trainer' or 'volunteer'
   
   // Login fields
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   
-  // Registration fields
+  // Trainer Registration fields
   const [regUsername, setRegUsername] = useState('');
   const [regEmail, setRegEmail] = useState('');
   const [regPhone, setRegPhone] = useState('');
@@ -17,6 +18,13 @@ function MainLoginPage({ onAdminLogin, onTrainerLogin }) {
   const [trainerType, setTrainerType] = useState('Assistant Trainer');
   const [regPhoto, setRegPhoto] = useState(null);
   const [regPhotoPreview, setRegPhotoPreview] = useState(null);
+  
+  // Volunteer Registration fields
+  const [volName, setVolName] = useState('');
+  const [volEmail, setVolEmail] = useState('');
+  const [volPhone, setVolPhone] = useState('');
+  const [volPassword, setVolPassword] = useState('');
+  const [volConfirmPassword, setVolConfirmPassword] = useState('');
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -129,6 +137,81 @@ function MainLoginPage({ onAdminLogin, onTrainerLogin }) {
     setLoading(false);
   };
 
+  const handleVolunteerRegister = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    // Validation
+    if (!volName || !volPassword || !volEmail || !volPhone) {
+      setError('Name, password, email, and phone are required');
+      setLoading(false);
+      return;
+    }
+
+    // Validate email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(volEmail)) {
+      setError('Please enter a valid email address');
+      setLoading(false);
+      return;
+    }
+
+    // Validate phone
+    if (volPhone.length < 10) {
+      setError('Phone number must be at least 10 digits');
+      setLoading(false);
+      return;
+    }
+
+    if (volPassword !== volConfirmPassword) {
+      setError('Passwords do not match');
+      setLoading(false);
+      return;
+    }
+
+    if (volPassword.length < 6) {
+      setError('Password must be at least 6 characters');
+      setLoading(false);
+      return;
+    }
+
+    // Create FormData for volunteer registration
+    const formData = new FormData();
+    formData.append('trainer_name', volName);
+    formData.append('password', volPassword);
+    formData.append('email', volEmail);
+    formData.append('phone', volPhone);
+    formData.append('trainer_type', 'Volunteer');
+
+    try {
+      const response = await fetch('/api/auth/trainer/register', {
+        method: 'POST',
+        body: formData
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setError('');
+        alert('Volunteer registration successful! Please login with your credentials.');
+        setIsRegistering(false);
+        setRegistrationType('trainer');
+        setVolName('');
+        setVolPassword('');
+        setVolConfirmPassword('');
+        setVolEmail('');
+        setVolPhone('');
+      } else {
+        setError(result.message);
+      }
+    } catch (err) {
+      setError('Registration failed: ' + err.message);
+    }
+
+    setLoading(false);
+  };
+
   const handlePhotoChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -211,23 +294,48 @@ function MainLoginPage({ onAdminLogin, onTrainerLogin }) {
             </button>
 
             <div className="form-toggle">
-              <p>Don't have an account? <button type="button" className="link-btn" onClick={() => { setIsRegistering(true); setError(''); }}>Register as Trainer</button></p>
+              <p>Don't have an account? <button type="button" className="link-btn" onClick={() => { setIsRegistering(true); setError(''); setRegistrationType('trainer'); }}>Register</button></p>
             </div>
           </form>
         ) : (
-          <form onSubmit={handleRegister} className="login-form">
-            <button
-              type="button"
-              className="back-btn"
-              onClick={() => {
-                setIsRegistering(false);
-                setError('');
-              }}
-            >
-              ← Back to Login
-            </button>
+          <div>
+            {/* Registration Tabs */}
+            <div className="registration-tabs">
+              <button
+                className={`tab-btn ${registrationType === 'trainer' ? 'active' : ''}`}
+                onClick={() => {
+                  setRegistrationType('trainer');
+                  setError('');
+                }}
+              >
+                📋 Trainer
+              </button>
+              <button
+                className={`tab-btn ${registrationType === 'volunteer' ? 'active' : ''}`}
+                onClick={() => {
+                  setRegistrationType('volunteer');
+                  setError('');
+                }}
+              >
+                🤝 Volunteer Support
+              </button>
+            </div>
 
-            <h2>Register as Trainer</h2>
+            {/* Trainer Registration Form */}
+            {registrationType === 'trainer' && (
+              <form onSubmit={handleRegister} className="login-form">
+                <button
+                  type="button"
+                  className="back-btn"
+                  onClick={() => {
+                    setIsRegistering(false);
+                    setError('');
+                  }}
+                >
+                  ← Back to Login
+                </button>
+
+                <h2>Register as Trainer</h2>
 
             <div className="form-group">
               <label>Trainer Name</label>
@@ -336,7 +444,100 @@ function MainLoginPage({ onAdminLogin, onTrainerLogin }) {
             <div className="form-toggle">
               <p>Already have an account? <button type="button" className="link-btn" onClick={() => { setIsRegistering(false); setError(''); }}>Login here</button></p>
             </div>
-          </form>
+              </form>
+            )}
+
+            {/* Volunteer Registration Form */}
+            {registrationType === 'volunteer' && (
+              <form onSubmit={handleVolunteerRegister} className="login-form">
+                <button
+                  type="button"
+                  className="back-btn"
+                  onClick={() => {
+                    setIsRegistering(false);
+                    setError('');
+                  }}
+                >
+                  ← Back to Login
+                </button>
+
+                <h2>Register as Volunteer Support</h2>
+
+                <div className="form-group">
+                  <label>Full Name</label>
+                  <input
+                    type="text"
+                    value={volName}
+                    onChange={(e) => setVolName(e.target.value)}
+                    placeholder="Your full name"
+                    disabled={loading}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Email</label>
+                  <input
+                    type="email"
+                    value={volEmail}
+                    onChange={(e) => setVolEmail(e.target.value)}
+                    placeholder="your.email@example.com"
+                    disabled={loading}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Phone Number</label>
+                  <input
+                    type="tel"
+                    value={volPhone}
+                    onChange={(e) => setVolPhone(e.target.value)}
+                    placeholder="Your phone number"
+                    disabled={loading}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Password</label>
+                  <div className="password-input-group">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={volPassword}
+                      onChange={(e) => setVolPassword(e.target.value)}
+                      placeholder="At least 6 characters"
+                      disabled={loading}
+                    />
+                    <button
+                      type="button"
+                      className="password-toggle"
+                      onClick={() => setShowPassword(!showPassword)}
+                      disabled={loading}
+                    >
+                      {showPassword ? '👁️' : '👁️‍🗨️'}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label>Confirm Password</label>
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={volConfirmPassword}
+                    onChange={(e) => setVolConfirmPassword(e.target.value)}
+                    placeholder="Confirm your password"
+                    disabled={loading}
+                  />
+                </div>
+
+                <button type="submit" className="btn btn-primary" disabled={loading}>
+                  {loading ? 'Registering...' : 'Register'}
+                </button>
+
+                <div className="form-toggle">
+                  <p>Already have an account? <button type="button" className="link-btn" onClick={() => { setIsRegistering(false); setError(''); }}>Login here</button></p>
+                </div>
+              </form>
+            )}
+          </div>
         )}
 
         <div className="login-footer">
