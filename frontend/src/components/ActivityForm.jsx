@@ -489,9 +489,23 @@ function ActivityForm({ onSubmit, trainers, currentTrainer }) {
           ) : null}
 
           {/* New Activities Checkboxes Section */}
-          <div className="activities-section">
-            <label className="section-label">Add New Activities</label>
-            <div className="activities-grid">
+          {Object.keys(selectedActivities).length === 0 && existingActivities.length > 0 && (
+            <div className="add-more-activities-prompt">
+              <p>✓ Today's activities logged. Want to add more?</p>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => handleActivityToggle(activities[0] || '')}
+              >
+                + Add More Activities
+              </button>
+            </div>
+          )}
+
+          {Object.keys(selectedActivities).length > 0 && (
+            <div className="activities-section">
+              <label className="section-label">Add New Activities</label>
+              <div className="activities-grid">
               {activities.length > 0 ? (
                 activities.map(activity => (
                   <div key={activity} className="activity-checkbox-group">
@@ -563,7 +577,7 @@ function ActivityForm({ onSubmit, trainers, currentTrainer }) {
                 <p className="no-activities">No activities available</p>
               )}
             </div>
-          </div>
+          )}
 
           {/* Summary of selected activities */}
           {Object.keys(selectedActivities).length > 0 && (
