@@ -55,7 +55,7 @@ function ReportsPage({ currentTrainer = null }) {
 
   useEffect(() => {
     fetchReports();
-  }, [activeReport, selectedTrainer, selectedMonth, selectedDate, useDateFilter];
+  }, [activeReport, selectedTrainer, selectedMonth, selectedDate, useDateFilter]);
 
   const fetchReports = async () => {
     setLoading(true);
