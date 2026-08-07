@@ -717,7 +717,8 @@ class GoogleSheetsManager:
                     trainers_data.append({
                         'name': trainer.get('Trainer Name', ''),
                         'email': trainer.get('Email', ''),
-                        'phone': trainer.get('Phone', '')
+                        'phone': trainer.get('Phone', ''),
+                        'trainer_type': trainer.get('Trainer Type', 'Assistant Trainer')
                     })
                 
                 return {

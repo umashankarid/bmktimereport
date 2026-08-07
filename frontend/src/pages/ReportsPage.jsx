@@ -40,7 +40,7 @@ function ReportsPage({ currentTrainer = null }) {
   const fetchTrainers = async () => {
     try {
       console.log('📋 Fetching trainers list...');
-      const response = await fetch('/api/trainers');
+      const response = await fetch('/api/trainers/details/all');
       const result = await response.json();
       
       if (result.success && result.data) {
@@ -48,7 +48,7 @@ function ReportsPage({ currentTrainer = null }) {
         setTrainers(result.data);
         // Set first trainer as default
         if (result.data.length > 0) {
-          setSelectedTrainer(result.data[0]);
+          setSelectedTrainer(result.data[0].name);
         }
       }
     } catch (err) {
@@ -59,6 +59,22 @@ function ReportsPage({ currentTrainer = null }) {
   useEffect(() => {
     fetchReports();
   }, [activeReport, selectedTrainer, selectedMonth, selectedDate, useDateFilter, reportTrainerType]);
+
+  // Filter trainers based on trainer type and set default selection
+  useEffect(() => {
+    if (trainers.length > 0 && !isTrainerView) {
+      const filteredTrainers = trainers.filter(t => 
+        t.trainer_type === reportTrainerType
+      );
+      
+      if (filteredTrainers.length > 0) {
+        // Set first trainer of the selected type as default
+        if (!selectedTrainer || !filteredTrainers.find(t => t.name === selectedTrainer)) {
+          setSelectedTrainer(filteredTrainers[0].name);
+        }
+      }
+    }
+  }, [reportTrainerType, trainers, isTrainerView]);
 
   const fetchReports = async () => {
     setLoading(true);
@@ -157,11 +173,13 @@ function ReportsPage({ currentTrainer = null }) {
                   onChange={(e) => setSelectedTrainer(e.target.value)}
                   className="filter-select"
                 >
-                  {trainers.map(trainer => (
-                    <option key={trainer} value={trainer}>
-                      {trainer}
-                    </option>
-                  ))}
+                  {trainers
+                    .filter(trainer => trainer.trainer_type === reportTrainerType)
+                    .map(trainer => (
+                      <option key={trainer.name} value={trainer.name}>
+                        {trainer.name}
+                      </option>
+                    ))}
                 </select>
               </div>
               
