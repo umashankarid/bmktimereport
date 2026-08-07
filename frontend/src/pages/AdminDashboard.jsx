@@ -15,6 +15,7 @@ function AdminDashboard({ onLogout }) {
   const [selectedTrainer, setSelectedTrainer] = useState('');
   const [selectedMonth, setSelectedMonth] = useState('');
   const [trainers, setTrainers] = useState([]);
+  const [reportTrainerType, setReportTrainerType] = useState('Assistant Trainer');
 
   // Fetch trainers on mount
   React.useEffect(() => {
@@ -265,7 +266,30 @@ function AdminDashboard({ onLogout }) {
 
         {activeTab === 'status' && (
           <div className="status-section">
-            <TimeReportStatus />
+            <div className="trainer-type-selector">
+              <label>Report Type:</label>
+              <div className="type-radio-group">
+                <label className="radio-option">
+                  <input
+                    type="radio"
+                    value="Assistant Trainer"
+                    checked={reportTrainerType === 'Assistant Trainer'}
+                    onChange={(e) => setReportTrainerType(e.target.value)}
+                  />
+                  <span>📊 Assistant Trainer</span>
+                </label>
+                <label className="radio-option">
+                  <input
+                    type="radio"
+                    value="Junior Trainer"
+                    checked={reportTrainerType === 'Junior Trainer'}
+                    onChange={(e) => setReportTrainerType(e.target.value)}
+                  />
+                  <span>👶 Junior Trainer</span>
+                </label>
+              </div>
+            </div>
+            <TimeReportStatus trainerType={reportTrainerType} />
           </div>
         )}
 
