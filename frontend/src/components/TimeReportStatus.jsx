@@ -230,8 +230,6 @@ function TimeReportStatus({ trainerType = 'Assistant Trainer' }) {
                 <span className="legend-symbol not-reported">✗</span>
                 <span>Not Reported</span>
               </div>
-                <span>No Activity Reported</span>
-              </div>
               <div className="legend-item">
                 <span className="legend-symbol warning-indicator">⚠️</span>
                 <span>Not Reported for 3+ Days</span>
