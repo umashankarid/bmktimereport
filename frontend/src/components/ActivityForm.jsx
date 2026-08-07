@@ -169,6 +169,75 @@ function ActivityForm({ onSubmit, trainers, currentTrainer }) {
     }));
   };
 
+  // Validate time slot - check for invalid range or overlaps
+  const validateTimeSlot = (slot, allSlots, existingActivities) => {
+    // Check if times are set
+    if (!slot.start_time || !slot.end_time) {
+      return null; // Not an error, just incomplete
+    }
+
+    // Check if end time is after start time
+    const [startH, startM] = slot.start_time.split(':').map(Number);
+    const [endH, endM] = slot.end_time.split(':').map(Number);
+    const startMinutes = startH * 60 + startM;
+    const endMinutes = endH * 60 + endM;
+
+    if (endMinutes <= startMinutes) {
+      return 'Invalid time range: End time must be after start time';
+    }
+
+    // Check for overlaps with new time slots
+    for (let i = 0; i < allSlots.length; i++) {
+      if (allSlots[i] === slot || !allSlots[i].start_time || !allSlots[i].end_time) {
+        continue;
+      }
+
+      const [otherStartH, otherStartM] = allSlots[i].start_time.split(':').map(Number);
+      const [otherEndH, otherEndM] = allSlots[i].end_time.split(':').map(Number);
+      const otherStartMinutes = otherStartH * 60 + otherStartM;
+      const otherEndMinutes = otherEndH * 60 + otherEndM;
+
+      // Check if times overlap
+      if (startMinutes < otherEndMinutes && endMinutes > otherStartMinutes) {
+        return 'Overlapping time with another slot';
+      }
+    }
+
+    // Check for overlaps with existing activities
+    for (const existing of existingActivities) {
+      const [existingStartH, existingStartM] = existing['Start Time'].split(':').map(Number);
+      const [existingEndH, existingEndM] = existing['End Time'].split(':').map(Number);
+      const existingStartMinutes = existingStartH * 60 + existingStartM;
+      const existingEndMinutes = existingEndH * 60 + existingEndM;
+
+      if (startMinutes < existingEndMinutes && endMinutes > existingStartMinutes) {
+        return `Overlapping with existing ${existing.Activity} (${existing['Start Time']}-${existing['End Time']})`;
+      }
+    }
+
+    return null; // No errors
+  };
+
+  // Get all validation errors for selected activities
+  const getValidationErrors = () => {
+    const errors = [];
+
+    for (const [activityName, slots] of Object.entries(selectedActivities)) {
+      for (let i = 0; i < slots.length; i++) {
+        const error = validateTimeSlot(slots[i], slots, existingActivities);
+        if (error) {
+          errors.push({
+            activity: activityName,
+            slotIndex: i,
+            error: error
+          });
+        }
+      }
+    }
+
+    return errors;
+  };
+
   const handleExistingActivityChange = (activity, field, slotIdx, value) => {
     setEditingActivities(prev => {
       const updated = { ...prev };
@@ -317,25 +386,14 @@ function ActivityForm({ onSubmit, trainers, currentTrainer }) {
       return;
     }
 
-    // Validate all time slots have times
-    for (const [activityName, slots] of Object.entries(selectedActivities)) {
-      for (let i = 0; i < slots.length; i++) {
-        if (!slots[i].start_time || !slots[i].end_time) {
-          setError(`Please set start and end times for all time slots of ${activityName}`);
-          return;
-        }
-        
-        // Validate end time is after start time
-        const [startH, startM] = slots[i].start_time.split(':').map(Number);
-        const [endH, endM] = slots[i].end_time.split(':').map(Number);
-        const startMinutes = startH * 60 + startM;
-        const endMinutes = endH * 60 + endM;
-        
-        if (endMinutes <= startMinutes) {
-          setError(`Invalid time range for ${activityName} (Slot ${i + 1}): End time must be after start time`);
-          return;
-        }
-      }
+    // Get all validation errors
+    const validationErrors = getValidationErrors();
+    if (validationErrors.length > 0) {
+      const errorMessages = validationErrors.map(err => 
+        `${err.activity} (Slot ${err.slotIndex + 1}): ${err.error}`
+      ).join('\n');
+      setError('Please fix the following issues:\n' + errorMessages);
+      return;
     }
 
     if (selectedCount === 0) {
@@ -444,54 +502,67 @@ function ActivityForm({ onSubmit, trainers, currentTrainer }) {
                     {/* Time slots appear when activity is selected */}
                     {selectedActivities[activity] && (
                       <div className="activity-time-slots">
-                        {selectedActivities[activity].map((slot, slotIndex) => (
-                          <div key={slotIndex} className="time-slot">
-                            <div className="time-slot-inputs">
-                              <div className="time-input">
-                                <TimeInput
-                                  label="Start"
-                                  value={slot.start_time}
-                                  onChange={(e) =>
-                                    handleTimeSlotChange(activity, slotIndex, 'start_time', e.target.value)
-                                  }
-                                  required
-                                />
-                              </div>
+                        {selectedActivities[activity].map((slot, slotIndex) => {
+                          const slotError = getValidationErrors().find(
+                            e => e.activity === activity && e.slotIndex === slotIndex
+                          );
+                          return (
+                            <div 
+                              key={slotIndex} 
+                              className={`time-slot ${slotError ? 'time-slot-invalid' : ''}`}
+                            >
+                              <div className="time-slot-inputs">
+                                <div className={`time-input ${slotError ? 'has-error' : ''}`}>
+                                  <TimeInput
+                                    label="Start"
+                                    value={slot.start_time}
+                                    onChange={(e) =>
+                                      handleTimeSlotChange(activity, slotIndex, 'start_time', e.target.value)
+                                    }
+                                    required
+                                  />
+                                </div>
 
-                              <div className="time-input">
-                                <TimeInput
-                                  label="End"
-                                  value={slot.end_time}
-                                  onChange={(e) =>
-                                    handleTimeSlotChange(activity, slotIndex, 'end_time', e.target.value)
-                                  }
-                                  required
-                                />
-                              </div>
+                                <div className={`time-input ${slotError ? 'has-error' : ''}`}>
+                                  <TimeInput
+                                    label="End"
+                                    value={slot.end_time}
+                                    onChange={(e) =>
+                                      handleTimeSlotChange(activity, slotIndex, 'end_time', e.target.value)
+                                    }
+                                    required
+                                  />
+                                </div>
 
-                              {selectedActivities[activity].length > 1 && (
+                                {selectedActivities[activity].length > 1 && (
+                                  <button
+                                    type="button"
+                                    className="btn-remove-slot"
+                                    onClick={() => handleRemoveNewTimeSlot(activity, slotIndex)}
+                                    title="Remove this time slot"
+                                  >
+                                    ✕
+                                  </button>
+                                )}
+                              </div>
+                              {slotError && (
+                                <div className="time-slot-error-message">
+                                  ⚠️ {slotError.error}
+                                </div>
+                              )}
+                              {slotIndex === selectedActivities[activity].length - 1 && (
                                 <button
                                   type="button"
-                                  className="btn-remove-slot"
-                                  onClick={() => handleRemoveNewTimeSlot(activity, slotIndex)}
-                                  title="Remove this time slot"
+                                  className="btn-add-slot"
+                                  onClick={() => handleAddTimeSlot(activity)}
+                                  title="Add another time slot for this activity"
                                 >
-                                  ✕
+                                  + Add time slot
                                 </button>
                               )}
                             </div>
-                            {slotIndex === selectedActivities[activity].length - 1 && (
-                              <button
-                                type="button"
-                                className="btn-add-slot"
-                                onClick={() => handleAddTimeSlot(activity)}
-                                title="Add another time slot for this activity"
-                              >
-                                + Add time slot
-                              </button>
-                            )}
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                   </div>
@@ -508,11 +579,32 @@ function ActivityForm({ onSubmit, trainers, currentTrainer }) {
               <h3>⚠️ New Activities to Save ({Object.keys(selectedActivities).length}):</h3>
               <p className="summary-info">These activities have not been saved yet. Please click the "Save Activities" button below to save them.</p>
               <ul>
-                {Object.entries(selectedActivities).map(([activity, slots]) => (
-                  <li key={activity}>
-                    {activity}: {slots.map(s => `${s.start_time}-${s.end_time}`).join(', ')}
-                  </li>
-                ))}
+                {Object.entries(selectedActivities).map(([activity, slots]) => {
+                  const activityErrors = getValidationErrors().filter(e => e.activity === activity);
+                  return (
+                    <li key={activity} className={activityErrors.length > 0 ? 'with-error' : ''}>
+                      <div className="activity-summary-item">
+                        <strong>{activity}:</strong> {slots.map((s, idx) => {
+                          const slotError = activityErrors.find(e => e.slotIndex === idx);
+                          return (
+                            <span key={idx} className={slotError ? 'time-slot-error' : ''}>
+                              {s.start_time && s.end_time ? `${s.start_time}-${s.end_time}` : '⏱️ incomplete'}
+                            </span>
+                          );
+                        }).reduce((prev, curr, idx) => [prev, ', ', curr])}
+                      </div>
+                      {activityErrors.length > 0 && (
+                        <div className="slot-error-messages">
+                          {activityErrors.map((err, idx) => (
+                            <div key={idx} className="error-message">
+                              ❌ Slot {err.slotIndex + 1}: {err.error}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           )}
