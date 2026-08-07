@@ -107,7 +107,7 @@ function ActivitySummaryTable({ trainerFilter, selectedMonth }) {
       <table className="activity-summary-table">
         <thead>
           <tr>
-            <th>Player</th>
+            {!trainerFilter && <th>Player</th>}
             <th>Activity</th>
             <th>Date</th>
             <th>Start Time</th>
@@ -120,7 +120,7 @@ function ActivitySummaryTable({ trainerFilter, selectedMonth }) {
           {activities.length > 0 ? (
             activities.map((activity, idx) => (
               <tr key={idx} className="activity-row">
-                <td>{activity['Trainer Name']}</td>
+                {!trainerFilter && <td>{activity['Trainer Name']}</td>}
                 {activity.should_show_activity && (
                   <td
                     rowSpan={activity.merge_size}
@@ -138,26 +138,26 @@ function ActivitySummaryTable({ trainerFilter, selectedMonth }) {
             ))
           ) : (
             <tr>
-              <td colSpan="7" className="no-data">No activities found</td>
+              <td colSpan={!trainerFilter ? 7 : 6} className="no-data">No activities found</td>
             </tr>
           )}
           {activities.length > 0 && (
             <tr className="totals-row">
-              <td colSpan="5" className="totals-label">Total</td>
+              <td colSpan={!trainerFilter ? 5 : 4} className="totals-label">Total</td>
               <td className="hours totals-value">{formatHours(totals.total_hours)}</td>
               <td></td>
             </tr>
           )}
           {activities.length > 0 && totals.overtime > 0 && (
             <tr className="overtime-row">
-              <td colSpan="5" className="totals-label">Overtime</td>
+              <td colSpan={!trainerFilter ? 5 : 4} className="totals-label">Overtime</td>
               <td className="hours totals-value overtime">{formatHours(totals.overtime)}</td>
               <td></td>
             </tr>
           )}
           {activities.length > 0 && totals.undertime > 0 && (
             <tr className="undertime-row">
-              <td colSpan="5" className="totals-label">Shortfall</td>
+              <td colSpan={!trainerFilter ? 5 : 4} className="totals-label">Shortfall</td>
               <td className="hours totals-value undertime">{formatHours(totals.undertime)}</td>
               <td></td>
             </tr>
