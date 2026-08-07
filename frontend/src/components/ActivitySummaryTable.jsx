@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import '../styles/ActivitySummaryTable.css';
 
-function ActivitySummaryTable({ trainerFilter, selectedMonth }) {
+function ActivitySummaryTable({ trainerFilter, selectedMonth, trainerType = 'Assistant Trainer' }) {
   const [activities, setActivities] = useState([]);
   const [totals, setTotals] = useState({
     total_hours: 0,
@@ -134,13 +134,17 @@ function ActivitySummaryTable({ trainerFilter, selectedMonth }) {
               // Render subtotal rows
               if (activity.is_subtotal) {
                 return (
-                  <tr key={idx} className="activity-subtotal-row">
-                    <td colSpan={!trainerFilter ? 5 : 4} className="subtotal-label">
-                      {activity.activity_type} Subtotal
-                    </td>
-                    <td className="hours subtotal-value">{formatHours(activity.subtotal_hours)}</td>
-                    <td></td>
-                  </tr>
+                  <>
+                    {trainerType !== 'Junior Trainer' && (
+                      <tr key={idx} className="activity-subtotal-row">
+                        <td colSpan={!trainerFilter ? 5 : 4} className="subtotal-label">
+                          {activity.activity_type} Subtotal
+                        </td>
+                        <td className="hours subtotal-value">{formatHours(activity.subtotal_hours)}</td>
+                        <td></td>
+                      </tr>
+                    )}
+                  </>
                 );
               }
               
@@ -183,7 +187,7 @@ function ActivitySummaryTable({ trainerFilter, selectedMonth }) {
               <td></td>
             </tr>
           )}
-          {activities.length > 0 && totals.undertime > 0 && trainerFilter && (
+          {activities.length > 0 && totals.undertime > 0 && trainerFilter && trainerType !== 'Junior Trainer' && (
             <tr className="undertime-row">
               <td colSpan={!trainerFilter ? 5 : 4} className="totals-label">Shortfall</td>
               <td className="hours totals-value undertime">{formatHours(totals.undertime)}</td>
