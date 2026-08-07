@@ -158,6 +158,35 @@ def create_app():
                 'message': error_msg
             }), 500
     
+    # Delete multiple activities
+    @app.route('/api/activities/delete-all', methods=['POST'])
+    def delete_all_activities():
+        """Delete multiple activities matching filter criteria"""
+        try:
+            data = request.get_json()
+            
+            if not data:
+                return jsonify({'error': 'No data provided'}), 400
+            
+            sheets = get_sheets_manager()
+            result = sheets.delete_activities_by_filter(
+                trainer=data.get('trainer'),
+                activity_type=data.get('activity_type'),
+                month=data.get('month')
+            )
+            
+            status_code = 200 if result['success'] else 400
+            return jsonify(result), status_code
+        except Exception as e:
+            error_msg = str(e)
+            print(f"❌ ERROR in delete_all_activities: {error_msg}")
+            import traceback
+            traceback.print_exc()
+            return jsonify({
+                'error': 'Failed to delete activities',
+                'message': error_msg
+            }), 500
+    
     # Get all activities
     @app.route('/api/activities', methods=['GET'])
     def get_activities():

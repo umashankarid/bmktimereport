@@ -165,6 +165,47 @@ function ActivityHistoryView({ currentTrainer = null, isAdminView = false }) {
     }
   };
 
+  const handleDeleteAll = async () => {
+    if (!window.confirm(`⚠️ WARNING: This will delete ALL ${activities.length} activities matching the current filters!\n\nTrainer: ${selectedTrainer || 'All'}\nActivity: ${selectedActivity || 'All'}\nMonth: ${selectedMonth}\n\nThis action cannot be undone. Are you sure?`)) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setMessage('');
+
+      const response = await fetch('/api/activities/delete-all', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+        },
+        body: JSON.stringify({
+          trainer: selectedTrainer || null,
+          activity_type: selectedActivity || null,
+          month: selectedMonth
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setMessage(`✅ ${result.deleted_count || activities.length} activities deleted successfully`);
+        setMessageType('success');
+        fetchActivityHistory();
+      } else {
+        setMessage(`❌ ${result.message || 'Failed to delete activities'}`);
+        setMessageType('error');
+      }
+    } catch (err) {
+      console.error('Error deleting activities:', err);
+      setMessage('Failed to delete activities');
+      setMessageType('error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Pagination
   const totalPages = Math.ceil(activities.length / itemsPerPage);
   const startIdx = (currentPage - 1) * itemsPerPage;
@@ -284,9 +325,16 @@ function ActivityHistoryView({ currentTrainer = null, isAdminView = false }) {
           {selectedTrainer && ` | Trainer: ${selectedTrainer}`}
           {selectedActivity && ` | Activity: ${selectedActivity}`}
         </span>
-        <button className="btn-export" onClick={handleExportCSV}>
-          📥 Export CSV
-        </button>
+        <div className="summary-actions">
+          {isAdminView && activities.length > 0 && (
+            <button className="btn-delete-all" onClick={handleDeleteAll}>
+              🗑️ Delete All Filtered
+            </button>
+          )}
+          <button className="btn-export" onClick={handleExportCSV}>
+            📥 Export CSV
+          </button>
+        </div>
       </div>
 
       {/* Error/Loading */}

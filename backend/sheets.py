@@ -649,6 +649,92 @@ class GoogleSheetsManager:
                 'message': f'Error deleting activity: {str(e)}'
             }
     
+    def delete_activities_by_filter(self, trainer=None, activity_type=None, month=None):
+        """Delete multiple activities matching filter criteria"""
+        try:
+            if not self.authenticated:
+                return {
+                    'success': False,
+                    'message': 'Google Sheets not configured'
+                }
+            
+            if self.demo_mode:
+                # Demo mode: filter and delete from memory
+                original_len = len(self.demo_data)
+                filtered_data = []
+                
+                for row in self.demo_data:
+                    should_delete = True
+                    
+                    if trainer and row.get('Trainer Name') != trainer:
+                        should_delete = False
+                    if activity_type and row.get('Activity') != activity_type:
+                        should_delete = False
+                    if month:
+                        row_date = row.get('Date', '')
+                        if not row_date.startswith(month):
+                            should_delete = False
+                    
+                    if not should_delete:
+                        filtered_data.append(row)
+                
+                deleted_count = original_len - len(filtered_data)
+                self.demo_data = filtered_data
+                
+                return {
+                    'success': True,
+                    'deleted_count': deleted_count,
+                    'message': f'Deleted {deleted_count} activities'
+                }
+            
+            # Real mode: delete from Google Sheets
+            sheet = self.get_sheet()
+            all_rows = sheet.get_all_records()
+            
+            # Find rows to delete (in reverse order to maintain indices)
+            rows_to_delete = []
+            for idx, row in enumerate(all_rows):
+                should_delete = True
+                
+                if trainer and row.get('Trainer Name') != trainer:
+                    should_delete = False
+                if activity_type and row.get('Activity') != activity_type:
+                    should_delete = False
+                if month:
+                    row_date = row.get('Date', '')
+                    if not row_date.startswith(month):
+                        should_delete = False
+                
+                if should_delete:
+                    rows_to_delete.append(idx + 2)  # +2 for 1-indexed and header
+            
+            # Delete in reverse order to maintain indices
+            deleted_count = 0
+            for row_idx in sorted(rows_to_delete, reverse=True):
+                try:
+                    sheet.delete_rows(row_idx)
+                    deleted_count += 1
+                except Exception as e:
+                    print(f"⚠️  Failed to delete row {row_idx}: {e}")
+            
+            if deleted_count > 0:
+                self._invalidate_cache()
+            
+            return {
+                'success': True,
+                'deleted_count': deleted_count,
+                'message': f'Deleted {deleted_count} activities'
+            }
+            
+        except Exception as e:
+            print(f"❌ Error deleting activities by filter: {e}")
+            import traceback
+            traceback.print_exc()
+            return {
+                'success': False,
+                'message': f'Error deleting activities: {str(e)}'
+            }
+    
     def get_all_activities(self, limit=100):
         """Get all activities from the sheet (with caching)"""
         try:
