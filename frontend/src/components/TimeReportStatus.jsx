@@ -142,7 +142,10 @@ function TimeReportStatus({ trainerType = 'Assistant Trainer' }) {
             </div>
             <div className="summary-card warning">
               <div className="summary-value">
-                {trainers.filter(t => isHighlighted(t)).length}
+                {trainers.filter(t => {
+                  const trainerName = typeof t === 'string' ? t : t.name;
+                  return isHighlighted(trainerName);
+                }).length}
               </div>
               <div className="summary-label">Trainers Not Reporting (3+ days)</div>
             </div>
@@ -168,15 +171,16 @@ function TimeReportStatus({ trainerType = 'Assistant Trainer' }) {
                 </thead>
                 <tbody>
                   {trainers.length > 0 ? (
-                    trainers.map(trainer => {
-                      const daysNotReported = getDaysSinceLastReport(trainer);
-                      const highlighted = isHighlighted(trainer);
+                    trainers.map(trainerObj => {
+                      const trainerName = typeof trainerObj === 'string' ? trainerObj : trainerObj.name;
+                      const daysNotReported = getDaysSinceLastReport(trainerName);
+                      const highlighted = isHighlighted(trainerName);
 
                       return (
-                        <tr key={trainer} className={highlighted ? 'trainer-row warning' : 'trainer-row'}>
+                        <tr key={trainerName} className={highlighted ? 'trainer-row warning' : 'trainer-row'}>
                           <td className="trainer-col">
                             <span className={highlighted ? 'trainer-name warning' : 'trainer-name'}>
-                              {trainer}
+                              {trainerName}
                               {highlighted && <span className="warning-badge">⚠️</span>}
                             </span>
                           </td>
@@ -187,11 +191,11 @@ function TimeReportStatus({ trainerType = 'Assistant Trainer' }) {
                           </td>
                           {days.map(day => {
                             const dateStr = `${year}-${month}-${String(day).padStart(2, '0')}`;
-                            const hasActivity = hasActivityOnDate(trainer, dateStr);
+                            const hasActivity = hasActivityOnDate(trainerName, dateStr);
 
                             return (
                               <td
-                                key={`${trainer}-${day}`}
+                                key={`${trainerName}-${day}`}
                                 className={`day-cell ${hasActivity ? 'reported' : 'not-reported'}`}
                                 title={hasActivity ? 'Reported' : 'Not reported'}
                               >
