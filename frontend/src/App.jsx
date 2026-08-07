@@ -280,21 +280,6 @@ function App() {
         >
           Log Activity
         </button>
-        <button
-          className={`tab ${activeTab === 'history' ? 'active' : ''}`}
-          onClick={() => {
-            setActiveTab('history');
-            handleRefresh();
-          }}
-        >
-          Activity History
-        </button>
-        <button
-          className={`tab ${activeTab === 'reports' ? 'active' : ''}`}
-          onClick={() => setActiveTab('reports')}
-        >
-          Reports
-        </button>
       </nav>
 
       <main className="container">
@@ -307,14 +292,6 @@ function App() {
 
         {activeTab === 'form' && (
           <ActivityForm onSubmit={handleActivitySubmit} trainers={trainers} currentTrainer={admin} />
-        )}
-
-        {activeTab === 'history' && (
-          <ActivityHistoryView currentTrainer={admin} isAdminView={false} />
-        )}
-
-        {activeTab === 'reports' && (
-          <ReportsPage currentTrainer={admin} />
         )}
       </main>
 
