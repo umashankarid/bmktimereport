@@ -404,15 +404,31 @@ function ActivityForm({ onSubmit, trainers, currentTrainer }) {
       return;
     }
 
-    // Get all validation errors
+    // FIRST: Check that all time slots have BOTH start and end times filled
+    console.log('[SUBMIT] Checking if all times are filled...');
+    for (const [activityName, slots] of Object.entries(selectedActivities)) {
+      for (let i = 0; i < slots.length; i++) {
+        if (!slots[i].start_time || !slots[i].end_time) {
+          console.log(`[SUBMIT] ❌ INCOMPLETE: ${activityName} slot ${i + 1} missing times`);
+          setError(`❌ ${activityName} (Slot ${i + 1}): Both start and end times are required`);
+          return;
+        }
+      }
+    }
+    console.log('[SUBMIT] ✅ All times filled');
+
+    // SECOND: Get all validation errors (overlaps, invalid ranges, etc)
+    console.log('[SUBMIT] Running validation checks...');
     const validationErrors = getValidationErrors();
     if (validationErrors.length > 0) {
       const errorMessages = validationErrors.map(err => 
         `${err.activity} (Slot ${err.slotIndex + 1}): ${err.error}`
       ).join('\n');
-      setError('Please fix the following issues:\n' + errorMessages);
+      console.log(`[SUBMIT] ❌ VALIDATION FAILED:\n${errorMessages}`);
+      setError('❌ Please fix the following issues:\n' + errorMessages);
       return;
     }
+    console.log('[SUBMIT] ✅ All validations passed');
 
     if (selectedCount === 0) {
       setSuccess('✓ No new activities to log');

@@ -403,13 +403,22 @@ class GoogleSheetsManager:
                     'message': f"Invalid date format. Please use YYYY-MM-DD format."
                 }
             
-            # Validate time ranges for all activities
-            print(f"\n⏱️  VALIDATING TIME RANGES")
+            # Validate time ranges for all activities (STRICT CHECK)
+            print(f"\n⏱️  VALIDATING TIME RANGES (STRICT)")
             for idx, activity_item in enumerate(activities_to_log):
                 start_time = activity_item.get('start_time', '')
                 end_time = activity_item.get('end_time', '')
                 activity_name = activity_item.get('activity', 'Unknown')
                 
+                # Check if times are missing
+                if not start_time or not end_time:
+                    print(f"❌ MISSING TIMES for {activity_name}: start={start_time}, end={end_time}")
+                    return {
+                        'success': False,
+                        'message': f"Missing start or end time for {activity_name}"
+                    }
+                
+                # Validate time format and range
                 is_valid, error_msg = self._is_valid_time_range(start_time, end_time)
                 
                 if not is_valid:
@@ -422,6 +431,25 @@ class GoogleSheetsManager:
                 print(f"✅ Valid: {activity_name} {start_time}-{end_time}")
             
             print(f"\n✅ All time ranges valid")
+            
+            # Check for overlaps WITHIN new activities being submitted
+            print(f"\n⏰ CHECKING FOR OVERLAPS WITHIN NEW ACTIVITIES")
+            for i in range(len(activities_to_log)):
+                for j in range(i + 1, len(activities_to_log)):
+                    act1 = activities_to_log[i]
+                    act2 = activities_to_log[j]
+                    
+                    if self._times_overlap(act1.get('start_time'), act1.get('end_time'), 
+                                         act2.get('start_time'), act2.get('end_time')):
+                        print(f"❌ OVERLAP WITHIN NEW ACTIVITIES:")
+                        print(f"   {act1.get('activity')} ({act1.get('start_time')}-{act1.get('end_time')})")
+                        print(f"   overlaps with")
+                        print(f"   {act2.get('activity')} ({act2.get('start_time')}-{act2.get('end_time')})")
+                        return {
+                            'success': False,
+                            'message': f"Cannot log overlapping activities: {act1.get('activity')} overlaps with {act2.get('activity')}"
+                        }
+            print(f"✅ No overlaps within new activities")
             
             # Check for time conflicts
             print(f"\n⏰ CHECKING FOR TIME CONFLICTS")
