@@ -23,6 +23,9 @@ function ReportsPage({ currentTrainer = null }) {
   });
   
   const [useDateFilter, setUseDateFilter] = useState(false);
+  
+  // Separate reports by trainer type
+  const [reportTrainerType, setReportTrainerType] = useState('Assistant Trainer');
 
   useEffect(() => {
     // Check if this is a trainer view (not admin)
@@ -55,7 +58,7 @@ function ReportsPage({ currentTrainer = null }) {
 
   useEffect(() => {
     fetchReports();
-  }, [activeReport, selectedTrainer, selectedMonth, selectedDate, useDateFilter]);
+  }, [activeReport, selectedTrainer, selectedMonth, selectedDate, useDateFilter, reportTrainerType]);
 
   const fetchReports = async () => {
     setLoading(true);
@@ -210,6 +213,33 @@ function ReportsPage({ currentTrainer = null }) {
         )}
 
         <div className="reports-layout">
+          {/* Trainer Type Selector */}
+          {!isTrainerView && (
+            <div className="trainer-type-selector">
+              <label>Report Type:</label>
+              <div className="type-radio-group">
+                <label className="radio-option">
+                  <input
+                    type="radio"
+                    value="Assistant Trainer"
+                    checked={reportTrainerType === 'Assistant Trainer'}
+                    onChange={(e) => setReportTrainerType(e.target.value)}
+                  />
+                  <span>📊 Assistant Trainer Reports</span>
+                </label>
+                <label className="radio-option">
+                  <input
+                    type="radio"
+                    value="Junior Trainer"
+                    checked={reportTrainerType === 'Junior Trainer'}
+                    onChange={(e) => setReportTrainerType(e.target.value)}
+                  />
+                  <span>👶 Junior Trainer Reports</span>
+                </label>
+              </div>
+            </div>
+          )}
+
           {/* Report Navigation */}
           <nav className="reports-nav">
             <button
@@ -241,7 +271,7 @@ function ReportsPage({ currentTrainer = null }) {
             ) : (
               <>
                 {activeReport === 'activity-summary' && (
-                  <ActivitySummaryReport data={reports['activity-summary']} trainerFilter={isTrainerView ? currentTrainer?.name : selectedTrainer} selectedMonth={selectedMonth} />
+                  <ActivitySummaryReport data={reports['activity-summary']} trainerFilter={isTrainerView ? currentTrainer?.name : selectedTrainer} selectedMonth={selectedMonth} trainerType={reportTrainerType} />
                 )}
                 {activeReport === 'activity-distribution' && (
                   <ActivityDistributionReport data={reports['activity-distribution']} trainerFilter={isTrainerView ? currentTrainer?.name : selectedTrainer} selectedMonth={selectedMonth} />

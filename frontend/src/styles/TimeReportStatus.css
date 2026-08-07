@@ -318,6 +318,41 @@
   padding: 2rem !important;
 }
 
+/* Access Denied State */
+.access-denied {
+  background: linear-gradient(135deg, #fff5e6 0%, #ffe8cc 100%);
+  border: 2px solid #ff9800;
+  border-radius: 8px;
+  padding: 3rem 2rem;
+  text-align: center;
+  margin: 2rem 0;
+}
+
+.denied-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+
+.access-denied h3 {
+  color: #e65100;
+  font-size: 1.5rem;
+  margin: 0 0 1rem 0;
+}
+
+.access-denied p {
+  color: #d84315;
+  font-size: 1rem;
+  margin: 0.5rem 0;
+}
+
+.current-role {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #ff9800;
+  color: #e65100;
+  font-weight: 500;
+}
+
 @media (max-width: 1024px) {
   .status-table th.day-col,
   .status-table td.day-cell {

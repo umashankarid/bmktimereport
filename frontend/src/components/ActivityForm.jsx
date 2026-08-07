@@ -673,33 +673,8 @@ function ActivityForm({ onSubmit, trainers, currentTrainer }) {
           )}
         </form>
 
-        {/* Mini Calendar showing activity dates for current month */}
-        <div className="activity-calendar-mini">
-          <h3>Your Activity Calendar - {formData.date.substring(0, 7)}</h3>
-          <div className="calendar-mini-grid">
-            {Array.from({ length: new Date(formData.date.substring(0, 7) + '-01').getDay() }, () => null).map((_, i) => (
-              <div key={`empty-${i}`} className="calendar-mini-day empty"></div>
-            ))}
-            {Array.from({ length: new Date(formData.date.substring(0, 4), parseInt(formData.date.substring(5, 7)), 0).getDate() }, (_, i) => {
-              const day = i + 1;
-              const dateStr = `${formData.date.substring(0, 7)}-${String(day).padStart(2, '0')}`;
-              const hasActivity = existingActivities.some(act => act.Date === dateStr);
-              return (
-                <div 
-                  key={day} 
-                  className={`calendar-mini-day ${hasActivity ? 'has-activity' : ''}`}
-                  title={hasActivity ? 'Activity logged' : 'No activity'}
-                >
-                  {day}
-                  {hasActivity && <div className="activity-indicator">●</div>}
-                </div>
-              );
-            })}
-          </div>
-          <div className="calendar-mini-legend">
-            <span className="legend-item">● Day with activity</span>
-          </div>
-        </div>
+        {/* Mini Calendar showing activity dates - moved to modal triggered by date picker */}
+        {/* Calendar is now accessed by clicking the date input field */}
 
         {/* Activity History Table at the bottom */}
         {existingActivities.length > 0 && (

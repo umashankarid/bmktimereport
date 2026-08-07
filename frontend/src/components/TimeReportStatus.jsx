@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import '../styles/TimeReportStatus.css';
 
-function TimeReportStatus() {
+function TimeReportStatus({ trainerType = 'Assistant Trainer' }) {
   const [reportData, setReportData] = useState({});
   const [trainers, setTrainers] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -96,30 +96,39 @@ function TimeReportStatus() {
         Track daily activity reports for each trainer. Highlighted trainers haven't reported for 3+ days.
       </p>
 
-      {error && (
-        <div className="alert alert-error">
-          <span>{error}</span>
-          <button onClick={() => setError('')}>×</button>
+      {trainerType !== 'Assistant Trainer' ? (
+        <div className="access-denied">
+          <div className="denied-icon">🔒</div>
+          <h3>Access Restricted</h3>
+          <p>Time Report Status is only available for Assistant Trainers.</p>
+          <p className="current-role">Your role: <strong>{trainerType}</strong></p>
         </div>
-      )}
-
-      <div className="status-filters">
-        <div className="filter-group">
-          <label htmlFor="month-filter">Month & Year:</label>
-          <input
-            type="month"
-            id="month-filter"
-            value={selectedMonth}
-            onChange={(e) => setSelectedMonth(e.target.value)}
-            className="filter-input"
-          />
-        </div>
-      </div>
-
-      {loading ? (
-        <div className="loading">Loading report status...</div>
       ) : (
         <>
+          {error && (
+            <div className="alert alert-error">
+              <span>{error}</span>
+              <button onClick={() => setError('')}>×</button>
+            </div>
+          )}
+
+          <div className="status-filters">
+            <div className="filter-group">
+              <label htmlFor="month-filter">Month & Year:</label>
+              <input
+                type="month"
+                id="month-filter"
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(e.target.value)}
+                className="filter-input"
+              />
+            </div>
+          </div>
+
+          {loading ? (
+            <div className="loading">Loading report status...</div>
+          ) : (
+            <>
           <div className="report-summary">
             <div className="summary-card">
               <div className="summary-value">{monthName}</div>
@@ -217,6 +226,8 @@ function TimeReportStatus() {
               </div>
             </div>
           </div>
+            </>
+          )}
         </>
       )}
     </div>

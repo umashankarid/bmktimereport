@@ -101,6 +101,53 @@
   color: #667eea;
 }
 
+/* Trainer Type Selector */
+.trainer-type-selector {
+  background: #f5f7ff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.trainer-type-selector label {
+  font-weight: 600;
+  color: #333;
+  display: block;
+  margin-bottom: 0.75rem;
+}
+
+.type-radio-group {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.radio-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-weight: 500;
+  color: #666;
+  user-select: none;
+}
+
+.radio-option input[type="radio"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #667eea;
+}
+
+.radio-option span {
+  cursor: pointer;
+}
+
+.radio-option:hover span {
+  color: #667eea;
+}
+
 .filter-select:focus,
 .filter-input:focus {
   outline: none;
