@@ -22,6 +22,18 @@ function AdminDashboard({ onLogout }) {
     fetchTrainers();
   }, []);
 
+  // When report trainer type changes, reset selected trainer to first of that type
+  React.useEffect(() => {
+    if (trainers.length > 0) {
+      const trainersOfType = trainers.filter(t => t.trainer_type === reportTrainerType);
+      if (trainersOfType.length > 0) {
+        setSelectedTrainer(trainersOfType[0].name);
+      } else {
+        setSelectedTrainer('');
+      }
+    }
+  }, [reportTrainerType, trainers]);
+
   const fetchTrainers = async () => {
     try {
       const response = await fetch('/api/trainers/details/all');
