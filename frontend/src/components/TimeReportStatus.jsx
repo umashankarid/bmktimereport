@@ -137,26 +137,6 @@ function TimeReportStatus({ trainerType = 'Assistant Trainer' }) {
             <div className="loading">Loading report status...</div>
           ) : (
             <>
-          <div className="report-summary">
-            <div className="summary-card">
-              <div className="summary-value">{monthName}</div>
-              <div className="summary-label">Current Month</div>
-            </div>
-            <div className="summary-card">
-              <div className="summary-value">{trainers.length}</div>
-              <div className="summary-label">Total Trainers</div>
-            </div>
-            <div className="summary-card warning">
-              <div className="summary-value">
-                {trainers.filter(t => {
-                  const trainerName = typeof t === 'string' ? t : t.name;
-                  return isHighlighted(trainerName);
-                }).length}
-              </div>
-              <div className="summary-label">Trainers Not Reporting (3+ days)</div>
-            </div>
-          </div>
-
           <div className="calendar-view-container">
             <div className="calendar-header">
               <h3>{monthName}</h3>
@@ -167,45 +147,55 @@ function TimeReportStatus({ trainerType = 'Assistant Trainer' }) {
                 <thead>
                   <tr>
                     <th className="trainer-col">Trainer</th>
-                    <th className="status-col">Days Not Reported</th>
-                    {days.map(day => (
-                      <th key={day} className="day-col">
-                        {day}
-                      </th>
-                    ))}
+                    {days.map(day => {
+                      const dateStr = `${year}-${month}-${String(day).padStart(2, '0')}`;
+                      const today = new Date();
+                      today.setHours(0, 0, 0, 0);
+                      const dayDate = new Date(dateStr);
+                      dayDate.setHours(0, 0, 0, 0);
+                      const isToday = dayDate.getTime() === today.getTime();
+                      const isFuture = dayDate > today;
+                      
+                      return (
+                        <th key={day} className={`day-col ${isToday ? 'today' : ''} ${isFuture ? 'future' : ''}`}>
+                          {day}
+                        </th>
+                      );
+                    })}
                   </tr>
                 </thead>
                 <tbody>
                   {trainers.length > 0 ? (
                     trainers.map(trainerObj => {
                       const trainerName = typeof trainerObj === 'string' ? trainerObj : trainerObj.name;
-                      const daysNotReported = getDaysSinceLastReport(trainerName);
-                      const highlighted = isHighlighted(trainerName);
 
                       return (
-                        <tr key={trainerName} className={highlighted ? 'trainer-row warning' : 'trainer-row'}>
+                        <tr key={trainerName} className="trainer-row">
                           <td className="trainer-col">
-                            <span className={highlighted ? 'trainer-name warning' : 'trainer-name'}>
+                            <span className="trainer-name">
                               {trainerName}
-                              {highlighted && <span className="warning-badge">⚠️</span>}
-                            </span>
-                          </td>
-                          <td className="status-col">
-                            <span className={daysNotReported >= 3 ? 'days-warning' : ''}>
-                              {daysNotReported === 999 ? 'Never' : `${daysNotReported}d`}
                             </span>
                           </td>
                           {days.map(day => {
                             const dateStr = `${year}-${month}-${String(day).padStart(2, '0')}`;
                             const hasActivity = hasActivityOnDate(trainerName, dateStr);
+                            
+                            // Only show ✗ for dates up to today, not future dates
+                            const today = new Date();
+                            today.setHours(0, 0, 0, 0);
+                            const dayDate = new Date(dateStr);
+                            dayDate.setHours(0, 0, 0, 0);
+                            const isFuture = dayDate > today;
+                            
+                            const cellContent = hasActivity ? '✓' : (isFuture ? '' : '✗');
 
                             return (
                               <td
                                 key={`${trainerName}-${day}`}
-                                className={`day-cell ${hasActivity ? 'reported' : 'not-reported'}`}
-                                title={hasActivity ? 'Reported' : 'Not reported'}
+                                className={`day-cell ${hasActivity ? 'reported' : isFuture ? 'future' : 'not-reported'}`}
+                                title={hasActivity ? 'Reported' : isFuture ? 'Future date' : 'Not reported'}
                               >
-                                {hasActivity ? '✓' : '✗'}
+                                {cellContent}
                               </td>
                             );
                           })}
@@ -214,7 +204,7 @@ function TimeReportStatus({ trainerType = 'Assistant Trainer' }) {
                     })
                   ) : (
                     <tr>
-                      <td colSpan={daysInMonth + 2} className="no-data">
+                      <td colSpan={daysInMonth + 1} className="no-data">
                         No trainers found
                       </td>
                     </tr>
@@ -230,11 +220,11 @@ function TimeReportStatus({ trainerType = 'Assistant Trainer' }) {
               </div>
               <div className="legend-item">
                 <span className="legend-symbol not-reported">✗</span>
-                <span>Not Reported</span>
+                <span>Not Reported (Past Date)</span>
               </div>
               <div className="legend-item">
-                <span className="legend-symbol warning-indicator">⚠️</span>
-                <span>Not Reported for 3+ Days</span>
+                <span className="legend-symbol" style={{background: '#f5f5f5', color: '#999'}}>-</span>
+                <span>Future Date</span>
               </div>
             </div>
           </div>
