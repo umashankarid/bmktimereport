@@ -184,6 +184,17 @@ function ReportsPage({ currentTrainer = null }) {
               </div>
               
               <div className="filter-group">
+                <label htmlFor="month-filter">Month & Year:</label>
+                <input
+                  type="month"
+                  id="month-filter"
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(e.target.value)}
+                  className="filter-input"
+                />
+              </div>
+
+              <div className="filter-group">
                 <label htmlFor="date-toggle" className="date-toggle-label">
                   <input
                     type="checkbox"
@@ -192,29 +203,18 @@ function ReportsPage({ currentTrainer = null }) {
                     onChange={(e) => setUseDateFilter(e.target.checked)}
                     className="date-toggle-checkbox"
                   />
-                  <span>Filter by specific date</span>
+                  <span>Also filter by specific date</span>
                 </label>
               </div>
 
-              {useDateFilter ? (
+              {useDateFilter && (
                 <div className="filter-group">
-                  <label htmlFor="date-filter">Date:</label>
+                  <label htmlFor="date-filter">Specific Date:</label>
                   <input
                     type="date"
                     id="date-filter"
                     value={selectedDate}
                     onChange={(e) => setSelectedDate(e.target.value)}
-                    className="filter-input"
-                  />
-                </div>
-              ) : (
-                <div className="filter-group">
-                  <label htmlFor="month-filter">Month & Year:</label>
-                  <input
-                    type="month"
-                    id="month-filter"
-                    value={selectedMonth}
-                    onChange={(e) => setSelectedMonth(e.target.value)}
                     className="filter-input"
                   />
                 </div>

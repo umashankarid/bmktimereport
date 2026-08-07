@@ -587,6 +587,68 @@ class GoogleSheetsManager:
                 self._cache[key] = {'data': None, 'timestamp': None}
             print(f"🗑️  All caches INVALIDATED")
     
+    def delete_activity(self, trainer_name, date, activity, start_time, end_time):
+        """Delete a specific activity from the sheet"""
+        try:
+            if not self.authenticated:
+                return {
+                    'success': False,
+                    'message': 'Google Sheets not configured'
+                }
+            
+            if self.demo_mode:
+                # Demo mode: remove from memory
+                self.demo_data = [
+                    row for row in self.demo_data
+                    if not (
+                        row.get('Trainer Name') == trainer_name and
+                        row.get('Date') == date and
+                        row.get('Activity') == activity and
+                        row.get('Start Time') == start_time and
+                        row.get('End Time') == end_time
+                    )
+                ]
+                return {
+                    'success': True,
+                    'message': 'Activity deleted successfully'
+                }
+            
+            # Real mode: delete from Google Sheets
+            sheet = self.get_sheet()
+            all_rows = sheet.get_all_records()
+            
+            # Find the row to delete
+            row_to_delete = None
+            for idx, row in enumerate(all_rows):
+                if (row.get('Trainer Name') == trainer_name and
+                    row.get('Date') == date and
+                    row.get('Activity') == activity and
+                    row.get('Start Time') == start_time and
+                    row.get('End Time') == end_time):
+                    row_to_delete = idx + 2  # +2 because sheet rows are 1-indexed and header is row 1
+                    break
+            
+            if row_to_delete:
+                sheet.delete_rows(row_to_delete)
+                self._invalidate_cache()
+                return {
+                    'success': True,
+                    'message': 'Activity deleted successfully'
+                }
+            else:
+                return {
+                    'success': False,
+                    'message': 'Activity not found'
+                }
+        except Exception as e:
+            print(f"❌ Error deleting activity: {e}")
+            import traceback
+            traceback.print_exc()
+            return {
+                'success': False,
+                'message': f'Error deleting activity: {str(e)}'
+            }
+    
     def get_all_activities(self, limit=100):
         """Get all activities from the sheet (with caching)"""
         try:
@@ -718,12 +780,16 @@ class GoogleSheetsManager:
                 
                 trainers_data = []
                 for trainer in all_trainers:
-                    trainers_data.append({
-                        'name': trainer.get('Trainer Name', ''),
-                        'email': trainer.get('Email', ''),
-                        'phone': trainer.get('Phone', ''),
-                        'trainer_type': trainer.get('Trainer Type', 'Assistant Trainer')
-                    })
+                    trainer_name = trainer.get('Trainer Name', '').strip()
+                    if trainer_name:  # Only include trainers with non-empty names
+                        trainers_data.append({
+                            'name': trainer_name,
+                            'email': trainer.get('Email', ''),
+                            'phone': trainer.get('Phone', ''),
+                            'trainer_type': trainer.get('Trainer Type', 'Assistant Trainer')
+                        })
+                
+                print(f"✅ Loaded {len(trainers_data)} trainers from Login sheet")
                 
                 return {
                     'success': True,

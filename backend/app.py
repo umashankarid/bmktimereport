@@ -127,6 +127,37 @@ def create_app():
                 'message': error_msg
             }), 500
     
+    # Delete an activity
+    @app.route('/api/activities/delete', methods=['POST'])
+    def delete_activity():
+        """Delete a specific activity"""
+        try:
+            data = request.get_json()
+            
+            if not data:
+                return jsonify({'error': 'No data provided'}), 400
+            
+            sheets = get_sheets_manager()
+            result = sheets.delete_activity(
+                trainer_name=data.get('trainer_name'),
+                date=data.get('date'),
+                activity=data.get('activity'),
+                start_time=data.get('start_time'),
+                end_time=data.get('end_time')
+            )
+            
+            status_code = 200 if result['success'] else 400
+            return jsonify(result), status_code
+        except Exception as e:
+            error_msg = str(e)
+            print(f"❌ ERROR in delete_activity: {error_msg}")
+            import traceback
+            traceback.print_exc()
+            return jsonify({
+                'error': 'Failed to delete activity',
+                'message': error_msg
+            }), 500
+    
     # Get all activities
     @app.route('/api/activities', methods=['GET'])
     def get_activities():

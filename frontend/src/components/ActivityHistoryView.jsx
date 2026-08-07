@@ -16,6 +16,8 @@ function ActivityHistoryView({ currentTrainer = null, isAdminView = false }) {
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   });
   const [availableActivities, setAvailableActivities] = useState([]);
+  const [message, setMessage] = useState('');
+  const [messageType, setMessageType] = useState(''); // success, error
   
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -118,6 +120,49 @@ function ActivityHistoryView({ currentTrainer = null, isAdminView = false }) {
     const now = new Date();
     setSelectedMonth(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`);
     setCurrentPage(1);
+  };
+
+  const handleDeleteActivity = async (activity) => {
+    if (!window.confirm(`Are you sure you want to delete this activity?\n${activity.Date} | ${activity['Trainer Name']} | ${activity.Activity}`)) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setMessage('');
+
+      const response = await fetch('/api/activities/delete', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+        },
+        body: JSON.stringify({
+          trainer_name: activity['Trainer Name'],
+          date: activity['Date'],
+          activity: activity['Activity'],
+          start_time: activity['Start Time'],
+          end_time: activity['End Time']
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setMessage(`✅ Activity deleted successfully`);
+        setMessageType('success');
+        fetchActivityHistory();
+      } else {
+        setMessage(`❌ ${result.message || 'Failed to delete activity'}`);
+        setMessageType('error');
+      }
+    } catch (err) {
+      console.error('Error deleting activity:', err);
+      setMessage('Failed to delete activity');
+      setMessageType('error');
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Pagination
@@ -246,6 +291,7 @@ function ActivityHistoryView({ currentTrainer = null, isAdminView = false }) {
 
       {/* Error/Loading */}
       {error && <div className="alert alert-error">{error}</div>}
+      {message && <div className={`alert alert-${messageType}`}>{message}</div>}
       {loading && <div className="loading">Loading activities...</div>}
 
       {/* Activities Table */}
@@ -262,6 +308,7 @@ function ActivityHistoryView({ currentTrainer = null, isAdminView = false }) {
                   <th>End Time</th>
                   <th>Duration</th>
                   <th>Note</th>
+                  {isAdminView && <th>Actions</th>}
                 </tr>
               </thead>
               <tbody>
@@ -289,6 +336,17 @@ function ActivityHistoryView({ currentTrainer = null, isAdminView = false }) {
                       <td className="time-cell">{activity['End Time']}</td>
                       <td className="duration-cell">{duration}</td>
                       <td className="note-cell">{activity['Note'] || '-'}</td>
+                      {isAdminView && (
+                        <td className="actions-cell">
+                          <button
+                            className="btn btn-delete-small"
+                            onClick={() => handleDeleteActivity(activity)}
+                            title="Delete activity"
+                          >
+                            🗑️ Delete
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   );
                 })}
