@@ -406,39 +406,6 @@
   box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
 }
 
-.add-more-activities-prompt {
-  background: #e8f5e9;
-  border: 2px solid #4caf50;
-  border-radius: 8px;
-  padding: 1.5rem;
-  text-align: center;
-  margin-bottom: 2rem;
-}
-
-.add-more-activities-prompt p {
-  color: #2e7d32;
-  font-size: 1.1rem;
-  margin: 0 0 1rem 0;
-  font-weight: 500;
-}
-
-.add-more-activities-prompt .btn-secondary {
-  background: #4caf50;
-  color: white;
-  border: none;
-  padding: 0.75rem 1.5rem;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 600;
-  transition: all 0.3s ease;
-}
-
-.add-more-activities-prompt .btn-secondary:hover {
-  background: #45a049;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
-}
-
 .activity-times {
   display: grid;
   grid-template-columns: 1fr 1fr;
