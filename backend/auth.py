@@ -218,11 +218,10 @@ def register_auth_routes(app, sheets_manager):
 
     @app.route('/api/auth/trainer/register', methods=['POST'])
     def trainer_register():
-        """Register a new trainer with email, phone, and optional photo"""
+        """Register a new trainer with email, phone, and optional photo (stored as base64)"""
         try:
             from trainer_auth import TrainerAuthManager
-            import os
-            from werkzeug.utils import secure_filename
+            import base64
             
             # Get form data
             trainer_name = request.form.get('trainer_name')
@@ -244,20 +243,21 @@ def register_auth_routes(app, sheets_manager):
                     'message': 'Email and phone are required'
                 }), 400
             
-            # Handle photo upload if provided
-            photo_path = None
+            # Handle photo upload if provided - convert to base64
+            photo_base64 = None
             if photo_file:
-                # Create uploads directory if it doesn't exist
-                uploads_dir = os.path.join(os.path.dirname(__file__), '..', 'uploads', 'trainer_photos')
-                os.makedirs(uploads_dir, exist_ok=True)
-                
-                # Save file with secure filename
-                filename = secure_filename(f"{trainer_name}_{photo_file.filename}")
-                photo_path = os.path.join(uploads_dir, filename)
-                photo_file.save(photo_path)
+                try:
+                    # Read file and encode as base64
+                    photo_data = photo_file.read()
+                    photo_base64 = base64.b64encode(photo_data).decode('utf-8')
+                except Exception as e:
+                    return jsonify({
+                        'success': False,
+                        'message': f'Failed to process photo: {str(e)}'
+                    }), 400
             
-            # Register trainer
-            result = TrainerAuthManager.register_trainer(trainer_name, password, email, phone, photo_path)
+            # Register trainer with base64 photo
+            result = TrainerAuthManager.register_trainer(trainer_name, password, email, phone, photo_base64)
             
             return jsonify(result), 200 if result['success'] else 400
             
