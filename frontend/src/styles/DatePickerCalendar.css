@@ -127,24 +127,25 @@
 
 .day.has-activity {
   border-color: #4caf50;
-  background: #e8f5e9;
-  color: #2e7d32;
+  background: #c8e6c9;
+  color: #1b5e20;
+  font-weight: 600;
 }
 
 .day.has-activity:hover:not(:disabled) {
-  background: #c8e6c9;
-  border-color: #2e7d32;
+  background: #a5d6a7;
+  border-color: #1b5e20;
 }
 
 .day.no-activity {
-  border-color: #e0e0e0;
-  background: white;
-  color: #999;
+  border-color: #f44336;
+  background: #ffcdd2;
+  color: #b71c1c;
 }
 
 .day.no-activity:hover:not(:disabled) {
-  border-color: #667eea;
-  background: #f5f7ff;
+  border-color: #d32f2f;
+  background: #ef9a9a;
 }
 
 .day.today {
@@ -202,7 +203,7 @@
 }
 
 .legend-dot.no-activity {
-  color: #999;
+  color: #f44336;
 }
 
 /* Mobile responsive */

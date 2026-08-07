@@ -40,10 +40,11 @@ function DatePickerCalendar({ selectedDate, onChange, trainerName }) {
             }
           }
         });
+        console.log(`📅 Calendar: Found ${dates.size} activities for ${trainerName} in ${year}-${month}:`, Array.from(dates));
         setDaysWithActivities(dates);
       }
     } catch (err) {
-      console.error('Error fetching activities:', err);
+      console.error('❌ Error fetching activities:', err);
     } finally {
       setLoading(false);
     }
@@ -66,16 +67,18 @@ function DatePickerCalendar({ selectedDate, onChange, trainerName }) {
   };
 
   const handleDateClick = (day) => {
-    const newDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
+    // Use local date string format to avoid timezone issues
+    const year = currentMonth.getFullYear();
+    const month = String(currentMonth.getMonth() + 1).padStart(2, '0');
+    const dayStr = String(day).padStart(2, '0');
+    const dateStr = `${year}-${month}-${dayStr}`;
     
-    // Don't allow future dates
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    if (newDate > today) {
+    // Check if date is in the past or today
+    const today = new Date().toISOString().split('T')[0];
+    if (dateStr > today) {
       return;
     }
     
-    const dateStr = newDate.toISOString().split('T')[0];
     onChange(dateStr);
     setIsOpen(false);
   };
@@ -124,18 +127,22 @@ function DatePickerCalendar({ selectedDate, onChange, trainerName }) {
                 return <div key={`empty-${idx}`} className="day empty"></div>;
               }
 
-              const dateObj = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
-              dateObj.setHours(0, 0, 0, 0);
-              const dateStr = dateObj.toISOString().split('T')[0];
+              // Use string-based dates to avoid timezone issues
+              const year = currentMonth.getFullYear();
+              const month = String(currentMonth.getMonth() + 1).padStart(2, '0');
+              const dayStr = String(day).padStart(2, '0');
+              const dateStr = `${year}-${month}-${dayStr}`;
+              
               const hasActivity = daysWithActivities.has(dateStr);
-              const isFuture = dateObj > today;
-              const isToday = dateObj.getTime() === today.getTime();
+              const today = new Date().toISOString().split('T')[0];
+              const isFuture = dateStr > today;
+              const isToday = dateStr === today;
               const isSelected = selectedDate === dateStr;
 
               return (
                 <button
                   key={day}
-                  className={`day ${hasActivity ? 'has-activity' : ''} ${isFuture ? 'future' : ''} ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''}`}
+                  className={`day ${hasActivity ? 'has-activity' : 'no-activity'} ${isFuture ? 'future' : ''} ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''}`}
                   onClick={() => handleDateClick(day)}
                   disabled={isFuture}
                   title={hasActivity ? 'Has activity' : 'No activity'}
