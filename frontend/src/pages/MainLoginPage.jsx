@@ -216,6 +216,17 @@ function MainLoginPage({ onAdminLogin, onTrainerLogin }) {
           </form>
         ) : (
           <form onSubmit={handleRegister} className="login-form">
+            <button
+              type="button"
+              className="back-btn"
+              onClick={() => {
+                setIsRegistering(false);
+                setError('');
+              }}
+            >
+              ← Back to Login
+            </button>
+
             <h2>Register as Trainer</h2>
 
             <div className="form-group">
