@@ -120,10 +120,10 @@ function ActivityForm({ onSubmit, trainers, currentTrainer }) {
     }
   };
 
-  const handleDateChange = (e) => {
+  const handleDateChange = (dateString) => {
     setFormData(prev => ({
       ...prev,
-      date: e.target.value
+      date: dateString
     }));
   };
 
