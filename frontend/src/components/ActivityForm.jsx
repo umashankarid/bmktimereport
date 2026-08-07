@@ -144,7 +144,7 @@ function ActivityForm({ onSubmit, trainers, currentTrainer }) {
     }));
   };
 
-  const handleRemoveTimeSlot = (activity, slotIndex) => {
+  const handleRemoveNewTimeSlot = (activity, slotIndex) => {
     setSelectedActivities(prev => {
       const slots = prev[activity].filter((_, idx) => idx !== slotIndex);
       if (slots.length === 0) {
@@ -540,7 +540,7 @@ function ActivityForm({ onSubmit, trainers, currentTrainer }) {
                                 <button
                                   type="button"
                                   className="btn-remove-slot"
-                                  onClick={() => handleRemoveTimeSlot(activity, slotIndex)}
+                                  onClick={() => handleRemoveNewTimeSlot(activity, slotIndex)}
                                   title="Remove this time slot"
                                 >
                                   ✕
