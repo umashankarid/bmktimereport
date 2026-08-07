@@ -32,7 +32,8 @@ function DatePickerCalendar({ selectedDate, onChange, trainerName }) {
         // Filter activities by trainer name and current month
         const dates = new Set();
         result.data.forEach(activity => {
-          if (activity.Trainer === trainerName && activity.Date) {
+          // Use 'Trainer Name' field (not 'Trainer')
+          if (activity['Trainer Name'] === trainerName && activity.Date) {
             // Check if activity date is in the current month
             const activityDate = new Date(activity.Date);
             if (activityDate.getFullYear() === year && activityDate.getMonth() === currentMonth.getMonth()) {
