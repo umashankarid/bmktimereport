@@ -24,17 +24,20 @@ function DatePickerCalendar({ selectedDate, onChange, trainerName }) {
       const year = currentMonth.getFullYear();
       const month = String(currentMonth.getMonth() + 1).padStart(2, '0');
       
-      const response = await fetch(
-        `/api/activities/by-trainer/${encodeURIComponent(trainerName)}?month=${year}-${month}`
-      );
+      // Fetch all activities and filter client-side
+      const response = await fetch('/api/activities');
       const result = await response.json();
       
-      if (result.success && result.data) {
-        // Extract unique dates from activities
+      if (result.success && result.data && Array.isArray(result.data)) {
+        // Filter activities by trainer name and current month
         const dates = new Set();
         result.data.forEach(activity => {
-          if (activity.Date) {
-            dates.add(activity.Date);
+          if (activity.Trainer === trainerName && activity.Date) {
+            // Check if activity date is in the current month
+            const activityDate = new Date(activity.Date);
+            if (activityDate.getFullYear() === year && activityDate.getMonth() === currentMonth.getMonth()) {
+              dates.add(activity.Date);
+            }
           }
         });
         setDaysWithActivities(dates);
