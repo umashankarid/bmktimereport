@@ -20,7 +20,7 @@ function ManageTrainers() {
   const fetchTrainers = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/trainers');
+      const response = await fetch('/api/trainers/details/all');
       const result = await response.json();
       if (result.success && result.data) {
         setTrainers(result.data);
@@ -35,11 +35,11 @@ function ManageTrainers() {
   };
 
   const handleEditClick = (trainer) => {
-    setEditingTrainer(trainer);
+    setEditingTrainer(trainer.name);
     setEditFormData({
-      name: trainer,
-      email: '',
-      phone: ''
+      name: trainer.name,
+      email: trainer.email,
+      phone: trainer.phone
     });
     setMessage('');
   };
@@ -174,10 +174,10 @@ function ManageTrainers() {
             </thead>
             <tbody>
               {trainers.map((trainer) => (
-                <tr key={trainer}>
-                  <td>{trainer}</td>
-                  <td>-</td>
-                  <td>-</td>
+                <tr key={trainer.name}>
+                  <td>{trainer.name}</td>
+                  <td>{trainer.email || '-'}</td>
+                  <td>{trainer.phone || '-'}</td>
                   <td className="actions">
                     <button
                       className="btn btn-edit"
@@ -188,7 +188,7 @@ function ManageTrainers() {
                     </button>
                     <button
                       className="btn btn-delete"
-                      onClick={() => handleDeleteTrainer(trainer)}
+                      onClick={() => handleDeleteTrainer(trainer.name)}
                       title="Delete trainer"
                     >
                       🗑️ Delete

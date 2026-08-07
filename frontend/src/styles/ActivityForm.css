@@ -630,3 +630,80 @@
     width: 100%;
   }
 }
+
+/* Activity Calendar Mini */
+.activity-calendar-mini {
+  background: white;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin: 2rem 0;
+  border: 2px solid #e8f5e9;
+}
+
+.activity-calendar-mini h3 {
+  margin: 0 0 1rem 0;
+  color: #2e7d32;
+  font-size: 1.1rem;
+}
+
+.calendar-mini-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.calendar-mini-day {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #e0e0e0;
+  border-radius: 6px;
+  background: white;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #666;
+  position: relative;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.calendar-mini-day:hover {
+  border-color: #4caf50;
+  background: #f5f5f5;
+}
+
+.calendar-mini-day.empty {
+  background: transparent;
+  border: none;
+  cursor: default;
+}
+
+.calendar-mini-day.has-activity {
+  background: #e8f5e9;
+  border-color: #4caf50;
+  color: #2e7d32;
+  font-weight: 600;
+}
+
+.activity-indicator {
+  position: absolute;
+  bottom: 2px;
+  color: #4caf50;
+  font-size: 0.7rem;
+}
+
+.calendar-mini-legend {
+  font-size: 0.85rem;
+  color: #666;
+  text-align: center;
+  padding-top: 0.5rem;
+  border-top: 1px solid #e0e0e0;
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}

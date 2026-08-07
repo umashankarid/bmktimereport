@@ -684,6 +684,70 @@ class GoogleSheetsManager:
                 'message': f'Error retrieving trainers: {str(e)}'
             }
 
+    def get_trainers_details(self):
+        """Get trainers list with their details from Login sheet"""
+        try:
+            if not self.authenticated:
+                return {
+                    'success': False,
+                    'data': [],
+                    'message': 'Google Sheets not configured'
+                }
+
+            if self.demo_mode:
+                # Demo mode: return empty details
+                trainers = set()
+                for activity in self.demo_data:
+                    if activity.get('Trainer Name'):
+                        trainers.add(activity['Trainer Name'])
+                return {
+                    'success': True,
+                    'data': [{'name': t, 'email': '', 'phone': ''} for t in sorted(list(trainers))],
+                    'note': 'DEMO MODE'
+                }
+
+            # Real mode: fetch from Login sheet
+            try:
+                from backend.trainer_auth import TrainerAuthManager
+                login_sheet = TrainerAuthManager.get_login_sheet()
+                all_trainers = login_sheet.get_all_records()
+                
+                trainers_data = []
+                for trainer in all_trainers:
+                    trainers_data.append({
+                        'name': trainer.get('Trainer Name', ''),
+                        'email': trainer.get('Email', ''),
+                        'phone': trainer.get('Phone', '')
+                    })
+                
+                return {
+                    'success': True,
+                    'data': trainers_data
+                }
+            except Exception as e:
+                # Fallback: just return trainer names without details
+                print(f"⚠️  Could not fetch from Login sheet: {e}")
+                sheet = self.get_sheet()
+                all_rows = sheet.get_all_records()
+                
+                trainers = set()
+                for row in all_rows:
+                    if row.get('Trainer Name'):
+                        trainers.add(row['Trainer Name'])
+                
+                return {
+                    'success': True,
+                    'data': [{'name': t, 'email': '', 'phone': ''} for t in sorted(list(trainers))]
+                }
+
+        except Exception as e:
+            print(f"✗ Error retrieving trainer details: {e}")
+            return {
+                'success': False,
+                'data': [],
+                'message': f'Error retrieving trainer details: {str(e)}'
+            }
+
     def get_time_report_status(self, month):
         """Get daily time report status for all trainers in a month
         

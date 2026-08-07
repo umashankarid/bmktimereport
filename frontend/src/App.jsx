@@ -6,7 +6,6 @@ import AdminDashboard from './pages/AdminDashboard';
 import ReportsPage from './pages/ReportsPage';
 import ActivityForm from './components/ActivityForm';
 import ActivityHistoryView from './components/ActivityHistoryView';
-import ActivityCalendar from './components/ActivityCalendar';
 
 const API_URL = process.env.REACT_APP_API_URL || '/api';
 
@@ -281,12 +280,6 @@ function App() {
         >
           Log Activity
         </button>
-        <button
-          className={`tab ${activeTab === 'calendar' ? 'active' : ''}`}
-          onClick={() => setActiveTab('calendar')}
-        >
-          📅 Calendar
-        </button>
       </nav>
 
       <main className="container">
@@ -299,12 +292,6 @@ function App() {
 
         {activeTab === 'form' && (
           <ActivityForm onSubmit={handleActivitySubmit} trainers={trainers} currentTrainer={admin} />
-        )}
-
-        {activeTab === 'calendar' && (
-          <div className="calendar-section">
-            <ActivityCalendar trainerName={admin?.name} />
-          </div>
         )}
       </main>
 

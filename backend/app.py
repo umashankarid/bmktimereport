@@ -163,6 +163,21 @@ def create_app():
                 'message': str(e)
             }), 500
 
+    # Get trainer details with email and phone
+    @app.route('/api/trainers/details/all', methods=['GET'])
+    def get_trainers_details():
+        """Get list of all trainers with their details (email, phone)"""
+        try:
+            sheets = get_sheets_manager()
+            result = sheets.get_trainers_details()
+            
+            return jsonify(result), 200 if result['success'] else 400
+        except Exception as e:
+            return jsonify({
+                'error': 'Failed to retrieve trainer details',
+                'message': str(e)
+            }), 500
+
     # Update trainer information
     @app.route('/api/trainers/<trainer_name>/update', methods=['PUT'])
     def update_trainer(trainer_name):
