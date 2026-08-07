@@ -155,7 +155,7 @@ function ActivitySummaryTable({ trainerFilter, selectedMonth }) {
               <td></td>
             </tr>
           )}
-          {activities.length > 0 && totals.undertime > 0 && (
+          {activities.length > 0 && totals.undertime > 0 && trainerFilter && (
             <tr className="undertime-row">
               <td colSpan={!trainerFilter ? 5 : 4} className="totals-label">Shortfall</td>
               <td className="hours totals-value undertime">{formatHours(totals.undertime)}</td>
