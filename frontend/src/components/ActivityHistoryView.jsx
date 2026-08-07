@@ -10,11 +10,7 @@ function ActivityHistoryView({ currentTrainer = null, isAdminView = false }) {
   // Filter states
   const [selectedTrainer, setSelectedTrainer] = useState(null);
   const [selectedActivity, setSelectedActivity] = useState('');
-  const [selectedMonth, setSelectedMonth] = useState(() => {
-    // Default to current month (YYYY-MM)
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  });
+  const [selectedMonth, setSelectedMonth] = useState(null); // null = all months
   const [availableActivities, setAvailableActivities] = useState([]);
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState(''); // success, error
@@ -116,9 +112,8 @@ function ActivityHistoryView({ currentTrainer = null, isAdminView = false }) {
 
   const handleClearFilters = () => {
     setSelectedActivity('');
-    // Reset month to current month
-    const now = new Date();
-    setSelectedMonth(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`);
+    // Reset month to all months
+    setSelectedMonth(null);
     setCurrentPage(1);
   };
 
@@ -268,8 +263,6 @@ function ActivityHistoryView({ currentTrainer = null, isAdminView = false }) {
 
       {/* Filters Section */}
       <div className="filters-section">
-        <h3>Filters</h3>
-        
         <div className="filter-row">
           {isAdminView && trainers.length > 0 && (
             <div className="filter-group">
@@ -305,11 +298,28 @@ function ActivityHistoryView({ currentTrainer = null, isAdminView = false }) {
 
           <div className="filter-group">
             <label>Month:</label>
-            <input
-              type="month"
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(e.target.value)}
-            />
+            <select
+              value={selectedMonth || 'all'}
+              onChange={(e) => {
+                if (e.target.value === 'all') {
+                  setSelectedMonth(null);
+                } else {
+                  setSelectedMonth(e.target.value);
+                }
+              }}
+            >
+              <option value="all">-- All Months --</option>
+              {/* Generate last 12 months */}
+              {Array.from({ length: 12 }, (_, i) => {
+                const date = new Date();
+                date.setMonth(date.getMonth() - i);
+                return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+              }).map(month => (
+                <option key={month} value={month}>
+                  {new Date(month + '-01').toLocaleString('default', { month: 'long', year: 'numeric' })}
+                </option>
+              ))}
+            </select>
           </div>
 
           <button className="btn-clear" onClick={handleClearFilters}>
