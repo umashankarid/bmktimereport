@@ -191,7 +191,7 @@ function App() {
         console.log('✅ Activity logged successfully');
         await fetchTrainers();
         await fetchActivities();
-        setActiveTab('history');
+        // Keep activeTab as 'form' so the activity form stays visible after success
         return { success: true };
       } else {
         console.log('❌ API returned success=false:', response.data.message);
