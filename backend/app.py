@@ -127,10 +127,10 @@ def create_app():
                 'message': error_msg
             }), 500
     
-    # Delete an activity
+    # Delete an activity (by POST with full details)
     @app.route('/api/activities/delete', methods=['POST'])
-    def delete_activity():
-        """Delete a specific activity"""
+    def delete_activity_by_details():
+        """Delete a specific activity by providing full details"""
         try:
             data = request.get_json()
             
@@ -150,7 +150,7 @@ def create_app():
             return jsonify(result), status_code
         except Exception as e:
             error_msg = str(e)
-            print(f"❌ ERROR in delete_activity: {error_msg}")
+            print(f"❌ ERROR in delete_activity_by_details: {error_msg}")
             import traceback
             traceback.print_exc()
             return jsonify({
