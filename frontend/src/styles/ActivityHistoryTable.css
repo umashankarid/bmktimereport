@@ -95,6 +95,64 @@
   font-size: 1rem;
 }
 
+.actions-cell {
+  text-align: center;
+  padding: 0.5rem !important;
+}
+
+.btn-action {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  margin: 0 0.25rem;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  color: #666;
+}
+
+.btn-action:hover {
+  background: #f0f4ff;
+  color: #333;
+}
+
+.btn-edit {
+  color: #667eea;
+}
+
+.btn-edit:hover {
+  background: #e8eef7;
+  color: #764ba2;
+}
+
+.btn-delete {
+  color: #ff6b6b;
+}
+
+.btn-delete:hover {
+  background: #ffe0e0;
+  color: #ee5a52;
+}
+
+.btn-save-edit {
+  color: #4caf50;
+}
+
+.btn-save-edit:hover {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.btn-cancel-edit {
+  color: #ff6b6b;
+}
+
+.btn-cancel-edit:hover {
+  background: #ffe0e0;
+  color: #ee5a52;
+}
+
 @media (max-width: 768px) {
   .activity-history-container {
     padding: 1rem;
@@ -111,5 +169,11 @@
 
   .history-title {
     font-size: 1rem;
+  }
+  
+  .btn-action {
+    font-size: 1rem;
+    padding: 0.2rem 0.4rem;
+    margin: 0 0.15rem;
   }
 }
