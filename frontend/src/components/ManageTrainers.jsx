@@ -184,14 +184,14 @@ function ManageTrainers() {
                       onClick={() => handleEditClick(trainer)}
                       title="Edit trainer"
                     >
-                      ✎ Edit
+                      ✎
                     </button>
                     <button
                       className="btn btn-delete"
                       onClick={() => handleDeleteTrainer(trainer.name)}
                       title="Delete trainer"
                     >
-                      🗑️ Delete
+                      🗑️
                     </button>
                   </td>
                 </tr>
