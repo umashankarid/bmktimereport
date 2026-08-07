@@ -1,15 +1,35 @@
 import React, { useState } from 'react';
 import '../styles/AdminDashboard.css';
-import ReportsPage from './ReportsPage';
 import ActivityHistoryView from '../components/ActivityHistoryView';
+import ActivitySummaryTable from '../components/ActivitySummaryTable';
 
 function AdminDashboard({ onLogout }) {
-  const [activeTab, setActiveTab] = useState('config'); // config, reports, activities
+  const [activeTab, setActiveTab] = useState('reports'); // reports, activities, config
   const [configFile, setConfigFile] = useState(null);
   const [sheetId, setSheetId] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState(''); // success, error
+  const [selectedTrainer, setSelectedTrainer] = useState('');
+  const [selectedMonth, setSelectedMonth] = useState('');
+  const [trainers, setTrainers] = useState([]);
+
+  // Fetch trainers on mount
+  React.useEffect(() => {
+    fetchTrainers();
+  }, []);
+
+  const fetchTrainers = async () => {
+    try {
+      const response = await fetch('/api/trainers');
+      const result = await response.json();
+      if (result.success && result.data) {
+        setTrainers(result.data);
+      }
+    } catch (err) {
+      console.error('Error fetching trainers:', err);
+    }
+  };
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -88,12 +108,6 @@ function AdminDashboard({ onLogout }) {
 
       <div className="admin-tabs">
         <button
-          className={`tab-btn ${activeTab === 'config' ? 'active' : ''}`}
-          onClick={() => setActiveTab('config')}
-        >
-          🔧 Configuration
-        </button>
-        <button
           className={`tab-btn ${activeTab === 'reports' ? 'active' : ''}`}
           onClick={() => setActiveTab('reports')}
         >
@@ -104,6 +118,12 @@ function AdminDashboard({ onLogout }) {
           onClick={() => setActiveTab('activities')}
         >
           📝 Activity History
+        </button>
+        <button
+          className={`tab-btn ${activeTab === 'config' ? 'active' : ''}`}
+          onClick={() => setActiveTab('config')}
+        >
+          🔧 Configuration
         </button>
       </div>
 
@@ -189,7 +209,44 @@ function AdminDashboard({ onLogout }) {
         )}
 
         {activeTab === 'reports' && (
-          <ReportsPage />
+          <div className="reports-section">
+            <h2>Activity Summary Report</h2>
+            
+            <div className="report-filters">
+              <div className="filter-group">
+                <label htmlFor="trainer-filter">Trainer:</label>
+                <select
+                  id="trainer-filter"
+                  value={selectedTrainer}
+                  onChange={(e) => setSelectedTrainer(e.target.value)}
+                  className="filter-select"
+                >
+                  <option value="">All Trainers</option>
+                  {trainers.map((trainer) => (
+                    <option key={trainer} value={trainer}>
+                      {trainer}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              <div className="filter-group">
+                <label htmlFor="month-filter">Month & Year:</label>
+                <input
+                  type="month"
+                  id="month-filter"
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(e.target.value)}
+                  className="filter-input"
+                />
+              </div>
+            </div>
+
+            <ActivitySummaryTable 
+              trainerFilter={selectedTrainer} 
+              selectedMonth={selectedMonth}
+            />
+          </div>
         )}
 
         {activeTab === 'activities' && (

@@ -1,0 +1,155 @@
+/* Activity Summary Table Styles */
+
+.activity-summary-table-container {
+  width: 100%;
+  overflow-x: auto;
+  margin: 2rem 0;
+}
+
+.activity-summary-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.activity-summary-table thead {
+  background: #667eea;
+  color: white;
+  font-weight: 600;
+}
+
+.activity-summary-table th {
+  padding: 1rem;
+  text-align: left;
+  border: 1px solid #e0e0e0;
+  font-size: 0.95rem;
+}
+
+.activity-summary-table td {
+  padding: 0.75rem 1rem;
+  border: 1px solid #e0e0e0;
+  font-size: 0.9rem;
+}
+
+.activity-row {
+  background: white;
+  transition: background-color 0.2s ease;
+}
+
+.activity-row:hover {
+  background-color: #f5f7ff;
+}
+
+.activity-row:nth-child(even) {
+  background-color: #fafbff;
+}
+
+.activity-merged {
+  font-weight: 600;
+  background: #f0f4ff;
+  color: #333;
+  vertical-align: middle;
+  border-left: 3px solid #667eea;
+}
+
+.hours {
+  font-weight: 500;
+  text-align: right;
+  font-family: 'Courier New', monospace;
+  background: #f5f7ff;
+}
+
+.totals-row {
+  background: #e8eef7;
+  font-weight: 600;
+  border-top: 2px solid #667eea;
+  border-bottom: 2px solid #667eea;
+}
+
+.totals-row td {
+  padding: 1rem;
+  border: 1px solid #ccc;
+}
+
+.totals-label {
+  text-align: right;
+  color: #333;
+}
+
+.totals-value {
+  background: #e0e8ff;
+  color: #667eea;
+  font-size: 1rem;
+}
+
+.overtime-row {
+  background: #fff3e0;
+  font-weight: 500;
+}
+
+.overtime-row td {
+  border: 1px solid #ffe0b2;
+}
+
+.overtime {
+  background: #ffe0b2 !important;
+  color: #e65100 !important;
+}
+
+.undertime-row {
+  background: #e3f2fd;
+  font-weight: 500;
+}
+
+.undertime-row td {
+  border: 1px solid #bbdefb;
+}
+
+.undertime {
+  background: #bbdefb !important;
+  color: #1565c0 !important;
+}
+
+.no-data {
+  text-align: center;
+  color: #999;
+  padding: 2rem !important;
+  font-style: italic;
+}
+
+.loading,
+.error {
+  padding: 2rem;
+  border-radius: 8px;
+  text-align: center;
+  font-size: 1rem;
+}
+
+.loading {
+  background: #f5f5f5;
+  color: #666;
+}
+
+.error {
+  background: #ffebee;
+  color: #c62828;
+  border: 1px solid #e57373;
+}
+
+@media (max-width: 768px) {
+  .activity-summary-table {
+    font-size: 0.85rem;
+  }
+
+  .activity-summary-table th,
+  .activity-summary-table td {
+    padding: 0.5rem;
+  }
+
+  .activity-summary-table-container {
+    font-size: 0.8rem;
+  }
+}

@@ -178,6 +178,80 @@ def create_app():
                 'message': str(e)
             }), 500
     
+    # Get activity summary for table display
+    @app.route('/api/activities/summary', methods=['GET'])
+    def get_activity_summary():
+        """Get detailed activity summary with optional filtering"""
+        try:
+            trainer_filter = request.args.get('trainer')
+            month_filter = request.args.get('month')
+            
+            sheets = get_sheets_manager()
+            
+            # Get all activities
+            activities_result = sheets.get_all_activities()
+            if not activities_result['success']:
+                return jsonify(activities_result), 400
+            
+            activities = activities_result['data']
+            
+            # Apply filters
+            if trainer_filter:
+                activities = [a for a in activities if a.get('Trainer Name', '').lower() == trainer_filter.lower()]
+            
+            if month_filter:
+                filtered = []
+                for activity in activities:
+                    date_str = activity.get('Date', '')
+                    if date_str:
+                        try:
+                            from datetime import datetime
+                            date_obj = datetime.strptime(date_str, '%Y-%m-%d')
+                            activity_month = date_obj.strftime('%Y-%m')
+                            if activity_month == month_filter:
+                                filtered.append(activity)
+                        except:
+                            pass
+                activities = filtered
+            
+            # Calculate hours for each activity
+            for activity in activities:
+                start_time = activity.get('Start Time', '')
+                end_time = activity.get('End Time', '')
+                if start_time and end_time:
+                    try:
+                        start_h, start_m = map(int, start_time.split(':'))
+                        end_h, end_m = map(int, end_time.split(':'))
+                        duration_minutes = (end_h - start_h) * 60 + (end_m - start_m)
+                        activity['hours'] = round(duration_minutes / 60, 2)
+                    except:
+                        activity['hours'] = 0
+                else:
+                    activity['hours'] = 0
+            
+            # Calculate totals
+            total_hours = sum(a.get('hours', 0) for a in activities)
+            MONTHLY_QUOTA = 180
+            overtime = max(0, total_hours - MONTHLY_QUOTA)
+            undertime = max(0, MONTHLY_QUOTA - total_hours)
+            
+            return jsonify({
+                'success': True,
+                'data': activities,
+                'totals': {
+                    'total_hours': round(total_hours, 2),
+                    'overtime': round(overtime, 2),
+                    'undertime': round(undertime, 2)
+                },
+                'count': len(activities)
+            }), 200
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'error': 'Failed to retrieve activity summary',
+                'message': str(e)
+            }), 500
+    
     # Activity History endpoint
     @app.route('/api/activity-history', methods=['GET'])
     def get_activity_history():
