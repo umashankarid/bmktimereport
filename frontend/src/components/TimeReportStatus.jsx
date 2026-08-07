@@ -35,7 +35,7 @@ function TimeReportStatus({ trainerType = 'Assistant Trainer' }) {
       setLoading(true);
       setError('');
 
-      const response = await fetch(`/api/reports/time-status?month=${selectedMonth}`);
+      const response = await fetch(`/api/reports/time-status?month=${selectedMonth}&trainer_type=${trainerType}`);
       const result = await response.json();
 
       if (result.success) {

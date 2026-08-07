@@ -751,8 +751,8 @@ class GoogleSheetsManager:
                 'message': f'Error retrieving trainer details: {str(e)}'
             }
 
-    def get_time_report_status(self, month):
-        """Get daily time report status for all trainers in a month
+    def get_time_report_status(self, month, trainer_type=None):
+        """Get daily time report status for trainers in a month, optionally filtered by trainer_type
         
         Returns: {
             'success': True,
@@ -777,6 +777,17 @@ class GoogleSheetsManager:
             month_date = datetime.strptime(month, '%Y-%m')
             year = month_date.year
             month_num = month_date.month
+            
+            # Get trainers of specified type if filtering
+            trainers_of_type = None
+            if trainer_type:
+                try:
+                    trainers_result = self.get_trainers_details()
+                    if trainers_result['success']:
+                        trainers_of_type = [t['name'] for t in trainers_result['data'] if t.get('trainer_type') == trainer_type]
+                        print(f"🔍 Time Report Status: filtering for {trainer_type}, found trainers: {trainers_of_type}")
+                except Exception as e:
+                    print(f"⚠️  Could not filter by trainer type: {e}")
 
             if self.demo_mode:
                 # Demo mode: extract from memory
@@ -786,6 +797,10 @@ class GoogleSheetsManager:
                     date = activity.get('Date')
                     
                     if trainer and date:
+                        # Skip if trainer type filtering is on and trainer not in list
+                        if trainers_of_type and trainer not in trainers_of_type:
+                            continue
+                        
                         # Check if date is in the requested month
                         try:
                             activity_date = datetime.strptime(date, '%Y-%m-%d')
@@ -812,6 +827,10 @@ class GoogleSheetsManager:
                 date = record.get('Date')
                 
                 if trainer and date:
+                    # Skip if trainer type filtering is on and trainer not in list
+                    if trainers_of_type and trainer not in trainers_of_type:
+                        continue
+                    
                     # Check if date is in the requested month
                     try:
                         activity_date = datetime.strptime(date, '%Y-%m-%d')

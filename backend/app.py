@@ -484,16 +484,17 @@ def create_app():
     # Get time report status for trainers
     @app.route('/api/reports/time-status', methods=['GET'])
     def get_time_status():
-        """Get daily time report status for all trainers in a month"""
+        """Get daily time report status for trainers in a month"""
         try:
             month = request.args.get('month')
+            trainer_type = request.args.get('trainer_type', 'Assistant Trainer')
             if not month:
                 # Default to current month
                 from datetime import datetime
                 month = datetime.now().strftime('%Y-%m')
             
             sheets = get_sheets_manager()
-            result = sheets.get_time_report_status(month)
+            result = sheets.get_time_report_status(month, trainer_type=trainer_type)
             return jsonify(result), 200 if result['success'] else 400
         except Exception as e:
             return jsonify({
