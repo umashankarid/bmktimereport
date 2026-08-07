@@ -708,7 +708,11 @@ class GoogleSheetsManager:
 
             # Real mode: fetch from Login sheet
             try:
-                from backend.trainer_auth import TrainerAuthManager
+                try:
+                    from trainer_auth import TrainerAuthManager
+                except ImportError:
+                    from backend.trainer_auth import TrainerAuthManager
+                
                 login_sheet = TrainerAuthManager.get_login_sheet()
                 all_trainers = login_sheet.get_all_records()
                 
