@@ -20,7 +20,7 @@ class GoogleSheetsManager:
     ACTIVITIES_COLUMN = 'Activities'
     
     # Cache settings
-    CACHE_TTL = 60  # Cache for 60 seconds
+    CACHE_TTL = 300  # Cache for 5 minutes (300 seconds) - increased for better scalability
     
     def __init__(self, demo_mode=False):
         """Initialize Google Sheets connection"""
