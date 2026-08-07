@@ -768,7 +768,7 @@ class GoogleSheetsManager:
                 'message': f'Error retrieving activities: {str(e)}'
             }
     
-    def update_activity(self, trainer_name, date, activity_name, start_time, end_time, note=''):
+    def update_activity(self, trainer_name, date, activity_name, start_time, end_time, note='', old_start_time=None, old_end_time=None):
         """Update an existing activity in the sheet"""
         try:
             if not self.authenticated:
@@ -783,6 +783,10 @@ class GoogleSheetsManager:
                     if (activity.get('Trainer Name', '').lower() == trainer_name.lower() and
                         activity.get('Date') == date and
                         activity.get('Activity') == activity_name):
+                        # If old times provided, match on those; otherwise match on first occurrence
+                        if old_start_time and old_end_time:
+                            if activity.get('Start Time') != old_start_time or activity.get('End Time') != old_end_time:
+                                continue
                         activity['Start Time'] = start_time
                         activity['End Time'] = end_time
                         activity['Note'] = note
@@ -809,6 +813,12 @@ class GoogleSheetsManager:
                 if (record_trainer == trainer_name.lower() and
                     record_date == date and
                     record_activity == activity_name):
+                    
+                    # If old times provided, match on those to identify the specific record
+                    if old_start_time and old_end_time:
+                        if (record.get('Start Time') != old_start_time or 
+                            record.get('End Time') != old_end_time):
+                            continue
                     
                     # Found the record, update it
                     row_number = idx + 2  # +1 for header, +1 for 1-indexed

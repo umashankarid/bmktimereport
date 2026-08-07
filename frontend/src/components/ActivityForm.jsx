@@ -75,14 +75,22 @@ function ActivityForm({ onSubmit, trainers, currentTrainer }) {
       if (result.success && result.data) {
         console.log('✅ Found existing activities:', result.data);
         setExistingActivities(result.data);
-        // Initialize editing activities with existing data
+        
+        // Group activities by type and collect all time slots
         const editing = {};
         result.data.forEach(act => {
-          editing[act.Activity] = {
+          const actType = act.Activity;
+          if (!editing[actType]) {
+            editing[actType] = {
+              time_slots: [],
+              note: act.Note || ''
+            };
+          }
+          // Add time slot to the activity
+          editing[actType].time_slots.push({
             start_time: act['Start Time'],
-            end_time: act['End Time'],
-            note: act.Note || ''
-          };
+            end_time: act['End Time']
+          });
         });
         setEditingActivities(editing);
       } else {
@@ -155,14 +163,27 @@ function ActivityForm({ onSubmit, trainers, currentTrainer }) {
     }));
   };
 
-  const handleExistingActivityChange = (activity, field, value) => {
-    setEditingActivities(prev => ({
-      ...prev,
-      [activity]: {
-        ...prev[activity],
-        [field]: value
+  const handleExistingActivityChange = (activity, field, slotIdx, value) => {
+    setEditingActivities(prev => {
+      const updated = { ...prev };
+      if (!updated[activity].time_slots[slotIdx]) {
+        updated[activity].time_slots[slotIdx] = {};
       }
-    }));
+      updated[activity].time_slots[slotIdx][field] = value;
+      return updated;
+    });
+  };
+
+  const handleRemoveTimeSlot = (activity, slotIdx) => {
+    setEditingActivities(prev => {
+      const updated = { ...prev };
+      updated[activity].time_slots.splice(slotIdx, 1);
+      // If no time slots left, remove the activity
+      if (updated[activity].time_slots.length === 0) {
+        delete updated[activity];
+      }
+      return updated;
+    });
   };
 
   const handleUpdateActivity = async (activity) => {
@@ -170,36 +191,65 @@ function ActivityForm({ onSubmit, trainers, currentTrainer }) {
       setSubmitting(true);
       const editedData = editingActivities[activity];
       
-      if (!editedData.start_time || !editedData.end_time) {
-        setError(`Please set start and end times for ${activity}`);
+      if (!editedData.time_slots || editedData.time_slots.length === 0) {
+        setError(`No time slots for ${activity}`);
         setSubmitting(false);
         return;
       }
 
-      console.log(`📝 Updating ${activity}...`);
-      const response = await fetch(
-        `/api/activities/${encodeURIComponent(formData.trainer_name)}/${encodeURIComponent(formData.date)}/${encodeURIComponent(activity)}`,
-        {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            start_time: editedData.start_time,
-            end_time: editedData.end_time,
-            note: editedData.note || formData.note
-          })
+      // Validate all time slots
+      for (let i = 0; i < editedData.time_slots.length; i++) {
+        const slot = editedData.time_slots[i];
+        if (!slot.start_time || !slot.end_time) {
+          setError(`Please set start and end times for all time slots of ${activity}`);
+          setSubmitting(false);
+          return;
         }
-      );
-
-      const result = await response.json();
-      
-      if (result.success) {
-        setSuccess(`✓ Updated ${activity}`);
-        // Refresh existing activities
-        await fetchExistingActivities();
-        setTimeout(() => setSuccess(''), 3000);
-      } else {
-        setError(result.message || 'Failed to update activity');
       }
+
+      console.log(`📝 Updating ${activity} with ${editedData.time_slots.length} time slot(s)...`);
+      
+      // For each time slot, find the corresponding activity in existingActivities and update it
+      const existingActivityRecords = existingActivities.filter(a => a.Activity === activity);
+      
+      for (let i = 0; i < editedData.time_slots.length; i++) {
+        const slot = editedData.time_slots[i];
+        const existingRecord = existingActivityRecords[i];
+        
+        if (!existingRecord) {
+          console.warn(`No existing record for time slot ${i} of ${activity}`);
+          continue;
+        }
+
+        // Use the original start/end time to identify the record
+        const response = await fetch(
+          `/api/activities/${encodeURIComponent(formData.trainer_name)}/${encodeURIComponent(formData.date)}/${encodeURIComponent(activity)}`,
+          {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              old_start_time: existingRecord['Start Time'],
+              old_end_time: existingRecord['End Time'],
+              start_time: slot.start_time,
+              end_time: slot.end_time,
+              note: editedData.note || formData.note
+            })
+          }
+        );
+
+        const result = await response.json();
+        
+        if (!result.success) {
+          setError(result.message || `Failed to update time slot ${i + 1} of ${activity}`);
+          setSubmitting(false);
+          return;
+        }
+      }
+      
+      setSuccess(`✓ Updated ${activity}`);
+      // Refresh existing activities
+      await fetchExistingActivities();
+      setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
       console.error('Error updating activity:', err);
       setError('Failed to update activity');
@@ -364,53 +414,69 @@ function ActivityForm({ onSubmit, trainers, currentTrainer }) {
           ) : existingActivities.length > 0 ? (
             <div className="existing-activities-section">
               <label className="section-label">
-                📝 Today's Activities ({existingActivities.length})
+                📝 Today's Activities ({existingActivities.length} session{existingActivities.length !== 1 ? 's' : ''})
               </label>
               <div className="existing-activities-list">
-                {existingActivities.map((activity, idx) => (
-                  <div key={idx} className="existing-activity-card">
+                {Object.entries(editingActivities).map(([activityType, activityData]) => (
+                  <div key={activityType} className="existing-activity-card">
                     <div className="activity-header">
-                      <h4>{activity.Activity}</h4>
+                      <h4>{activityType}</h4>
                       <button
                         type="button"
                         className="btn-delete"
-                        onClick={() => handleDeleteActivity(activity.Activity)}
-                        title="Delete activity"
+                        onClick={() => handleDeleteActivity(activityType)}
+                        title="Delete all time slots for this activity"
                       >
                         🗑️
                       </button>
                     </div>
                     
-                    <div className="activity-times-edit">
-                      <div className="time-input">
-                        <TimeInput
-                          label="Start Time"
-                          value={editingActivities[activity.Activity]?.start_time || ''}
-                          onChange={(e) =>
-                            handleExistingActivityChange(activity.Activity, 'start_time', e.target.value)
-                          }
-                        />
-                      </div>
+                    {/* Display all time slots for this activity */}
+                    <div className="activity-time-slots-edit">
+                      {activityData.time_slots && activityData.time_slots.map((slot, slotIdx) => (
+                        <div key={slotIdx} className="activity-times-edit">
+                          <div className="time-input">
+                            <TimeInput
+                              label="Start"
+                              value={slot.start_time || ''}
+                              onChange={(e) =>
+                                handleExistingActivityChange(activityType, 'start_time', slotIdx, e.target.value)
+                              }
+                            />
+                          </div>
 
-                      <div className="time-input">
-                        <TimeInput
-                          label="End Time"
-                          value={editingActivities[activity.Activity]?.end_time || ''}
-                          onChange={(e) =>
-                            handleExistingActivityChange(activity.Activity, 'end_time', e.target.value)
-                          }
-                        />
-                      </div>
+                          <div className="time-input">
+                            <TimeInput
+                              label="End"
+                              value={slot.end_time || ''}
+                              onChange={(e) =>
+                                handleExistingActivityChange(activityType, 'end_time', slotIdx, e.target.value)
+                              }
+                            />
+                          </div>
 
-                      <button
-                        type="button"
-                        className="btn-save"
-                        onClick={() => handleUpdateActivity(activity.Activity)}
-                        disabled={submitting}
-                      >
-                        {submitting ? '💾...' : '💾 Save'}
-                      </button>
+                          {activityData.time_slots.length > 1 && (
+                            <button
+                              type="button"
+                              className="btn-remove-time-slot"
+                              onClick={() => handleRemoveTimeSlot(activityType, slotIdx)}
+                              title="Remove this time slot"
+                            >
+                              ✕
+                            </button>
+                          )}
+                        </div>
+                      ))}
                     </div>
+                    
+                    <button
+                      type="button"
+                      className="btn-save"
+                      onClick={() => handleUpdateActivity(activityType)}
+                      disabled={submitting}
+                    >
+                      {submitting ? '💾...' : '💾 Save'}
+                    </button>
                   </div>
                 ))}
               </div>

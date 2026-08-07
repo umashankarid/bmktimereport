@@ -372,7 +372,9 @@ def create_app():
                 activity_name=activity_name,
                 start_time=data.get('start_time'),
                 end_time=data.get('end_time'),
-                note=data.get('note', '')
+                note=data.get('note', ''),
+                old_start_time=data.get('old_start_time'),
+                old_end_time=data.get('old_end_time')
             )
             
             return jsonify(result), 200 if result['success'] else 400
