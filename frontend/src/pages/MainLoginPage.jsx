@@ -9,6 +9,10 @@ function MainLoginPage({ onAdminLogin, onTrainerLogin }) {
   const [trainerPassword, setTrainerPassword] = useState('');
   const [isRegistering, setIsRegistering] = useState(false);
   const [trainerConfirmPassword, setTrainerConfirmPassword] = useState('');
+  const [trainerEmail, setTrainerEmail] = useState('');
+  const [trainerPhone, setTrainerPhone] = useState('');
+  const [trainerPhoto, setTrainerPhoto] = useState(null);
+  const [trainerPhotoPreview, setTrainerPhotoPreview] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -36,8 +40,24 @@ function MainLoginPage({ onAdminLogin, onTrainerLogin }) {
     setError('');
     setLoading(true);
 
-    if (!trainerName || !trainerPassword) {
-      setError('Trainer name and password are required');
+    // Validation
+    if (!trainerName || !trainerPassword || !trainerEmail || !trainerPhone) {
+      setError('Trainer name, password, email, and phone are required');
+      setLoading(false);
+      return;
+    }
+
+    // Validate email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trainerEmail)) {
+      setError('Please enter a valid email address');
+      setLoading(false);
+      return;
+    }
+
+    // Validate phone (basic validation)
+    if (trainerPhone.length < 10) {
+      setError('Phone number must be at least 10 digits');
       setLoading(false);
       return;
     }
@@ -54,18 +74,69 @@ function MainLoginPage({ onAdminLogin, onTrainerLogin }) {
       return;
     }
 
-    const result = await onTrainerLogin(trainerName, trainerPassword, true);
-    if (result.success) {
-      setError('');
-      alert('Registration successful! Please login.');
-      setIsRegistering(false);
-      setTrainerName('');
-      setTrainerPassword('');
-      setTrainerConfirmPassword('');
-    } else {
-      setError(result.message);
+    // Create FormData for file upload
+    const formData = new FormData();
+    formData.append('trainer_name', trainerName);
+    formData.append('password', trainerPassword);
+    formData.append('email', trainerEmail);
+    formData.append('phone', trainerPhone);
+    if (trainerPhoto) {
+      formData.append('photo', trainerPhoto);
     }
+
+    try {
+      const response = await fetch('/api/auth/trainer/register', {
+        method: 'POST',
+        body: formData
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setError('');
+        alert('Registration successful! Please login with your credentials.');
+        setIsRegistering(false);
+        setTrainerName('');
+        setTrainerPassword('');
+        setTrainerConfirmPassword('');
+        setTrainerEmail('');
+        setTrainerPhone('');
+        setTrainerPhoto(null);
+        setTrainerPhotoPreview(null);
+      } else {
+        setError(result.message);
+      }
+    } catch (err) {
+      setError('Registration failed: ' + err.message);
+    }
+
     setLoading(false);
+  };
+
+  const handlePhotoChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setError('Photo size must be less than 5MB');
+        return;
+      }
+      
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        setError('Please select an image file');
+        return;
+      }
+
+      setTrainerPhoto(file);
+      
+      // Create preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setTrainerPhotoPreview(e.target.result);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleTrainerLogin = async (e) => {
@@ -278,6 +349,10 @@ function MainLoginPage({ onAdminLogin, onTrainerLogin }) {
                     setTrainerName('');
                     setTrainerPassword('');
                     setTrainerConfirmPassword('');
+                    setTrainerEmail('');
+                    setTrainerPhone('');
+                    setTrainerPhoto(null);
+                    setTrainerPhotoPreview(null);
                   }}
                 >
                   ← Back
@@ -292,6 +367,28 @@ function MainLoginPage({ onAdminLogin, onTrainerLogin }) {
                     value={trainerName}
                     onChange={(e) => setTrainerName(e.target.value)}
                     placeholder="Your trainer name"
+                    disabled={loading}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Email</label>
+                  <input
+                    type="email"
+                    value={trainerEmail}
+                    onChange={(e) => setTrainerEmail(e.target.value)}
+                    placeholder="your.email@example.com"
+                    disabled={loading}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Phone Number</label>
+                  <input
+                    type="tel"
+                    value={trainerPhone}
+                    onChange={(e) => setTrainerPhone(e.target.value)}
+                    placeholder="Your phone number"
                     disabled={loading}
                   />
                 </div>
@@ -326,6 +423,28 @@ function MainLoginPage({ onAdminLogin, onTrainerLogin }) {
                     placeholder="Confirm your password"
                     disabled={loading}
                   />
+                </div>
+
+                <div className="form-group">
+                  <label>Profile Photo (Optional)</label>
+                  <div className="photo-upload-group">
+                    <input
+                      type="file"
+                      id="photo-input"
+                      accept="image/*"
+                      onChange={handlePhotoChange}
+                      disabled={loading}
+                      className="photo-input"
+                    />
+                    <label htmlFor="photo-input" className="photo-input-label">
+                      {trainerPhotoPreview ? '✓ Photo selected' : '📷 Choose photo (max 5MB)'}
+                    </label>
+                  </div>
+                  {trainerPhotoPreview && (
+                    <div className="photo-preview">
+                      <img src={trainerPhotoPreview} alt="Preview" />
+                    </div>
+                  )}
                 </div>
 
                 <button type="submit" className="btn btn-primary" disabled={loading}>
