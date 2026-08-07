@@ -215,6 +215,47 @@
   margin: 0;
 }
 
+.photo-upload-group {
+  position: relative;
+  margin-bottom: 1rem;
+}
+
+.photo-input {
+  display: none;
+}
+
+.photo-input-label {
+  display: block;
+  padding: 12px;
+  border: 2px dashed #667eea;
+  border-radius: 8px;
+  text-align: center;
+  cursor: pointer;
+  color: #667eea;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  background: #f5f7ff;
+}
+
+.photo-input-label:hover {
+  background: #e8eef7;
+  border-color: #764ba2;
+  color: #764ba2;
+}
+
+.photo-preview {
+  margin-top: 1rem;
+  text-align: center;
+}
+
+.photo-preview img {
+  max-width: 150px;
+  max-height: 150px;
+  border-radius: 8px;
+  border: 2px solid #667eea;
+  object-fit: cover;
+}
+
 @media (max-width: 600px) {
   .trainer-login-card {
     padding: 25px;

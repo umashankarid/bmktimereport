@@ -12,7 +12,7 @@ class TrainerAuthManager:
     """Manages trainer authentication with Google Sheets"""
     
     LOGIN_SHEET_NAME = 'Login'
-    HEADERS = ['Trainer Name', 'Password Hash', 'Salt', 'Created Date']
+    HEADERS = ['Trainer Name', 'Email', 'Phone', 'Photo Path', 'Password Hash', 'Salt', 'Created Date']
     
     @staticmethod
     def hash_password(password, salt=None):
@@ -137,7 +137,7 @@ class TrainerAuthManager:
             raise
     
     @staticmethod
-    def register_trainer(trainer_name, password):
+    def register_trainer(trainer_name, password, email='', phone='', photo_path=None):
         """Register a new trainer"""
         try:
             print(f"\n{'='*60}")
@@ -193,11 +193,14 @@ class TrainerAuthManager:
             from datetime import datetime
             row = [
                 trainer_name,
+                email,
+                phone,
+                photo_path or '',
                 pwd_hash,
                 salt,
                 datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             ]
-            print(f"📝 Row data: {row[0]}, [hash], [salt], {row[3]}")
+            print(f"📝 Row data: {row[0]}, {row[1]}, {row[2]}, [photo], [hash], [salt], {row[6]}")
             
             print(f"📤 Appending to sheet...")
             login_sheet.append_row(row)

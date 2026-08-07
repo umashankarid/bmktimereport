@@ -218,22 +218,46 @@ def register_auth_routes(app, sheets_manager):
 
     @app.route('/api/auth/trainer/register', methods=['POST'])
     def trainer_register():
-        """Register a new trainer"""
+        """Register a new trainer with email, phone, and optional photo"""
         try:
             from trainer_auth import TrainerAuthManager
+            import os
+            from werkzeug.utils import secure_filename
             
-            data = request.get_json()
+            # Get form data
+            trainer_name = request.form.get('trainer_name')
+            password = request.form.get('password')
+            email = request.form.get('email')
+            phone = request.form.get('phone')
+            photo_file = request.files.get('photo')
             
-            if not data:
+            # Validation
+            if not trainer_name or not password:
                 return jsonify({
                     'success': False,
-                    'message': 'No data provided'
+                    'message': 'Trainer name and password are required'
                 }), 400
             
-            trainer_name = data.get('trainer_name')
-            password = data.get('password')
+            if not email or not phone:
+                return jsonify({
+                    'success': False,
+                    'message': 'Email and phone are required'
+                }), 400
             
-            result = TrainerAuthManager.register_trainer(trainer_name, password)
+            # Handle photo upload if provided
+            photo_path = None
+            if photo_file:
+                # Create uploads directory if it doesn't exist
+                uploads_dir = os.path.join(os.path.dirname(__file__), '..', 'uploads', 'trainer_photos')
+                os.makedirs(uploads_dir, exist_ok=True)
+                
+                # Save file with secure filename
+                filename = secure_filename(f"{trainer_name}_{photo_file.filename}")
+                photo_path = os.path.join(uploads_dir, filename)
+                photo_file.save(photo_path)
+            
+            # Register trainer
+            result = TrainerAuthManager.register_trainer(trainer_name, password, email, phone, photo_path)
             
             return jsonify(result), 200 if result['success'] else 400
             
