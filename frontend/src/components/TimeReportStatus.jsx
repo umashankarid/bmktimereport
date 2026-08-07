@@ -71,11 +71,15 @@ function TimeReportStatus({ trainerType = 'Assistant Trainer' }) {
     const lastDate = getLastActivityDate(trainer);
     if (!lastDate) return 999; // No reports at all
 
+    // For the time report, calculate days from last activity to end of current month
+    // This gives a snapshot of the month, not relative to today
+    const [year, monthStr] = selectedMonth.split('-');
+    const lastDayOfMonth = new Date(year, monthStr, 0); // Last day of the selected month
+    
     const last = new Date(lastDate);
-    const today = new Date();
-    const diffTime = today - last;
+    const diffTime = lastDayOfMonth - last;
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays;
+    return Math.max(0, diffDays); // Return 0 if last report is on or after last day
   };
 
   const isHighlighted = (trainer) => {
@@ -199,7 +203,7 @@ function TimeReportStatus({ trainerType = 'Assistant Trainer' }) {
                                 className={`day-cell ${hasActivity ? 'reported' : 'not-reported'}`}
                                 title={hasActivity ? 'Reported' : 'Not reported'}
                               >
-                                {hasActivity ? '✓' : ''}
+                                {hasActivity ? '✓' : '✗'}
                               </td>
                             );
                           })}
@@ -223,7 +227,9 @@ function TimeReportStatus({ trainerType = 'Assistant Trainer' }) {
                 <span>Activity Reported</span>
               </div>
               <div className="legend-item">
-                <span className="legend-symbol not-reported"></span>
+                <span className="legend-symbol not-reported">✗</span>
+                <span>Not Reported</span>
+              </div>
                 <span>No Activity Reported</span>
               </div>
               <div className="legend-item">
