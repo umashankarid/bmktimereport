@@ -72,13 +72,17 @@ function ActivityForm({ onSubmit, trainers, currentTrainer }) {
       );
       const result = await response.json();
       
+      console.log('🔍 API Response success:', result.success, 'has data:', !!result.data);
+      
       if (result.success && result.data) {
         console.log('✅ Found existing activities:', result.data);
         setExistingActivities(result.data);
         
+        console.log('🔄 Starting to group activities...');
         // Group activities by type and collect all time slots
         const editing = {};
-        result.data.forEach(act => {
+        result.data.forEach((act, idx) => {
+          console.log(`  [${idx}] Processing: ${act.Activity} ${act['Start Time']}-${act['End Time']}`);
           const actType = act.Activity;
           if (!editing[actType]) {
             editing[actType] = {
