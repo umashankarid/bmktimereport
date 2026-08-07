@@ -204,14 +204,27 @@ function ActivityForm({ onSubmit, trainers, currentTrainer }) {
     }
 
     // Check for overlaps with existing activities
+    console.log(`[OVERLAP CHECK] Checking ${slot.start_time}-${slot.end_time} against ${existingActivities.length} existing activities`);
     for (const existing of existingActivities) {
-      const [existingStartH, existingStartM] = existing['Start Time'].split(':').map(Number);
-      const [existingEndH, existingEndM] = existing['End Time'].split(':').map(Number);
+      const existingStartTime = existing['Start Time'];
+      const existingEndTime = existing['End Time'];
+      const existingActivity = existing.Activity;
+      
+      if (!existingStartTime || !existingEndTime) {
+        console.log(`[OVERLAP CHECK] Skipping existing activity with missing times`);
+        continue;
+      }
+
+      const [existingStartH, existingStartM] = existingStartTime.split(':').map(Number);
+      const [existingEndH, existingEndM] = existingEndTime.split(':').map(Number);
       const existingStartMinutes = existingStartH * 60 + existingStartM;
       const existingEndMinutes = existingEndH * 60 + existingEndM;
 
+      console.log(`[OVERLAP CHECK] New: ${startMinutes}-${endMinutes} vs Existing: ${existingStartMinutes}-${existingEndMinutes} (${existingActivity})`);
+
       if (startMinutes < existingEndMinutes && endMinutes > existingStartMinutes) {
-        return `Overlapping with existing ${existing.Activity} (${existing['Start Time']}-${existing['End Time']})`;
+        console.log(`[OVERLAP DETECTED] Overlap found!`);
+        return `Overlapping with existing ${existingActivity} (${existingStartTime}-${existingEndTime})`;
       }
     }
 
@@ -222,15 +235,20 @@ function ActivityForm({ onSubmit, trainers, currentTrainer }) {
   const getValidationErrors = () => {
     const errors = [];
 
+    console.log(`[VALIDATION] Checking ${Object.keys(selectedActivities).length} activities against ${existingActivities.length} existing activities`);
+
     for (const [activityName, slots] of Object.entries(selectedActivities)) {
       for (let i = 0; i < slots.length; i++) {
         const error = validateTimeSlot(slots[i], slots, existingActivities);
         if (error) {
+          console.log(`[VALIDATION ERROR] ${activityName} slot ${i}: ${error}`);
           errors.push({
             activity: activityName,
             slotIndex: i,
             error: error
           });
+        } else {
+          console.log(`[VALIDATION OK] ${activityName} slot ${i}: ${slots[i].start_time}-${slots[i].end_time}`);
         }
       }
     }
