@@ -138,7 +138,7 @@ def create_app():
                 return jsonify({'error': 'No data provided'}), 400
             
             sheets = get_sheets_manager()
-            result = sheets.delete_activity(
+            result = sheets.delete_activity_by_details(
                 trainer_name=data.get('trainer_name'),
                 date=data.get('date'),
                 activity=data.get('activity'),

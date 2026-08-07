@@ -587,8 +587,8 @@ class GoogleSheetsManager:
                 self._cache[key] = {'data': None, 'timestamp': None}
             print(f"🗑️  All caches INVALIDATED")
     
-    def delete_activity(self, trainer_name, date, activity, start_time, end_time):
-        """Delete a specific activity from the sheet"""
+    def delete_activity_by_details(self, trainer_name, date, activity, start_time, end_time):
+        """Delete a specific activity from the sheet by matching all details"""
         try:
             if not self.authenticated:
                 return {
