@@ -100,7 +100,7 @@ function MainLoginPage({ onAdminLogin, onTrainerLogin }) {
     <div className="main-login-container">
       <div className="main-login-card">
         <div className="login-header">
-          <h1>🏸 Badminton Activity Logger</h1>
+          <h1>🏸 BMK Komet Activity Logger</h1>
           <p>Login to your account</p>
         </div>
 

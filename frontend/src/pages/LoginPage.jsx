@@ -34,7 +34,7 @@ function LoginPage({ onLoginSuccess }) {
     <div className="login-container">
       <div className="login-box">
         <div className="login-header">
-          <h1>🏸 Badminton Activity Logger</h1>
+          <h1>🏸 BMK Komet Activity Logger</h1>
           <p>Admin Login</p>
         </div>
 

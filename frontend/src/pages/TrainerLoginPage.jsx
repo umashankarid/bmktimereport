@@ -78,7 +78,7 @@ function TrainerLoginPage({ onLoginSuccess }) {
     <div className="trainer-login-container">
       <div className="trainer-login-card">
         <div className="trainer-login-header">
-          <h1>🏸 Badminton Activity Logger</h1>
+          <h1>🏸 BMK Komet Activity Logger</h1>
           <p>Trainer Portal</p>
         </div>
 

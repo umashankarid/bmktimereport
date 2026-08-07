@@ -258,7 +258,7 @@ function App() {
         <div className="container">
           <div className="header-content">
             <div className="header-title">
-              <h1>🏸 Badminton Activity Logger</h1>
+              <h1>🏸 BMK Komet Activity Logger</h1>
               <p>Track and log your coaching activities</p>
             </div>
             <div className="header-admin">
@@ -296,7 +296,7 @@ function App() {
       </main>
 
       <footer className="app-footer">
-        <p>&copy; 2024 Badminton Activity Logger | Data stored in Google Sheets</p>
+        <p>&copy; 2024 BMK Komet Activity Logger | Data stored in Google Sheets</p>
       </footer>
     </div>
     );
