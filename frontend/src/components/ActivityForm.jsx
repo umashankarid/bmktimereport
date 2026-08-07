@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import '../styles/ActivityForm.css';
 import TimeInput from './TimeInput';
 import ActivityHistoryTable from './ActivityHistoryTable';
+import DatePickerCalendar from './DatePickerCalendar';
 
 function ActivityForm({ onSubmit, trainers, currentTrainer }) {
   const [formData, setFormData] = useState({
@@ -515,13 +516,10 @@ function ActivityForm({ onSubmit, trainers, currentTrainer }) {
 
           <div className="form-group">
             <label htmlFor="date">Date * (Today or earlier)</label>
-            <input
-              type="date"
-              id="date"
-              value={formData.date}
+            <DatePickerCalendar 
+              selectedDate={formData.date}
               onChange={handleDateChange}
-              max={new Date().toISOString().split('T')[0]}
-              required
+              trainerName={formData.trainer_name}
             />
           </div>
 
