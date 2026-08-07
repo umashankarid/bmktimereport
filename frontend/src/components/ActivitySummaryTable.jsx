@@ -13,7 +13,7 @@ function ActivitySummaryTable({ trainerFilter, selectedMonth, trainerType = 'Ass
 
   useEffect(() => {
     fetchActivities();
-  }, [trainerFilter, selectedMonth, trainerType];
+  }, [trainerFilter, selectedMonth, trainerType]);
 
   const fetchActivities = async () => {
     try {
