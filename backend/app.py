@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from config import Config
 from sheets import get_sheets_manager
+from cache import get_data_cache
 from auth import register_auth_routes
 import os
 import sys
@@ -57,6 +58,20 @@ def create_app():
     sheets_manager = get_sheets_manager()
     logger.warning(f"✅ Google Sheets initialized")
     
+    # Initialize data cache and load initial data
+    logger.warning(f"\n💾 Initializing data cache...")
+    cache = get_data_cache()
+    try:
+        cache.load_initial_data(sheets_manager)
+        logger.warning(f"✅ Data cache initialized and loaded")
+        
+        # Start background sync thread
+        cache.start_background_sync(sheets_manager, poll_interval=120)
+        logger.warning(f"✅ Background sync thread started")
+    except Exception as e:
+        logger.error(f"❌ Error initializing cache: {e}")
+        logger.warning(f"⚠️  Continuing without cache - will use direct sheet access")
+    
     # Register authentication routes
     logger.warning(f"\n📝 Registering auth routes...")
     register_auth_routes(app, sheets_manager)
@@ -89,39 +104,31 @@ def create_app():
     # Log activity
     @app.route('/api/activities', methods=['POST'])
     def log_activity():
-        """Log a new badminton activity"""
+        """Log a new badminton activity to sheets and cache"""
         try:
             data = request.get_json()
-            
-            print(f"\n{'='*60}")
-            print(f"📥 RECEIVED ACTIVITY REQUEST")
-            print(f"{'='*60}")
-            print(f"Raw JSON data: {data}")
-            print(f"Data type: {type(data)}")
-            if data:
-                for key, value in data.items():
-                    print(f"  - {key}: {value} (type: {type(value).__name__})")
             
             if not data:
                 return jsonify({'error': 'No data provided'}), 400
             
+            # Write to sheets first
             sheets = get_sheets_manager()
-            print(f"\n📊 Sheets manager authenticated: {sheets.authenticated}")
-            print(f"📝 Calling add_activity()...")
             result = sheets.add_activity(data)
             
-            print(f"\n📤 ACTIVITY RESULT")
-            print(f"{'='*60}")
-            print(f"Result: {result}")
-            print(f"{'='*60}\n")
+            # If successful, also update cache
+            if result['success']:
+                try:
+                    cache = get_data_cache()
+                    cache.add_activity(data)
+                    logger.info(f"✅ Activity added to cache")
+                except Exception as e:
+                    logger.warning(f"⚠️  Could not update cache: {e}")
             
             status_code = 201 if result['success'] else 400
             return jsonify(result), status_code
         except Exception as e:
             error_msg = str(e)
-            print(f"\n❌ ERROR in log_activity: {error_msg}")
-            import traceback
-            traceback.print_exc()
+            logger.error(f"❌ ERROR in log_activity: {error_msg}")
             return jsonify({
                 'error': 'Failed to log activity',
                 'message': error_msg
@@ -190,33 +197,41 @@ def create_app():
     # Get all activities
     @app.route('/api/activities', methods=['GET'])
     def get_activities():
-        """Retrieve all logged activities"""
+        """Retrieve all logged activities from cache"""
         try:
             limit = request.args.get('limit', 100, type=int)
-            sheets = get_sheets_manager()
-            result = sheets.get_all_activities(limit=limit)
+            cache = get_data_cache()
+            all_activities = cache.get_activities()
             
-            if not result['success']:
-                print(f"DEBUG: GET activities failed: {result}")
+            # Apply limit
+            activities = all_activities[:limit]
             
-            return jsonify(result), 200 if result['success'] else 400
+            return jsonify({
+                'success': True,
+                'data': activities,
+                'from_cache': True
+            }), 200
         except Exception as e:
             error_msg = str(e)
-            print(f"DEBUG: GET activities exception: {error_msg}")
+            print(f"❌ ERROR in get_activities: {error_msg}")
             return jsonify({
-                'error': 'Failed to retrieve activities',
-                'message': error_msg
+                'success': False,
+                'message': f'Error retrieving activities: {error_msg}'
             }), 500
     
     # Get trainers list
     @app.route('/api/trainers', methods=['GET'])
     def get_trainers():
-        """Get list of all trainers"""
+        """Get list of all trainers from cache"""
         try:
-            sheets = get_sheets_manager()
-            result = sheets.get_trainers()
+            cache = get_data_cache()
+            trainers = cache.get_trainers()
             
-            return jsonify(result), 200 if result['success'] else 400
+            return jsonify({
+                'success': True,
+                'data': trainers,
+                'from_cache': True
+            }), 200
         except Exception as e:
             return jsonify({
                 'error': 'Failed to retrieve trainers',
@@ -226,12 +241,16 @@ def create_app():
     # Get trainer details with email and phone
     @app.route('/api/trainers/details/all', methods=['GET'])
     def get_trainers_details():
-        """Get list of all trainers with their details (email, phone)"""
+        """Get list of all trainers with their details from cache"""
         try:
-            sheets = get_sheets_manager()
-            result = sheets.get_trainers_details()
+            cache = get_data_cache()
+            trainers = cache.get_trainers()
             
-            return jsonify(result), 200 if result['success'] else 400
+            return jsonify({
+                'success': True,
+                'data': trainers,
+                'from_cache': True
+            }), 200
         except Exception as e:
             return jsonify({
                 'error': 'Failed to retrieve trainer details',
@@ -631,11 +650,16 @@ def create_app():
     # Get tournaments
     @app.route('/api/tournaments', methods=['GET'])
     def get_tournaments():
-        """Get list of all tournaments"""
+        """Get list of all tournaments from cache"""
         try:
-            sheets = get_sheets_manager()
-            result = sheets.get_tournaments()
-            return jsonify(result), 200 if result['success'] else 400
+            cache = get_data_cache()
+            tournaments = cache.get_tournaments()
+            
+            return jsonify({
+                'success': True,
+                'data': tournaments,
+                'from_cache': True
+            }), 200
         except Exception as e:
             return jsonify({
                 'success': False,
@@ -664,8 +688,26 @@ def create_app():
                     'message': 'Volunteer name and tournament name required'
                 }), 400
             
+            # Write to sheets
             sheets = get_sheets_manager()
             result = sheets.register_volunteer(volunteer_name, tournament_name)
+            
+            # If successful, also update cache
+            if result['success']:
+                try:
+                    from datetime import datetime
+                    cache = get_data_cache()
+                    registration = {
+                        'Volunteer Name': volunteer_name,
+                        'Tournament Name': tournament_name,
+                        'Registration Date': datetime.now().strftime('%Y-%m-%d'),
+                        'Status': 'Registered'
+                    }
+                    cache.add_volunteer_registration(registration)
+                    logger.info(f"✅ Volunteer registration added to cache")
+                except Exception as e:
+                    logger.warning(f"⚠️  Could not update cache: {e}")
+            
             return jsonify(result), 200 if result['success'] else 400
         except Exception as e:
             return jsonify({
@@ -676,11 +718,22 @@ def create_app():
     # Get volunteer registrations
     @app.route('/api/tournaments/registrations/<volunteer_name>', methods=['GET'])
     def get_volunteer_registrations(volunteer_name):
-        """Get all tournament registrations for a volunteer"""
+        """Get all tournament registrations for a volunteer from cache"""
         try:
-            sheets = get_sheets_manager()
-            result = sheets.get_volunteer_registrations(volunteer_name)
-            return jsonify(result), 200 if result['success'] else 400
+            cache = get_data_cache()
+            all_registrations = cache.get_volunteer_registrations()
+            
+            # Filter by volunteer name
+            volunteer_registrations = [
+                reg for reg in all_registrations 
+                if reg.get('Volunteer Name', '').strip() == volunteer_name
+            ]
+            
+            return jsonify({
+                'success': True,
+                'data': volunteer_registrations,
+                'from_cache': True
+            }), 200
         except Exception as e:
             return jsonify({
                 'success': False,
