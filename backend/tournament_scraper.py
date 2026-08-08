@@ -302,8 +302,9 @@ def import_tournaments_from_badminton_sweden():
             
             venue = scrape_tournament_details(session, tournament['url'])
             
-            # Use date_start, or parse if needed
+            # Use date_start and date_end from the search results
             start_date = tournament['date_start'] or parse_swedish_date(tournament['name'])
+            end_date = tournament['date_end'] or start_date
             
             if not start_date:
                 logger.warning(f"   ⚠️  No date found, skipping")
@@ -311,7 +312,8 @@ def import_tournaments_from_badminton_sweden():
             
             tournament_data = {
                 'Tournament Name': tournament['name'],
-                'Date': start_date,
+                'Start Date': start_date,
+                'End Date': end_date,
                 'Venue': venue or tournament['location'] or 'TBA',
                 'Start Time': '09:00',
                 'End Time': '17:00',

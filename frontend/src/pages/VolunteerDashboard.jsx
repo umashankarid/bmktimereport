@@ -22,7 +22,7 @@ function VolunteerDashboard({ volunteer, onLogout }) {
       if (result.success) {
         // Filter to only upcoming/ongoing tournaments
         const now = new Date().toISOString().split('T')[0];
-        const upcomingTournaments = result.data.filter(t => t.Date >= now);
+        const upcomingTournaments = result.data.filter(t => t['Start Date'] >= now);
         setTournaments(upcomingTournaments);
       }
     } catch (err) {
@@ -136,8 +136,13 @@ function VolunteerDashboard({ volunteer, onLogout }) {
 
                     <div className="tournament-details">
                       <div className="detail-row">
-                        <span className="label">📅 Date:</span>
-                        <span className="value">{tournament.Date}</span>
+                        <span className="label">📅 Start Date:</span>
+                        <span className="value">{tournament['Start Date']}</span>
+                      </div>
+
+                      <div className="detail-row">
+                        <span className="label">📅 End Date:</span>
+                        <span className="value">{tournament['End Date']}</span>
                       </div>
 
                       <div className="detail-row">

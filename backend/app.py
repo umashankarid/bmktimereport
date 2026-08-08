@@ -795,7 +795,8 @@ def create_app():
                 
                 for idx, tournament_data in enumerate(result['imported'], 1):
                     logger.warning(f"\n   [{idx}] {tournament_data.get('Tournament Name', 'N/A')}")
-                    logger.warning(f"       Date: {tournament_data.get('Start Date', 'N/A')}")
+                    logger.warning(f"       Start Date: {tournament_data.get('Start Date', 'N/A')}")
+                    logger.warning(f"       End Date: {tournament_data.get('End Date', 'N/A')}")
                     logger.warning(f"       Venue: {tournament_data.get('Venue', 'N/A')}")
                     
                     add_result = sheets.add_tournament(tournament_data)

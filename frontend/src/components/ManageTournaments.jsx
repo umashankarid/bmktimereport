@@ -9,7 +9,8 @@ function ManageTournaments() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [formData, setFormData] = useState({
     tournament_name: '',
-    date: '',
+    start_date: '',
+    end_date: '',
     venue: '',
     start_time: '',
     end_time: '',
@@ -49,8 +50,8 @@ function ManageTournaments() {
   const handleAddTournament = async (e) => {
     e.preventDefault();
     
-    if (!formData.tournament_name || !formData.date) {
-      setMessage('Tournament name and date are required');
+    if (!formData.tournament_name || !formData.start_date) {
+      setMessage('Tournament name and start date are required');
       setMessageType('error');
       return;
     }
@@ -68,7 +69,8 @@ function ManageTournaments() {
         },
         body: JSON.stringify({
           'Tournament Name': formData.tournament_name,
-          'Date': formData.date,
+          'Start Date': formData.start_date,
+          'End Date': formData.end_date || formData.start_date,
           'Venue': formData.venue,
           'Start Time': formData.start_time,
           'End Time': formData.end_time,
@@ -84,7 +86,8 @@ function ManageTournaments() {
         setMessageType('success');
         setFormData({
           tournament_name: '',
-          date: '',
+          start_date: '',
+          end_date: '',
           venue: '',
           start_time: '',
           end_time: '',
@@ -217,14 +220,25 @@ function ManageTournaments() {
               </div>
 
               <div className="form-group">
-                <label>Date *</label>
+                <label>Start Date *</label>
                 <input
                   type="date"
-                  name="date"
-                  value={formData.date}
+                  name="start_date"
+                  value={formData.start_date}
                   onChange={handleInputChange}
                   disabled={loading}
                   required
+                />
+              </div>
+
+              <div className="form-group">
+                <label>End Date</label>
+                <input
+                  type="date"
+                  name="end_date"
+                  value={formData.end_date}
+                  onChange={handleInputChange}
+                  disabled={loading}
                 />
               </div>
             </div>
@@ -316,7 +330,8 @@ function ManageTournaments() {
             <thead>
               <tr>
                 <th>Tournament Name</th>
-                <th>Date</th>
+                <th>Start Date</th>
+                <th>End Date</th>
                 <th>Venue</th>
                 <th>Time</th>
                 <th>Slots</th>
@@ -328,7 +343,8 @@ function ManageTournaments() {
               {tournaments.map((tournament, idx) => (
                 <tr key={idx}>
                   <td className="tournament-name">{tournament['Tournament Name']}</td>
-                  <td>{tournament.Date}</td>
+                  <td>{tournament['Start Date']}</td>
+                  <td>{tournament['End Date']}</td>
                   <td>{tournament.Venue || '-'}</td>
                   <td className="time">
                     {tournament['Start Time']} - {tournament['End Time'] || 'TBA'}

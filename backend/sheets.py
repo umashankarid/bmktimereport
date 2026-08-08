@@ -21,7 +21,7 @@ class GoogleSheetsManager:
     
     # Tournaments sheet
     TOURNAMENTS_SHEET = 'Tournaments'
-    TOURNAMENTS_HEADERS = ['Tournament Name', 'Date', 'Venue', 'Start Time', 'End Time', 'Available Slots', 'Status']
+    TOURNAMENTS_HEADERS = ['Tournament Name', 'Start Date', 'End Date', 'Venue', 'Start Time', 'End Time', 'Available Slots', 'Status']
     
     # Volunteer registrations sheet
     VOLUNTEER_REGISTRATIONS_SHEET = 'Volunteer Registrations'
@@ -1563,7 +1563,8 @@ class GoogleSheetsManager:
             # Extract tournament data
             row_data = [
                 tournament_data.get('Tournament Name', ''),
-                tournament_data.get('Date', ''),
+                tournament_data.get('Start Date', tournament_data.get('Date', '')),  # Fallback to 'Date' for backward compat
+                tournament_data.get('End Date', tournament_data.get('Date', '')),    # Fallback to 'Date' for backward compat
                 tournament_data.get('Venue', ''),
                 tournament_data.get('Start Time', ''),
                 tournament_data.get('End Time', ''),
