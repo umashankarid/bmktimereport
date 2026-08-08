@@ -274,8 +274,8 @@ function ActivityHistoryView({ currentTrainer = null, isAdminView = false }) {
               >
                 <option value="">-- All Trainers --</option>
                 {trainers.map(trainer => (
-                  <option key={trainer} value={trainer}>
-                    {trainer}
+                  <option key={trainer.name} value={trainer.name}>
+                    {trainer.name}
                   </option>
                 ))}
               </select>
