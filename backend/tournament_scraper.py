@@ -12,14 +12,7 @@ HEADERS = {
 
 BADMINTON_SWEDEN_BASE = "https://badmintonsweden.tournamentsoftware.com"
 FIND_URL = f"{BADMINTON_SWEDEN_BASE}/find"
-
-# Create session with cookies enabled to bypass cookie wall
-session = requests.Session()
-# Accept cookies to bypass cookie wall
-session.cookies.update({
-    'cookie_consent': 'true',
-    'essential': 'true'
-})
+COOKIEWALL_URL = f"{BADMINTON_SWEDEN_BASE}/cookiewall/Save"
 
 # Swedish month mapping
 SWEDISH_MONTHS = {
@@ -32,6 +25,31 @@ SWEDISH_DAYS = {
     'mån': 'Mon', 'tis': 'Tue', 'ons': 'Wed', 'tors': 'Thu',
     'fre': 'Fri', 'lör': 'Sat', 'sön': 'Sun'
 }
+
+
+def create_session_with_cookies():
+    """Create a requests session and accept cookies to bypass cookie wall"""
+    session = requests.Session()
+    session.headers.update(HEADERS)
+    
+    try:
+        logger.info("Accepting cookies on Badminton Sweden...")
+        # Post to cookie wall to accept all cookies
+        resp = session.post(
+            COOKIEWALL_URL,
+            data={
+                "ReturnUrl": "/",
+                "SettingsOpen": "false",
+                "CookieWallCategoryPreferences": "1,2,3"  # Accept all categories
+            },
+            allow_redirects=True,
+            timeout=10
+        )
+        logger.info(f"✅ Cookie wall response: {resp.status_code}")
+        return session
+    except Exception as e:
+        logger.error(f"Error accepting cookies: {e}")
+        return session
 
 
 def parse_swedish_date(date_str):
@@ -78,7 +96,7 @@ def parse_swedish_date(date_str):
         return None
 
 
-def fetch_tournaments_list():
+def fetch_tournaments_list(session):
     """Fetch tournaments from Badminton Sweden with 'komet' in the name"""
     try:
         # Calculate date range: today to 5 months from now
@@ -98,8 +116,8 @@ def fetch_tournaments_list():
         url_params = "&".join(f'{k}={v}' for k, v in params.items())
         logger.info(f"URL: {FIND_URL}?{url_params}")
         
-        # Use session to handle cookies and cookie wall
-        response = session.get(FIND_URL, params=params, headers=HEADERS, timeout=15, allow_redirects=True)
+        # Use session to handle cookies
+        response = session.get(FIND_URL, params=params, timeout=15, allow_redirects=True)
         response.raise_for_status()
         logger.info(f"✅ Response status: {response.status_code}")
         logger.info(f"Response length: {len(response.text)} characters")
@@ -206,13 +224,13 @@ def fetch_tournaments_list():
         return []
 
 
-def scrape_tournament_details(tournament_url):
+def scrape_tournament_details(session, tournament_url):
     """Scrape tournament page to get dates and address"""
     try:
         logger.info(f"🔍 Scraping: {tournament_url}")
         
         # Use session to handle cookies
-        response = session.get(tournament_url, headers=HEADERS, timeout=15, allow_redirects=True)
+        response = session.get(tournament_url, timeout=15, allow_redirects=True)
         response.raise_for_status()
         logger.info(f"✅ Status: {response.status_code}, Length: {len(response.text)}")
         
@@ -294,24 +312,57 @@ def import_tournaments_from_badminton_sweden():
         logger.warning("🏸 TOURNAMENT SCRAPER STARTED")
         logger.warning("="*70)
         
-        # NOTE: The Badminton Sweden website uses JavaScript and a cookie wall
-        # that prevents simple HTTP requests from accessing tournament data.
-        # To properly scrape tournaments, you have two options:
-        # 1. Use Playwright/Selenium to render the page and accept cookies
-        # 2. Visit the site manually, find tournaments, and add them via the UI
+        # Create session and accept cookies
+        logger.warning("\n1️⃣  ACCEPTING COOKIES...")
+        session = create_session_with_cookies()
+        logger.warning("✅ Cookie wall accepted\n")
         
-        logger.warning("\n⚠️  NOTICE:")
-        logger.warning("The Badminton Sweden website requires JavaScript rendering.")
-        logger.warning("The cookie wall blocks programmatic access.\n")
-        logger.warning("SOLUTION: Use the 'Add Tournament' button in Admin Dashboard")
-        logger.warning("to manually enter tournaments, or implement Selenium/Playwright.\n")
+        # Fetch tournament list
+        logger.warning("2️⃣  FETCHING TOURNAMENT LIST...")
+        tournaments_list = fetch_tournaments_list(session)
+        logger.warning(f"\n✅ Found {len(tournaments_list)} tournaments with 'komet' in the name")
+        
+        if not tournaments_list:
+            logger.warning("\n❌ No tournaments found!")
+            logger.warning("="*70 + "\n")
+            return {
+                'success': False,
+                'message': 'No tournaments found with "komet" in the name',
+                'imported': []
+            }
+        
+        imported_tournaments = []
+        
+        # Scrape details for each tournament
+        logger.warning(f"\n3️⃣  SCRAPING DETAILS FOR {len(tournaments_list)} TOURNAMENTS...")
+        for idx, tournament in enumerate(tournaments_list, 1):
+            logger.warning(f"\n   [{idx}/{len(tournaments_list)}] {tournament['name']}")
+            details = scrape_tournament_details(session, tournament['url'])
+            
+            if not details or not details['start_date']:
+                logger.warning(f"   ❌ Could not get details, skipping")
+                continue
+            
+            tournament_data = {
+                'Tournament Name': tournament['name'],
+                'Date': details['start_date'],
+                'Venue': details['venue'] or 'TBA',
+                'Start Time': '09:00',
+                'End Time': '17:00',
+                'Available Slots': '4',
+                'Status': 'Upcoming'
+            }
+            
+            imported_tournaments.append(tournament_data)
+            logger.warning(f"   ✅ Date: {details['start_date']}, Venue: {details['venue']}")
+        
+        logger.warning(f"\n✅ Successfully prepared {len(imported_tournaments)} tournaments for import")
         logger.warning("="*70 + "\n")
         
         return {
-            'success': False,
-            'message': 'Web scraping requires manual setup due to cookie wall. Use "Add Tournament" button in Admin Dashboard instead.',
-            'imported': [],
-            'note': 'The Badminton Sweden website uses JavaScript and a cookie wall. Recommend using the manual "Add Tournament" feature or implementing headless browser automation.'
+            'success': True,
+            'message': f'Found {len(imported_tournaments)} tournaments',
+            'imported': imported_tournaments
         }
     
     except Exception as e:
@@ -321,6 +372,6 @@ def import_tournaments_from_badminton_sweden():
         logger.warning("="*70 + "\n")
         return {
             'success': False,
-            'message': f'Error: {str(e)}',
+            'message': f'Error importing tournaments: {str(e)}',
             'imported': []
         }
