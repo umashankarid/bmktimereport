@@ -19,6 +19,14 @@ class GoogleSheetsManager:
     ALL_ACTIVITIES_SHEET = 'All Activities'
     ACTIVITIES_COLUMN = 'Activities'
     
+    # Tournaments sheet
+    TOURNAMENTS_SHEET = 'Tournaments'
+    TOURNAMENTS_HEADERS = ['Tournament Name', 'Date', 'Venue', 'Start Time', 'End Time', 'Available Slots', 'Status']
+    
+    # Volunteer registrations sheet
+    VOLUNTEER_REGISTRATIONS_SHEET = 'Volunteer Registrations'
+    VOLUNTEER_REG_HEADERS = ['Volunteer Name', 'Tournament Name', 'Registration Date', 'Status']
+    
     # Cache settings
     CACHE_TTL = 300  # Cache for 5 minutes (300 seconds) - increased for better scalability
     
@@ -35,7 +43,8 @@ class GoogleSheetsManager:
         self._cache = {
             'all_activities': {'data': None, 'timestamp': None},
             'trainers': {'data': None, 'timestamp': None},
-            'activity_list': {'data': None, 'timestamp': None}
+            'activity_list': {'data': None, 'timestamp': None},
+            'tournaments': {'data': None, 'timestamp': None}
         }
         
         if not demo_mode:
@@ -159,6 +168,32 @@ class GoogleSheetsManager:
                 print(f"✅ '{self.ALL_ACTIVITIES_SHEET}' sheet created with {len(default_activities)} default activities")
             else:
                 print(f"✅ '{self.ALL_ACTIVITIES_SHEET}' sheet exists")
+            
+            # Ensure Tournaments sheet exists
+            if self.TOURNAMENTS_SHEET not in worksheet_names:
+                print(f"⚠️  '{self.TOURNAMENTS_SHEET}' sheet not found, creating...")
+                tournaments_sheet = spreadsheet.add_worksheet(
+                    title=self.TOURNAMENTS_SHEET,
+                    rows=100,
+                    cols=7
+                )
+                tournaments_sheet.append_row(self.TOURNAMENTS_HEADERS)
+                print(f"✅ '{self.TOURNAMENTS_SHEET}' sheet created with headers")
+            else:
+                print(f"✅ '{self.TOURNAMENTS_SHEET}' sheet exists")
+            
+            # Ensure Volunteer Registrations sheet exists
+            if self.VOLUNTEER_REGISTRATIONS_SHEET not in worksheet_names:
+                print(f"⚠️  '{self.VOLUNTEER_REGISTRATIONS_SHEET}' sheet not found, creating...")
+                vol_reg_sheet = spreadsheet.add_worksheet(
+                    title=self.VOLUNTEER_REGISTRATIONS_SHEET,
+                    rows=100,
+                    cols=4
+                )
+                vol_reg_sheet.append_row(self.VOLUNTEER_REG_HEADERS)
+                print(f"✅ '{self.VOLUNTEER_REGISTRATIONS_SHEET}' sheet created with headers")
+            else:
+                print(f"✅ '{self.VOLUNTEER_REGISTRATIONS_SHEET}' sheet exists")
                 
         except Exception as e:
             print(f"⚠️  Error ensuring sheets exist: {e}")
@@ -1440,6 +1475,160 @@ class GoogleSheetsManager:
             return {
                 'success': False,
                 'message': f'Error deleting activity: {str(e)}'
+            }
+
+    def get_tournaments(self):
+        """Get list of all tournaments"""
+        try:
+            # Check cache first
+            if self._cache['tournaments']['data'] is not None:
+                elapsed = time.time() - self._cache['tournaments']['timestamp']
+                if elapsed < self.CACHE_TTL:
+                    return {
+                        'success': True,
+                        'data': self._cache['tournaments']['data'],
+                        'from_cache': True
+                    }
+
+            if not self.authenticated:
+                return {
+                    'success': False,
+                    'data': [],
+                    'message': 'Google Sheets not configured'
+                }
+
+            if self.demo_mode:
+                # Demo mode: return empty list
+                return {
+                    'success': True,
+                    'data': [],
+                    'note': 'DEMO MODE'
+                }
+
+            # Fetch from Tournaments sheet
+            sheet_id = os.getenv('GOOGLE_SHEET_ID')
+            if not sheet_id or sheet_id == 'demo-sheet-id':
+                return {'success': True, 'data': []}
+
+            try:
+                spreadsheet = self.client.open_by_key(sheet_id)
+                tournaments_sheet = spreadsheet.worksheet(self.TOURNAMENTS_SHEET)
+                all_tournaments = tournaments_sheet.get_all_records()
+                
+                # Cache the result
+                self._cache['tournaments']['data'] = all_tournaments
+                self._cache['tournaments']['timestamp'] = time.time()
+                
+                return {
+                    'success': True,
+                    'data': all_tournaments
+                }
+            except Exception as e:
+                print(f"⚠️  Could not fetch tournaments: {e}")
+                return {
+                    'success': False,
+                    'data': [],
+                    'message': str(e)
+                }
+
+        except Exception as e:
+            return {
+                'success': False,
+                'message': f'Error fetching tournaments: {str(e)}'
+            }
+
+    def register_volunteer(self, volunteer_name, tournament_name):
+        """Register a volunteer for a tournament"""
+        try:
+            if not self.authenticated:
+                return {
+                    'success': False,
+                    'message': 'Google Sheets not configured'
+                }
+
+            if self.demo_mode:
+                # Demo mode: just return success
+                return {
+                    'success': True,
+                    'message': 'Volunteer registered (demo mode)'
+                }
+
+            sheet_id = os.getenv('GOOGLE_SHEET_ID')
+            if not sheet_id or sheet_id == 'demo-sheet-id':
+                return {'success': False, 'message': 'Google Sheets not configured'}
+
+            spreadsheet = self.client.open_by_key(sheet_id)
+            vol_reg_sheet = spreadsheet.worksheet(self.VOLUNTEER_REGISTRATIONS_SHEET)
+            
+            # Check if already registered
+            existing_registrations = vol_reg_sheet.get_all_records()
+            for reg in existing_registrations:
+                if (reg.get('Volunteer Name', '').strip() == volunteer_name and 
+                    reg.get('Tournament Name', '').strip() == tournament_name):
+                    return {
+                        'success': False,
+                        'message': 'Already registered for this tournament'
+                    }
+            
+            # Add new registration
+            registration_date = datetime.now().strftime('%Y-%m-%d')
+            vol_reg_sheet.append_row([volunteer_name, tournament_name, registration_date, 'Registered'])
+            
+            # Invalidate tournament cache since slots might have changed
+            self._cache['tournaments']['data'] = None
+            self._cache['tournaments']['timestamp'] = None
+            
+            return {
+                'success': True,
+                'message': 'Successfully registered for tournament'
+            }
+
+        except Exception as e:
+            return {
+                'success': False,
+                'message': f'Error registering volunteer: {str(e)}'
+            }
+
+    def get_volunteer_registrations(self, volunteer_name):
+        """Get all tournament registrations for a volunteer"""
+        try:
+            if not self.authenticated:
+                return {
+                    'success': False,
+                    'data': [],
+                    'message': 'Google Sheets not configured'
+                }
+
+            if self.demo_mode:
+                return {
+                    'success': True,
+                    'data': [],
+                    'note': 'DEMO MODE'
+                }
+
+            sheet_id = os.getenv('GOOGLE_SHEET_ID')
+            if not sheet_id or sheet_id == 'demo-sheet-id':
+                return {'success': True, 'data': []}
+
+            spreadsheet = self.client.open_by_key(sheet_id)
+            vol_reg_sheet = spreadsheet.worksheet(self.VOLUNTEER_REGISTRATIONS_SHEET)
+            all_registrations = vol_reg_sheet.get_all_records()
+            
+            # Filter by volunteer name
+            volunteer_registrations = [
+                reg for reg in all_registrations 
+                if reg.get('Volunteer Name', '').strip() == volunteer_name
+            ]
+            
+            return {
+                'success': True,
+                'data': volunteer_registrations
+            }
+
+        except Exception as e:
+            return {
+                'success': False,
+                'message': f'Error fetching volunteer registrations: {str(e)}'
             }
 
 

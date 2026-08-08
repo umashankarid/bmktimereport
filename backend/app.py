@@ -628,6 +628,65 @@ def create_app():
                 'message': f'Error deleting activity: {str(e)}'
             }), 500
     
+    # Get tournaments
+    @app.route('/api/tournaments', methods=['GET'])
+    def get_tournaments():
+        """Get list of all tournaments"""
+        try:
+            sheets = get_sheets_manager()
+            result = sheets.get_tournaments()
+            return jsonify(result), 200 if result['success'] else 400
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'message': f'Error fetching tournaments: {str(e)}'
+            }), 500
+    
+    # Register volunteer for tournament
+    @app.route('/api/tournaments/register', methods=['POST'])
+    def register_tournament():
+        """Register a volunteer for a tournament"""
+        try:
+            data = request.get_json()
+            
+            if not data:
+                return jsonify({
+                    'success': False,
+                    'message': 'No data provided'
+                }), 400
+            
+            volunteer_name = data.get('volunteer_name')
+            tournament_name = data.get('tournament_name')
+            
+            if not volunteer_name or not tournament_name:
+                return jsonify({
+                    'success': False,
+                    'message': 'Volunteer name and tournament name required'
+                }), 400
+            
+            sheets = get_sheets_manager()
+            result = sheets.register_volunteer(volunteer_name, tournament_name)
+            return jsonify(result), 200 if result['success'] else 400
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'message': f'Error registering volunteer: {str(e)}'
+            }), 500
+    
+    # Get volunteer registrations
+    @app.route('/api/tournaments/registrations/<volunteer_name>', methods=['GET'])
+    def get_volunteer_registrations(volunteer_name):
+        """Get all tournament registrations for a volunteer"""
+        try:
+            sheets = get_sheets_manager()
+            result = sheets.get_volunteer_registrations(volunteer_name)
+            return jsonify(result), 200 if result['success'] else 400
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'message': f'Error fetching registrations: {str(e)}'
+            }), 500
+    
     # Error handlers
     @app.errorhandler(404)
     def not_found(error):

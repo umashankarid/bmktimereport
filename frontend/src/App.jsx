@@ -4,6 +4,7 @@ import './App.css';
 import MainLoginPage from './pages/MainLoginPage';
 import AdminDashboard from './pages/AdminDashboard';
 import ReportsPage from './pages/ReportsPage';
+import VolunteerDashboard from './pages/VolunteerDashboard';
 import ActivityForm from './components/ActivityForm';
 import ActivityHistoryView from './components/ActivityHistoryView';
 import Responsibilities from './components/Responsibilities';
@@ -33,10 +34,19 @@ function App() {
     if (trainerToken && trainer) {
       setAuthState('ready');
       setAdmin(trainer);
-      setUserType('trainer');
+      
+      // Determine user type based on trainer_type
+      const isVolunteer = trainer.trainer_type === 'Volunteer';
+      const userTypeValue = isVolunteer ? 'volunteer' : 'trainer';
+      setUserType(userTypeValue);
+      
       axios.defaults.headers.common['Authorization'] = `Bearer ${trainerToken}`;
-      fetchTrainers();
-      fetchActivities();
+      
+      // Only fetch trainers and activities for actual trainers, not volunteers
+      if (!isVolunteer) {
+        fetchTrainers();
+        fetchActivities();
+      }
     } else {
       // Check admin auth
       const adminToken = localStorage.getItem('adminToken');
@@ -124,12 +134,20 @@ function App() {
           // Set auth header
           axios.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
           
+          // Determine user type based on trainer_type
+          const isVolunteer = trainerData.trainer_type === 'Volunteer';
+          const actualUserType = isVolunteer ? 'volunteer' : 'trainer';
+          
           // Update app state
           setAdmin(trainerData);
-          setUserType('trainer');
+          setUserType(actualUserType);
           setAuthState('ready');
-          fetchTrainers();
-          fetchActivities();
+          
+          // Only fetch trainers and activities for actual trainers, not volunteers
+          if (!isVolunteer) {
+            fetchTrainers();
+            fetchActivities();
+          }
           
           return { success: true };
         } else {
@@ -249,6 +267,11 @@ function App() {
   // Admin dashboard
   if (userType === 'admin') {
     return <AdminDashboard onLogout={handleLogout} />;
+  }
+
+  // Volunteer dashboard
+  if (userType === 'volunteer') {
+    return <VolunteerDashboard volunteer={admin} onLogout={handleLogout} />;
   }
 
   // Trainer app - main trainer interface
