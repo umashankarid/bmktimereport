@@ -767,6 +767,48 @@ def create_app():
                 'message': f'Error fetching tournaments: {str(e)}'
             }), 500
     
+    # Add new tournament
+    @app.route('/api/tournaments', methods=['POST'])
+    def add_tournament():
+        """Add a new tournament"""
+        try:
+            data = request.get_json()
+            
+            if not data:
+                return jsonify({
+                    'success': False,
+                    'message': 'No data provided'
+                }), 400
+            
+            tournament_name = data.get('Tournament Name')
+            date = data.get('Date')
+            
+            if not tournament_name or not date:
+                return jsonify({
+                    'success': False,
+                    'message': 'Tournament name and date are required'
+                }), 400
+            
+            sheets = get_sheets_manager()
+            result = sheets.add_tournament(data)
+            
+            # If successful, update cache
+            if result['success']:
+                try:
+                    cache = get_data_cache()
+                    with cache.lock:
+                        cache.data['tournaments'] = []  # Invalidate cache
+                    logger.info("✅ Tournament added to cache")
+                except Exception as e:
+                    logger.warning(f"⚠️  Could not update cache: {e}")
+            
+            return jsonify(result), 201 if result['success'] else 400
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'message': f'Error adding tournament: {str(e)}'
+            }), 500
+    
     # Register volunteer for tournament
     @app.route('/api/tournaments/register', methods=['POST'])
     def register_tournament():

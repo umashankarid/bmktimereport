@@ -1537,6 +1537,58 @@ class GoogleSheetsManager:
                 'message': f'Error fetching tournaments: {str(e)}'
             }
 
+    def add_tournament(self, tournament_data):
+        """Add a new tournament to the Tournaments sheet"""
+        try:
+            if not self.authenticated:
+                return {
+                    'success': False,
+                    'message': 'Google Sheets not configured'
+                }
+
+            if self.demo_mode:
+                # Demo mode: just return success
+                return {
+                    'success': True,
+                    'message': 'Tournament added (demo mode)'
+                }
+
+            sheet_id = os.getenv('GOOGLE_SHEET_ID')
+            if not sheet_id or sheet_id == 'demo-sheet-id':
+                return {'success': False, 'message': 'Google Sheets not configured'}
+
+            spreadsheet = self.client.open_by_key(sheet_id)
+            tournaments_sheet = spreadsheet.worksheet(self.TOURNAMENTS_SHEET)
+            
+            # Extract tournament data
+            row_data = [
+                tournament_data.get('Tournament Name', ''),
+                tournament_data.get('Date', ''),
+                tournament_data.get('Venue', ''),
+                tournament_data.get('Start Time', ''),
+                tournament_data.get('End Time', ''),
+                tournament_data.get('Available Slots', ''),
+                tournament_data.get('Status', 'Upcoming')
+            ]
+            
+            # Append to sheet
+            tournaments_sheet.append_row(row_data)
+            
+            # Invalidate cache
+            self._cache['tournaments']['data'] = None
+            self._cache['tournaments']['timestamp'] = None
+            
+            return {
+                'success': True,
+                'message': 'Tournament added successfully'
+            }
+
+        except Exception as e:
+            return {
+                'success': False,
+                'message': f'Error adding tournament: {str(e)}'
+            }
+
     def register_volunteer(self, volunteer_name, tournament_name):
         """Register a volunteer for a tournament"""
         try:
