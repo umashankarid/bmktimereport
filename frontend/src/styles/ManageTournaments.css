@@ -61,6 +61,7 @@
   font-weight: 600;
   font-size: 0.95rem;
   margin-bottom: 1.5rem;
+  margin-right: 1rem;
   transition: all 0.3s ease;
 }
 
@@ -71,6 +72,30 @@
 }
 
 .btn-add-tournament:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-import-tournament {
+  background: #4caf50;
+  color: white;
+  border: none;
+  padding: 0.8rem 1.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.95rem;
+  margin-bottom: 1.5rem;
+  transition: all 0.3s ease;
+}
+
+.btn-import-tournament:hover:not(:disabled) {
+  background: #388e3c;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
+}
+
+.btn-import-tournament:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }

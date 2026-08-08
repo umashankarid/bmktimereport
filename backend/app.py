@@ -767,6 +767,58 @@ def create_app():
                 'message': f'Error fetching tournaments: {str(e)}'
             }), 500
     
+    # Import tournaments from Badminton Sweden
+    @app.route('/api/tournaments/import', methods=['POST'])
+    def import_tournaments():
+        """Import tournaments from Badminton Sweden website"""
+        try:
+            from tournament_scraper import import_tournaments_from_badminton_sweden
+            
+            logger.info("Starting tournament import from Badminton Sweden")
+            result = import_tournaments_from_badminton_sweden()
+            
+            if result['success'] and result['imported']:
+                # Add tournaments to sheets
+                sheets = get_sheets_manager()
+                added_count = 0
+                errors = []
+                
+                for tournament_data in result['imported']:
+                    add_result = sheets.add_tournament(tournament_data)
+                    if add_result['success']:
+                        added_count += 1
+                    else:
+                        errors.append(f"{tournament_data['Tournament Name']}: {add_result['message']}")
+                
+                # Invalidate cache
+                try:
+                    cache = get_data_cache()
+                    with cache.lock:
+                        cache.data['tournaments'] = []
+                except Exception as e:
+                    logger.warning(f"Could not invalidate cache: {e}")
+                
+                return jsonify({
+                    'success': True,
+                    'message': f'Successfully imported {added_count} tournaments',
+                    'imported_count': added_count,
+                    'total_found': len(result['imported']),
+                    'errors': errors,
+                    'tournaments': result['imported']
+                }), 200
+            else:
+                return jsonify({
+                    'success': False,
+                    'message': result['message']
+                }), 400
+        
+        except Exception as e:
+            logger.error(f"Error importing tournaments: {e}")
+            return jsonify({
+                'success': False,
+                'message': f'Error importing tournaments: {str(e)}'
+            }), 500
+    
     # Add new tournament
     @app.route('/api/tournaments', methods=['POST'])
     def add_tournament():

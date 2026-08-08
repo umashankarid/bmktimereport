@@ -127,6 +127,44 @@ function ManageTournaments() {
     }
   };
 
+  const handleImportFromBadmintonSweden = async () => {
+    if (!window.confirm('This will fetch tournaments from Badminton Sweden with "komet" in the name. Continue?')) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setMessage('🔄 Importing tournaments from Badminton Sweden...');
+      setMessageType('');
+
+      const response = await fetch('/api/tournaments/import', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+        }
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setMessage(`✅ Imported ${result.imported_count} tournaments from Badminton Sweden (found ${result.total_found} total)`);
+        setMessageType('success');
+        if (result.errors && result.errors.length > 0) {
+          console.warn('Import errors:', result.errors);
+        }
+        fetchTournaments();
+      } else {
+        setMessage(`❌ ${result.message}`);
+        setMessageType('error');
+      }
+    } catch (err) {
+      setMessage('Failed to import tournaments: ' + err.message);
+      setMessageType('error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="manage-tournaments-container">
       <h2>Manage Tournaments</h2>
@@ -149,6 +187,15 @@ function ManageTournaments() {
         disabled={loading}
       >
         {showAddForm ? '✕ Cancel' : '+ Add Tournament'}
+      </button>
+
+      <button 
+        className="btn-import-tournament"
+        onClick={handleImportFromBadmintonSweden}
+        disabled={loading}
+        title="Import tournaments from Badminton Sweden"
+      >
+        🔄 Import from Badminton Sweden
       </button>
 
       {showAddForm && (
