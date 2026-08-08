@@ -150,6 +150,16 @@ def create_app():
                 end_time=data.get('end_time')
             )
             
+            # Invalidate cache if delete was successful
+            if result['success']:
+                try:
+                    cache = get_data_cache()
+                    with cache.lock:
+                        cache.data['activities'] = []
+                    logger.info("✅ Cache invalidated after activity deletion")
+                except Exception as e:
+                    logger.warning(f"⚠️  Could not invalidate cache: {e}")
+            
             status_code = 200 if result['success'] else 400
             return jsonify(result), status_code
         except Exception as e:
@@ -178,6 +188,16 @@ def create_app():
                 activity_type=data.get('activity_type'),
                 month=data.get('month')
             )
+            
+            # Invalidate cache if delete was successful
+            if result['success']:
+                try:
+                    cache = get_data_cache()
+                    with cache.lock:
+                        cache.data['activities'] = []
+                    logger.info("✅ Cache invalidated after activities deletion")
+                except Exception as e:
+                    logger.warning(f"⚠️  Could not invalidate cache: {e}")
             
             status_code = 200 if result['success'] else 400
             return jsonify(result), status_code
@@ -314,6 +334,18 @@ def create_app():
         try:
             sheets = get_sheets_manager()
             result = sheets.delete_trainer(trainer_name)
+            
+            # Invalidate cache if delete was successful
+            if result['success']:
+                try:
+                    cache = get_data_cache()
+                    with cache.lock:
+                        cache.data['trainers'] = []
+                        cache.data['activities'] = []
+                    logger.info("✅ Cache invalidated after trainer deletion")
+                except Exception as e:
+                    logger.warning(f"⚠️  Could not invalidate cache: {e}")
+            
             return jsonify(result), 200 if result['success'] else 400
         except Exception as e:
             return jsonify({
