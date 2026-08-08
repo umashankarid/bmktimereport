@@ -87,7 +87,8 @@ def fetch_tournaments_list():
         }
         
         logger.info(f"Fetching tournaments from Badminton Sweden with params: {params}")
-        logger.info(f"URL: {FIND_URL}?{}&".join(f'{k}={v}' for k, v in params.items())}")
+        url_params = "&".join(f'{k}={v}' for k, v in params.items())
+        logger.info(f"URL: {FIND_URL}?{url_params}")
         
         response = requests.get(FIND_URL, params=params, headers=HEADERS, timeout=15)
         response.raise_for_status()
