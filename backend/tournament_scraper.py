@@ -98,21 +98,33 @@ def fetch_tournaments_list():
         soup = BeautifulSoup(response.text, 'html.parser')
         tournaments = []
         
+        # Log page structure
+        logger.info(f"📄 Total page text length: {len(response.text)} characters")
+        
         # Find all tournament items - try multiple selectors
-        selectors = ['div.list__item', 'li.list__item', 'a.media__link', 'div.tournament', 'tr']
+        selectors = ['div.list__item', 'li.list__item', 'a.media__link', 'div.tournament', 'tr', 'div', 'table']
         all_items = []
         
         for selector in selectors:
             items = soup.select(selector)
             if items:
                 logger.info(f"📍 Selector '{selector}': found {len(items)} items")
+                if selector in ['div', 'table'] and len(items) > 50:
+                    logger.info(f"   (too many, not logging all)")
+                else:
+                    for item in items[:3]:
+                        text = item.get_text(strip=True)[:60]
+                        logger.info(f"     - {text}")
                 all_items.extend(items)
         
         logger.info(f"Total items found: {len(all_items)}")
         
         # Log all text content to see what's on the page
         all_text = soup.get_text()
-        logger.info(f"📄 Total page text length: {len(all_text)} characters")
+        logger.info(f"📄 Page text length: {len(all_text)} characters")
+        
+        # Log first 500 chars of page text
+        logger.info(f"📄 Page text (first 500 chars):\n{all_text[:500]}")
         
         # Look for 'komet' anywhere on the page
         if 'komet' in all_text.lower():
@@ -124,6 +136,10 @@ def fetch_tournaments_list():
                 logger.info(f"  [{i}] {line[:100]}")
         else:
             logger.warning("❌ 'komet' not found in page text")
+            logger.warning(f"Looking for alternative keywords...")
+            for keyword in ['turner', 'match', 'badminton', 'tournament']:
+                count = all_text.lower().count(keyword)
+                logger.warning(f"  '{keyword}': {count} occurrences")
         
         # Process items
         for idx, item in enumerate(all_items):
