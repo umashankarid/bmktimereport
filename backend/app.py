@@ -200,13 +200,24 @@ def create_app():
             cache = get_data_cache()
             all_activities = cache.get_activities()
             
+            # Fallback to sheets if cache is empty
+            if not all_activities:
+                logger.warning("⚠️  Cache empty, fetching from sheets...")
+                sheets = get_sheets_manager()
+                result = sheets.get_all_activities(limit=limit)
+                if result['success']:
+                    all_activities = result['data']
+                    # Update cache for next time
+                    with cache.lock:
+                        cache.data['activities'] = all_activities
+            
             # Apply limit
             activities = all_activities[:limit]
             
             return jsonify({
                 'success': True,
                 'data': activities,
-                'from_cache': True
+                'from_cache': len(all_activities) > 0
             }), 200
         except Exception as e:
             error_msg = str(e)
@@ -224,10 +235,21 @@ def create_app():
             cache = get_data_cache()
             trainers = cache.get_trainers()
             
+            # Fallback to sheets if cache is empty
+            if not trainers:
+                logger.warning("⚠️  Cache empty, fetching from sheets...")
+                sheets = get_sheets_manager()
+                result = sheets.get_trainers_details()
+                if result['success']:
+                    trainers = result['data']
+                    # Update cache for next time
+                    with cache.lock:
+                        cache.data['trainers'] = trainers
+            
             return jsonify({
                 'success': True,
                 'data': trainers,
-                'from_cache': True
+                'from_cache': len(trainers) > 0
             }), 200
         except Exception as e:
             return jsonify({
@@ -243,10 +265,21 @@ def create_app():
             cache = get_data_cache()
             trainers = cache.get_trainers()
             
+            # Fallback to sheets if cache is empty
+            if not trainers:
+                logger.warning("⚠️  Cache empty, fetching from sheets...")
+                sheets = get_sheets_manager()
+                result = sheets.get_trainers_details()
+                if result['success']:
+                    trainers = result['data']
+                    # Update cache for next time
+                    with cache.lock:
+                        cache.data['trainers'] = trainers
+            
             return jsonify({
                 'success': True,
                 'data': trainers,
-                'from_cache': True
+                'from_cache': len(trainers) > 0
             }), 200
         except Exception as e:
             return jsonify({
@@ -652,10 +685,21 @@ def create_app():
             cache = get_data_cache()
             tournaments = cache.get_tournaments()
             
+            # Fallback to sheets if cache is empty
+            if not tournaments:
+                logger.warning("⚠️  Cache empty, fetching from sheets...")
+                sheets = get_sheets_manager()
+                result = sheets.get_tournaments()
+                if result['success']:
+                    tournaments = result['data']
+                    # Update cache for next time
+                    with cache.lock:
+                        cache.data['tournaments'] = tournaments
+            
             return jsonify({
                 'success': True,
                 'data': tournaments,
-                'from_cache': True
+                'from_cache': len(tournaments) > 0
             }), 200
         except Exception as e:
             return jsonify({
