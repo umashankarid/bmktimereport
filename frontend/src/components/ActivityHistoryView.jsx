@@ -42,7 +42,8 @@ function ActivityHistoryView({ currentTrainer = null, isAdminView = false }) {
       if (result.success && result.data) {
         setTrainers(result.data);
         if (result.data.length > 0) {
-          setSelectedTrainer(result.data[0]);
+          // Set only the trainer name, not the entire object
+          setSelectedTrainer(result.data[0].name);
         }
       }
     } catch (err) {
