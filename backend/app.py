@@ -347,28 +347,49 @@ def create_app():
             
             print(f"📊 get_activity_summary called with: trainer={trainer_filter}, month={month_filter}, trainer_type={trainer_type_filter}")
             
-            sheets = get_sheets_manager()
+            # Get activities from cache first
+            cache = get_data_cache()
+            activities = cache.get_activities()
             
-            # Get all activities
-            activities_result = sheets.get_all_activities()
-            if not activities_result['success']:
-                return jsonify(activities_result), 400
+            # Fallback to sheets if cache is empty
+            if not activities:
+                logger.warning("⚠️  Cache empty, fetching from sheets...")
+                sheets = get_sheets_manager()
+                result = sheets.get_all_activities()
+                if result['success']:
+                    activities = result['data']
+                    # Update cache for next time
+                    with cache.lock:
+                        cache.data['activities'] = activities
+                else:
+                    return jsonify(result), 400
             
-            activities = activities_result['data']
-            print(f"📊 Total activities in sheet: {len(activities)}")
+            print(f"📊 Total activities: {len(activities)}")
             
             # If trainer_type filter is set, get trainers of that type and filter activities
             if trainer_type_filter:
                 try:
-                    # Get all trainers with their types from Login sheet
-                    trainers_result = sheets.get_trainers_details()
-                    if trainers_result['success']:
-                        trainers_of_type = [t['name'] for t in trainers_result['data'] if t.get('trainer_type') == trainer_type_filter]
+                    # Get trainers from cache first
+                    trainers = cache.get_trainers()
+                    
+                    # Fallback to sheets if cache is empty
+                    if not trainers:
+                        logger.warning("⚠️  Cache empty, fetching trainers from sheets...")
+                        sheets = get_sheets_manager()
+                        trainers_result = sheets.get_trainers_details()
+                        if trainers_result['success']:
+                            trainers = trainers_result['data']
+                            # Update cache
+                            with cache.lock:
+                                cache.data['trainers'] = trainers
+                    
+                    if trainers:
+                        trainers_of_type = [t['name'] for t in trainers if t.get('trainer_type') == trainer_type_filter]
                         print(f"📊 Filtering by trainer type '{trainer_type_filter}': found {len(trainers_of_type)} trainers - {trainers_of_type}")
                         activities = [a for a in activities if a.get('Trainer Name', '') in trainers_of_type]
                         print(f"📊 After type filter: {len(activities)} activities")
                     else:
-                        print(f"⚠️  Could not get trainers details: {trainers_result}")
+                        print(f"⚠️  Could not get trainers")
                 except Exception as e:
                     print(f"❌ Error filtering by trainer type: {e}")
                     import traceback
@@ -436,8 +457,6 @@ def create_app():
     def get_activity_history():
         """Get activity history with optional filtering"""
         try:
-            sheets = get_sheets_manager()
-            
             # Get query parameters for filtering
             trainer_name = request.args.get('trainer', None)
             activity_type = request.args.get('activity', None)
@@ -445,17 +464,26 @@ def create_app():
             end_date = request.args.get('end_date', None)
             limit = request.args.get('limit', 500, type=int)
             
-            # Get all activities
-            activities = sheets.get_all_activities(limit=limit)
+            # Get activities from cache first
+            cache = get_data_cache()
+            all_activities = cache.get_activities()
             
-            if not activities.get('success'):
-                return jsonify({
-                    'success': False,
-                    'data': [],
-                    'message': 'Failed to retrieve activities'
-                }), 400
-            
-            all_activities = activities.get('data', [])
+            # Fallback to sheets if cache is empty
+            if not all_activities:
+                logger.warning("⚠️  Cache empty, fetching from sheets...")
+                sheets = get_sheets_manager()
+                result = sheets.get_all_activities(limit=limit)
+                if result['success']:
+                    all_activities = result['data']
+                    # Update cache for next time
+                    with cache.lock:
+                        cache.data['activities'] = all_activities
+                else:
+                    return jsonify({
+                        'success': False,
+                        'data': [],
+                        'message': 'Failed to retrieve activities'
+                    }), 400
             
             # Filter activities
             filtered = []
