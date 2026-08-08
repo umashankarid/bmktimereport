@@ -791,20 +791,30 @@ def create_app():
                 # Add tournaments to sheets
                 sheets = get_sheets_manager()
                 added_count = 0
+                skipped_count = 0
                 errors = []
+                skipped = []
                 
                 for idx, tournament_data in enumerate(result['imported'], 1):
-                    logger.warning(f"\n   [{idx}] {tournament_data.get('Tournament Name', 'N/A')}")
+                    tournament_name = tournament_data.get('Tournament Name', 'N/A')
+                    logger.warning(f"\n   [{idx}] {tournament_name}")
                     logger.warning(f"       Start Date: {tournament_data.get('Start Date', 'N/A')}")
                     logger.warning(f"       End Date: {tournament_data.get('End Date', 'N/A')}")
                     logger.warning(f"       Venue: {tournament_data.get('Venue', 'N/A')}")
+                    
+                    # Check if tournament already exists
+                    if sheets.tournament_exists(tournament_name):
+                        logger.warning(f"       ⚠️  Tournament already exists, skipping")
+                        skipped_count += 1
+                        skipped.append(tournament_name)
+                        continue
                     
                     add_result = sheets.add_tournament(tournament_data)
                     if add_result['success']:
                         added_count += 1
                         logger.warning(f"       ✅ Added successfully")
                     else:
-                        error_msg = f"{tournament_data['Tournament Name']}: {add_result['message']}"
+                        error_msg = f"{tournament_name}: {add_result['message']}"
                         errors.append(error_msg)
                         logger.warning(f"       ❌ {error_msg}")
                 
@@ -818,14 +828,21 @@ def create_app():
                     logger.warning(f"⚠️  Could not invalidate cache: {e}")
                 
                 logger.warning("\n" + "="*70)
-                logger.warning(f"🎉 IMPORT COMPLETE: {added_count}/{len(result['imported'])} added")
+                logger.warning(f"🎉 IMPORT COMPLETE:")
+                logger.warning(f"   Added: {added_count}/{len(result['imported'])}")
+                if skipped_count > 0:
+                    logger.warning(f"   Skipped (already exist): {skipped_count}")
+                if errors:
+                    logger.warning(f"   Errors: {len(errors)}")
                 logger.warning("="*70 + "\n")
                 
                 return jsonify({
                     'success': True,
-                    'message': f'Successfully imported {added_count} tournaments',
+                    'message': f'Imported {added_count} tournaments' + (f', skipped {skipped_count} duplicates' if skipped_count > 0 else ''),
                     'imported_count': added_count,
+                    'skipped_count': skipped_count,
                     'total_found': len(result['imported']),
+                    'skipped': skipped,
                     'errors': errors,
                     'tournaments': result['imported']
                 }), 200

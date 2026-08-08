@@ -335,6 +335,7 @@ function ManageTournaments() {
                 <th>Venue</th>
                 <th>Time</th>
                 <th>Slots</th>
+                <th>Volunteers</th>
                 <th>Status</th>
                 <th>Actions</th>
               </tr>
@@ -350,6 +351,12 @@ function ManageTournaments() {
                     {tournament['Start Time']} - {tournament['End Time'] || 'TBA'}
                   </td>
                   <td className="slots">{tournament['Available Slots'] || '-'}</td>
+                  <td className="volunteers">
+                    <span className="volunteer-count">{tournament['Volunteers Registered'] || '0'}</span>
+                    {tournament['Volunteers List'] && (
+                      <span className="volunteer-tooltip" title={tournament['Volunteers List']}>ℹ️</span>
+                    )}
+                  </td>
                   <td>
                     <span className={`status-badge ${tournament.Status?.toLowerCase()}`}>
                       {tournament.Status || 'Upcoming'}

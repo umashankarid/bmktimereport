@@ -21,7 +21,7 @@ class GoogleSheetsManager:
     
     # Tournaments sheet
     TOURNAMENTS_SHEET = 'Tournaments'
-    TOURNAMENTS_HEADERS = ['Tournament Name', 'Start Date', 'End Date', 'Venue', 'Start Time', 'End Time', 'Available Slots', 'Status']
+    TOURNAMENTS_HEADERS = ['Tournament Name', 'Start Date', 'End Date', 'Venue', 'Start Time', 'End Time', 'Available Slots', 'Volunteers Registered', 'Volunteers List', 'Status']
     
     # Volunteer registrations sheet
     VOLUNTEER_REGISTRATIONS_SHEET = 'Volunteer Registrations'
@@ -1537,6 +1537,18 @@ class GoogleSheetsManager:
                 'message': f'Error fetching tournaments: {str(e)}'
             }
 
+    def tournament_exists(self, tournament_name):
+        """Check if a tournament already exists by name"""
+        try:
+            result = self.get_tournaments()
+            if result['success']:
+                tournaments = result['data']
+                return any(t.get('Tournament Name', '') == tournament_name for t in tournaments)
+            return False
+        except Exception as e:
+            logger.error(f"Error checking tournament existence: {e}")
+            return False
+
     def add_tournament(self, tournament_data):
         """Add a new tournament to the Tournaments sheet"""
         try:
@@ -1569,6 +1581,8 @@ class GoogleSheetsManager:
                 tournament_data.get('Start Time', ''),
                 tournament_data.get('End Time', ''),
                 tournament_data.get('Available Slots', ''),
+                '0',  # Volunteers Registered
+                '',   # Volunteers List
                 tournament_data.get('Status', 'Upcoming')
             ]
             
