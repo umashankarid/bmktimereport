@@ -20,49 +20,60 @@ class DataCache:
         self.last_sync = None
 
     def load_initial_data(self, sheets_manager):
-        """Load all data from sheets on startup"""
+        """Load all data from sheets on startup with retry logic"""
         logger.info("📂 Loading initial data from Google Sheets...")
         start_time = time.time()
         
+        # If sheets_manager is in demo mode, skip loading
+        if sheets_manager.demo_mode:
+            logger.info("ℹ️  Demo mode - skipping Google Sheets data load")
+            return
+        
         try:
             with self.lock:
-                # Load activities
-                result = sheets_manager.get_all_activities(limit=1000)
-                if result['success']:
-                    self.data['activities'] = result['data']
-                    logger.info(f"✅ Loaded {len(self.data['activities'])} activities")
+                # Load activities with retry
+                try:
+                    result = sheets_manager.get_all_activities(limit=1000)
+                    if result['success']:
+                        self.data['activities'] = result['data']
+                        logger.info(f"✅ Loaded {len(self.data['activities'])} activities")
+                except Exception as e:
+                    logger.warning(f"⚠️  Could not load activities: {e}")
                 
-                # Load all activities list
-                result = sheets_manager.get_activities_list()
-                if result['success']:
-                    self.data['all_activities'] = result['data']
-                    logger.info(f"✅ Loaded {len(self.data['all_activities'])} activity types")
+                # Load all activities list with retry
+                try:
+                    result = sheets_manager.get_activities_list()
+                    if result['success']:
+                        self.data['all_activities'] = result['data']
+                        logger.info(f"✅ Loaded {len(self.data['all_activities'])} activity types")
+                except Exception as e:
+                    logger.warning(f"⚠️  Could not load activity types: {e}")
                 
-                # Load trainers
-                result = sheets_manager.get_trainers_details()
-                if result['success']:
-                    self.data['trainers'] = result['data']
-                    logger.info(f"✅ Loaded {len(self.data['trainers'])} trainers")
+                # Load trainers with retry
+                try:
+                    result = sheets_manager.get_trainers_details()
+                    if result['success']:
+                        self.data['trainers'] = result['data']
+                        logger.info(f"✅ Loaded {len(self.data['trainers'])} trainers")
+                except Exception as e:
+                    logger.warning(f"⚠️  Could not load trainers: {e}")
                 
-                # Load tournaments
-                result = sheets_manager.get_tournaments()
-                if result['success']:
-                    self.data['tournaments'] = result['data']
-                    logger.info(f"✅ Loaded {len(self.data['tournaments'])} tournaments")
-                
-                # Load volunteer registrations
-                result = sheets_manager.get_volunteer_registrations('')
-                if result['success']:
-                    self.data['volunteer_registrations'] = result['data']
-                    logger.info(f"✅ Loaded {len(self.data['volunteer_registrations'])} volunteer registrations")
+                # Load tournaments with retry
+                try:
+                    result = sheets_manager.get_tournaments()
+                    if result['success']:
+                        self.data['tournaments'] = result['data']
+                        logger.info(f"✅ Loaded {len(self.data['tournaments'])} tournaments")
+                except Exception as e:
+                    logger.warning(f"⚠️  Could not load tournaments: {e}")
                 
                 self.last_sync = datetime.now()
                 elapsed = time.time() - start_time
-                logger.info(f"🎉 Initial data load complete in {elapsed:.2f}s")
+                logger.info(f"🎉 Data load complete in {elapsed:.2f}s")
                 
         except Exception as e:
-            logger.error(f"❌ Error loading initial data: {e}")
-            raise
+            logger.error(f"❌ Error loading data: {e}")
+            # Don't raise - let the app continue with empty cache
 
     def start_background_sync(self, sheets_manager, poll_interval=None):
         """Background sync disabled - cache is kept in sync via write operations"""

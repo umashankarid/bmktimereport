@@ -66,8 +66,8 @@ def create_app():
         logger.warning(f"✅ Data cache initialized and loaded")
         logger.warning(f"ℹ️  Cache will stay in sync via write operations (no background polling)")
     except Exception as e:
-        logger.error(f"❌ Error initializing cache: {e}")
-        logger.warning(f"⚠️  Continuing without cache - will use direct sheet access")
+        logger.warning(f"⚠️  Error initializing cache: {e}")
+        logger.warning(f"⚠️  Continuing without cache - will use direct sheet access with fallback")
     
     # Register authentication routes
     logger.warning(f"\n📝 Registering auth routes...")
