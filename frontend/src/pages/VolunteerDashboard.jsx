@@ -156,11 +156,6 @@ function VolunteerDashboard({ volunteer, onLogout }) {
                           {tournament['Start Time']} - {tournament['End Time']}
                         </span>
                       </div>
-
-                      <div className="detail-row">
-                        <span className="label">🙋 Slots Available:</span>
-                        <span className="value">{tournament['Available Slots'] || 'N/A'}</span>
-                      </div>
                     </div>
 
                     <button

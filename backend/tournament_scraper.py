@@ -317,7 +317,6 @@ def import_tournaments_from_badminton_sweden():
                 'Venue': venue or tournament['location'] or 'TBA',
                 'Start Time': '09:00',
                 'End Time': '17:00',
-                'Available Slots': '4',
                 'Status': 'Upcoming'
             }
             

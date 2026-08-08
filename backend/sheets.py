@@ -21,7 +21,7 @@ class GoogleSheetsManager:
     
     # Tournaments sheet
     TOURNAMENTS_SHEET = 'Tournaments'
-    TOURNAMENTS_HEADERS = ['Tournament Name', 'Start Date', 'End Date', 'Venue', 'Start Time', 'End Time', 'Available Slots', 'Volunteers Registered', 'Volunteers List', 'Status']
+    TOURNAMENTS_HEADERS = ['Tournament Name', 'Start Date', 'End Date', 'Venue', 'Start Time', 'End Time', 'Status']
     
     # Volunteer registrations sheet
     VOLUNTEER_REGISTRATIONS_SHEET = 'Volunteer Registrations'
@@ -1612,9 +1612,6 @@ class GoogleSheetsManager:
                     tournament.get('Venue', ''),
                     tournament.get('Start Time', ''),
                     tournament.get('End Time', ''),
-                    tournament.get('Available Slots', ''),
-                    tournament.get('Volunteers Registered', '0'),
-                    tournament.get('Volunteers List', ''),
                     tournament.get('Status', 'Upcoming')
                 ]
                 tournaments_sheet.append_row(row_data)
@@ -1659,9 +1656,6 @@ class GoogleSheetsManager:
                 tournament_data.get('Venue', ''),
                 tournament_data.get('Start Time', ''),
                 tournament_data.get('End Time', ''),
-                tournament_data.get('Available Slots', ''),
-                '0',  # Volunteers Registered
-                '',   # Volunteers List
                 tournament_data.get('Status', 'Upcoming')
             ]
             

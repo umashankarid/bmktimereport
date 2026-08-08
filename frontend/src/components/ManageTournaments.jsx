@@ -14,7 +14,6 @@ function ManageTournaments() {
     venue: '',
     start_time: '',
     end_time: '',
-    available_slots: '',
     status: 'Upcoming'
   });
 
@@ -74,7 +73,6 @@ function ManageTournaments() {
           'Venue': formData.venue,
           'Start Time': formData.start_time,
           'End Time': formData.end_time,
-          'Available Slots': formData.available_slots,
           'Status': formData.status
         })
       });
@@ -91,7 +89,6 @@ function ManageTournaments() {
           venue: '',
           start_time: '',
           end_time: '',
-          available_slots: '',
           status: 'Upcoming'
         });
         setShowAddForm(false);
@@ -337,18 +334,6 @@ function ManageTournaments() {
                   disabled={loading}
                 />
               </div>
-
-              <div className="form-group">
-                <label>Available Slots</label>
-                <input
-                  type="number"
-                  name="available_slots"
-                  value={formData.available_slots}
-                  onChange={handleInputChange}
-                  placeholder="Number of volunteers needed"
-                  disabled={loading}
-                />
-              </div>
             </div>
 
             <button 
@@ -378,8 +363,6 @@ function ManageTournaments() {
                 <th>End Date</th>
                 <th>Venue</th>
                 <th>Time</th>
-                <th>Slots</th>
-                <th>Volunteers</th>
                 <th>Status</th>
                 <th>Actions</th>
               </tr>
@@ -393,13 +376,6 @@ function ManageTournaments() {
                   <td>{tournament.Venue || '-'}</td>
                   <td className="time">
                     {tournament['Start Time']} - {tournament['End Time'] || 'TBA'}
-                  </td>
-                  <td className="slots">{tournament['Available Slots'] || '-'}</td>
-                  <td className="volunteers">
-                    <span className="volunteer-count">{tournament['Volunteers Registered'] || '0'}</span>
-                    {tournament['Volunteers List'] && (
-                      <span className="volunteer-tooltip" title={tournament['Volunteers List']}>ℹ️</span>
-                    )}
                   </td>
                   <td>
                     <span className={`status-badge ${tournament.Status?.toLowerCase()}`}>
