@@ -318,7 +318,9 @@ class TrainerAuthManager:
                 'message': 'Login successful',
                 'trainer': {
                     'name': trainer.get('Trainer Name'),
-                    'type': trainer.get('Trainer Type', 'Assistant Trainer')
+                    'email': trainer.get('Email', ''),
+                    'phone': trainer.get('Phone', ''),
+                    'trainer_type': trainer.get('Trainer Type', 'Assistant Trainer')
                 }
             }
             
