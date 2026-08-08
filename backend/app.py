@@ -774,29 +774,51 @@ def create_app():
         try:
             from tournament_scraper import import_tournaments_from_badminton_sweden
             
-            logger.info("Starting tournament import from Badminton Sweden")
+            logger.warning("\n" + "="*70)
+            logger.warning("🏸 TOURNAMENT IMPORT STARTED")
+            logger.warning("="*70)
+            
             result = import_tournaments_from_badminton_sweden()
             
+            logger.warning(f"\n📊 IMPORT RESULT:")
+            logger.warning(f"   Success: {result['success']}")
+            logger.warning(f"   Message: {result['message']}")
+            logger.warning(f"   Tournaments found: {len(result.get('imported', []))}")
+            
             if result['success'] and result['imported']:
+                logger.warning(f"\n✅ Processing {len(result['imported'])} tournaments...")
+                
                 # Add tournaments to sheets
                 sheets = get_sheets_manager()
                 added_count = 0
                 errors = []
                 
-                for tournament_data in result['imported']:
+                for idx, tournament_data in enumerate(result['imported'], 1):
+                    logger.warning(f"\n   [{idx}] {tournament_data.get('Tournament Name', 'N/A')}")
+                    logger.warning(f"       Date: {tournament_data.get('Start Date', 'N/A')}")
+                    logger.warning(f"       Venue: {tournament_data.get('Venue', 'N/A')}")
+                    
                     add_result = sheets.add_tournament(tournament_data)
                     if add_result['success']:
                         added_count += 1
+                        logger.warning(f"       ✅ Added successfully")
                     else:
-                        errors.append(f"{tournament_data['Tournament Name']}: {add_result['message']}")
+                        error_msg = f"{tournament_data['Tournament Name']}: {add_result['message']}"
+                        errors.append(error_msg)
+                        logger.warning(f"       ❌ {error_msg}")
                 
                 # Invalidate cache
                 try:
                     cache = get_data_cache()
                     with cache.lock:
                         cache.data['tournaments'] = []
+                    logger.warning(f"\n✅ Cache invalidated")
                 except Exception as e:
-                    logger.warning(f"Could not invalidate cache: {e}")
+                    logger.warning(f"⚠️  Could not invalidate cache: {e}")
+                
+                logger.warning("\n" + "="*70)
+                logger.warning(f"🎉 IMPORT COMPLETE: {added_count}/{len(result['imported'])} added")
+                logger.warning("="*70 + "\n")
                 
                 return jsonify({
                     'success': True,
@@ -807,6 +829,9 @@ def create_app():
                     'tournaments': result['imported']
                 }), 200
             else:
+                logger.warning(f"\n❌ IMPORT FAILED: {result['message']}")
+                logger.warning("="*70 + "\n")
+                
                 return jsonify({
                     'success': False,
                     'message': result['message']
