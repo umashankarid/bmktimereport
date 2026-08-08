@@ -100,6 +100,31 @@
   cursor: not-allowed;
 }
 
+.btn-repair-sheet {
+  background: #ff9800;
+  color: white;
+  border: none;
+  padding: 0.8rem 1.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.95rem;
+  margin-bottom: 1.5rem;
+  margin-left: 1rem;
+  transition: all 0.3s ease;
+}
+
+.btn-repair-sheet:hover:not(:disabled) {
+  background: #f57c00;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(255, 152, 0, 0.3);
+}
+
+.btn-repair-sheet:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .add-tournament-form {
   background: #f9f9f9;
   border: 1px solid #e0e0e0;

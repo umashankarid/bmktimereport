@@ -778,6 +778,11 @@ def create_app():
             logger.warning("🏸 TOURNAMENT IMPORT STARTED")
             logger.warning("="*70)
             
+            # First, repair the tournaments sheet if needed
+            sheets = get_sheets_manager()
+            logger.warning("\n0️⃣  VERIFYING SHEET STRUCTURE...")
+            sheets.repair_tournaments_sheet()
+            
             result = import_tournaments_from_badminton_sweden()
             
             logger.warning(f"\n📊 IMPORT RESULT:")
@@ -860,6 +865,31 @@ def create_app():
             return jsonify({
                 'success': False,
                 'message': f'Error importing tournaments: {str(e)}'
+            }), 500
+    
+    # Repair tournaments sheet
+    @app.route('/api/tournaments/repair', methods=['POST'])
+    def repair_tournaments_sheet():
+        """Repair the tournaments sheet structure"""
+        try:
+            sheets = get_sheets_manager()
+            success = sheets.repair_tournaments_sheet()
+            
+            if success:
+                return jsonify({
+                    'success': True,
+                    'message': 'Tournaments sheet repaired successfully'
+                }), 200
+            else:
+                return jsonify({
+                    'success': False,
+                    'message': 'Failed to repair tournaments sheet'
+                }), 400
+        except Exception as e:
+            logger.error(f"Error repairing tournaments sheet: {e}")
+            return jsonify({
+                'success': False,
+                'message': f'Error repairing tournaments sheet: {str(e)}'
             }), 500
     
     # Add new tournament

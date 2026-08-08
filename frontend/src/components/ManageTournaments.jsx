@@ -150,7 +150,7 @@ function ManageTournaments() {
       const result = await response.json();
 
       if (result.success) {
-        setMessage(`✅ Imported ${result.imported_count} tournaments from Badminton Sweden (found ${result.total_found} total)`);
+        setMessage(`✅ Imported ${result.imported_count} tournaments from Badminton Sweden (found ${result.total_found} total)${result.skipped_count > 0 ? `, skipped ${result.skipped_count} duplicates` : ''}`);
         setMessageType('success');
         if (result.errors && result.errors.length > 0) {
           console.warn('Import errors:', result.errors);
@@ -162,6 +162,41 @@ function ManageTournaments() {
       }
     } catch (err) {
       setMessage('Failed to import tournaments: ' + err.message);
+      setMessageType('error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRepairSheet = async () => {
+    if (!window.confirm('This will repair the tournament sheet structure. Continue?')) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setMessage('🔧 Repairing tournament sheet...');
+      setMessageType('');
+
+      const response = await fetch('/api/tournaments/repair', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+        }
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setMessage(`✅ ${result.message}`);
+        setMessageType('success');
+        fetchTournaments();
+      } else {
+        setMessage(`❌ ${result.message}`);
+        setMessageType('error');
+      }
+    } catch (err) {
+      setMessage('Failed to repair sheet: ' + err.message);
       setMessageType('error');
     } finally {
       setLoading(false);
@@ -199,6 +234,15 @@ function ManageTournaments() {
         title="Import tournaments from Badminton Sweden"
       >
         🔄 Import from Badminton Sweden
+      </button>
+
+      <button 
+        className="btn-repair-sheet"
+        onClick={handleRepairSheet}
+        disabled={loading}
+        title="Repair tournament sheet structure"
+      >
+        🔧 Repair Sheet
       </button>
 
       {showAddForm && (

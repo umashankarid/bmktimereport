@@ -175,12 +175,29 @@ class GoogleSheetsManager:
                 tournaments_sheet = spreadsheet.add_worksheet(
                     title=self.TOURNAMENTS_SHEET,
                     rows=100,
-                    cols=7
+                    cols=10  # Updated to 10 columns for new schema
                 )
                 tournaments_sheet.append_row(self.TOURNAMENTS_HEADERS)
                 print(f"✅ '{self.TOURNAMENTS_SHEET}' sheet created with headers")
             else:
                 print(f"✅ '{self.TOURNAMENTS_SHEET}' sheet exists")
+                # Verify and repair headers if needed
+                tournaments_sheet = spreadsheet.worksheet(self.TOURNAMENTS_SHEET)
+                try:
+                    current_headers = tournaments_sheet.row_values(1)
+                    expected_headers = self.TOURNAMENTS_HEADERS
+                    
+                    if current_headers != expected_headers:
+                        print(f"⚠️  Tournaments sheet headers mismatch!")
+                        print(f"   Current: {current_headers}")
+                        print(f"   Expected: {expected_headers}")
+                        print(f"   Repairing headers...")
+                        # Clear first row and rewrite headers
+                        tournaments_sheet.delete_rows(1)
+                        tournaments_sheet.insert_rows([self.TOURNAMENTS_HEADERS], 1)
+                        print(f"✅ Tournaments sheet headers repaired")
+                except Exception as e:
+                    print(f"⚠️  Could not verify tournaments headers: {e}")
             
             # Ensure Volunteer Registrations sheet exists
             if self.VOLUNTEER_REGISTRATIONS_SHEET not in worksheet_names:
@@ -1547,6 +1564,68 @@ class GoogleSheetsManager:
             return False
         except Exception as e:
             logger.error(f"Error checking tournament existence: {e}")
+            return False
+
+    def repair_tournaments_sheet(self):
+        """Repair the Tournaments sheet if headers are misaligned"""
+        try:
+            if not self.authenticated:
+                return False
+            
+            sheet_id = os.getenv('GOOGLE_SHEET_ID')
+            if not sheet_id or sheet_id == 'demo-sheet-id':
+                return False
+            
+            spreadsheet = self.client.open_by_key(sheet_id)
+            tournaments_sheet = spreadsheet.worksheet(self.TOURNAMENTS_SHEET)
+            
+            # Get current headers (first row)
+            current_headers = tournaments_sheet.row_values(1)
+            expected_headers = self.TOURNAMENTS_HEADERS
+            
+            logger.warning(f"\n🔧 Checking Tournaments sheet structure...")
+            logger.warning(f"   Expected headers: {expected_headers}")
+            logger.warning(f"   Current headers: {current_headers}")
+            
+            if current_headers == expected_headers:
+                logger.warning(f"✅ Sheet structure is correct")
+                return True
+            
+            logger.warning(f"⚠️  Sheet structure mismatch - repairing...")
+            
+            # Get all data (skip header)
+            all_data = tournaments_sheet.get_all_records()
+            logger.warning(f"   Found {len(all_data)} tournaments")
+            
+            # Clear sheet
+            tournaments_sheet.clear()
+            
+            # Write correct headers
+            tournaments_sheet.append_row(self.TOURNAMENTS_HEADERS)
+            
+            # Re-add all tournaments with correct columns
+            for tournament in all_data:
+                row_data = [
+                    tournament.get('Tournament Name', ''),
+                    tournament.get('Start Date', tournament.get('Date', '')),
+                    tournament.get('End Date', tournament.get('Date', '')),
+                    tournament.get('Venue', ''),
+                    tournament.get('Start Time', ''),
+                    tournament.get('End Time', ''),
+                    tournament.get('Available Slots', ''),
+                    tournament.get('Volunteers Registered', '0'),
+                    tournament.get('Volunteers List', ''),
+                    tournament.get('Status', 'Upcoming')
+                ]
+                tournaments_sheet.append_row(row_data)
+            
+            logger.warning(f"✅ Sheet repaired with {len(all_data)} tournaments")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error repairing tournaments sheet: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
             return False
 
     def add_tournament(self, tournament_data):
