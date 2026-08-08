@@ -28,7 +28,7 @@ class GoogleSheetsManager:
     VOLUNTEER_REG_HEADERS = ['Volunteer Name', 'Tournament Name', 'Registration Date', 'Status']
     
     # Cache settings
-    CACHE_TTL = 300  # Cache for 5 minutes (300 seconds) - increased for better scalability
+    CACHE_TTL = 600  # Cache for 10 minutes (600 seconds) - increased for better scalability
     
     def __init__(self, demo_mode=False):
         """Initialize Google Sheets connection"""

@@ -42,10 +42,12 @@ function App() {
       
       axios.defaults.headers.common['Authorization'] = `Bearer ${trainerToken}`;
       
-      // Only fetch trainers and activities for actual trainers, not volunteers
+      // Only fetch trainers and activities for actual trainers on first load
+      // Volunteers don't need this data
       if (!isVolunteer) {
-        fetchTrainers();
-        fetchActivities();
+        // Don't fetch on init - only fetch when needed to reduce API calls
+        // fetchTrainers();
+        // fetchActivities();
       }
     } else {
       // Check admin auth
@@ -57,8 +59,7 @@ function App() {
         setAdmin(adminData);
         setUserType('admin');
         axios.defaults.headers.common['Authorization'] = `Bearer ${adminToken}`;
-        fetchTrainers();
-        fetchActivities();
+        // Don't fetch on init - data loads when admin dashboard components mount
       } else {
         setAuthState('login');
       }
@@ -80,8 +81,7 @@ function App() {
         setAdmin(response.data.admin);
         setUserType('admin');
         setAuthState('ready');
-        fetchTrainers();
-        fetchActivities();
+        // Don't fetch on login - let admin dashboard load data as needed
         return { success: true };
       } else {
         return { success: false, message: response.data.message };
@@ -143,11 +143,8 @@ function App() {
           setUserType(actualUserType);
           setAuthState('ready');
           
-          // Only fetch trainers and activities for actual trainers, not volunteers
-          if (!isVolunteer) {
-            fetchTrainers();
-            fetchActivities();
-          }
+          // Don't fetch trainers/activities on login to reduce API calls
+          // They're loaded lazily when needed (ActivityForm, ReportsPage, etc)
           
           return { success: true };
         } else {
