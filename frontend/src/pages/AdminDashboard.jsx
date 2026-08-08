@@ -3,6 +3,7 @@ import '../styles/AdminDashboard.css';
 import ActivityHistoryView from '../components/ActivityHistoryView';
 import ActivitySummaryTable from '../components/ActivitySummaryTable';
 import ManageTrainers from '../components/ManageTrainers';
+import ManageTournaments from '../components/ManageTournaments';
 import TimeReportStatus from '../components/TimeReportStatus';
 
 function AdminDashboard({ onLogout }) {
@@ -144,7 +145,13 @@ function AdminDashboard({ onLogout }) {
           className={`tab-btn ${activeTab === 'trainers' ? 'active' : ''}`}
           onClick={() => setActiveTab('trainers')}
         >
-          👥 Manage Trainers
+          👥 Manage Users
+        </button>
+        <button
+          className={`tab-btn ${activeTab === 'tournaments' ? 'active' : ''}`}
+          onClick={() => setActiveTab('tournaments')}
+        >
+          🏸 Manage Tournaments
         </button>
         <button
           className={`tab-btn ${activeTab === 'config' ? 'active' : ''}`}
@@ -155,6 +162,12 @@ function AdminDashboard({ onLogout }) {
       </div>
 
       <div className="admin-content">
+        {activeTab === 'tournaments' && (
+          <ManageTournaments />
+        )}
+        {activeTab === 'trainers' && (
+          <ManageTrainers />
+        )}
         {activeTab === 'config' && (
           <div className="config-section">
             <h2>Google Sheets Configuration</h2>
@@ -313,12 +326,6 @@ function AdminDashboard({ onLogout }) {
         {activeTab === 'activities' && (
           <div className="activities-section">
             <ActivityHistoryView isAdminView={true} />
-          </div>
-        )}
-
-        {activeTab === 'trainers' && (
-          <div className="trainers-section">
-            <ManageTrainers />
           </div>
         )}
       </div>

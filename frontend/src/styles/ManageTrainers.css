@@ -120,6 +120,31 @@
   color: #ff6b6b;
 }
 
+/* User Type Badges */
+.user-type {
+  display: inline-block;
+  padding: 0.4rem 0.8rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.user-type.assistant-trainer {
+  background: #e3f2fd;
+  color: #1976d2;
+}
+
+.user-type.junior-trainer {
+  background: #fff3e0;
+  color: #f57c00;
+}
+
+.user-type.volunteer {
+  background: #f3e5f5;
+  color: #7b1fa2;
+}
+
 /* Modal Styles */
 .modal-overlay {
   position: fixed;

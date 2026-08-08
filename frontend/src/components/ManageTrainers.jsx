@@ -143,9 +143,9 @@ function ManageTrainers() {
 
   return (
     <div className="manage-trainers-container">
-      <h2>Manage Trainers</h2>
+      <h2>Manage Users</h2>
       <p className="section-description">
-        View, edit, or delete trainer accounts. Changes to trainer information will be saved to the system.
+        View, edit, or delete user accounts (trainers and volunteers). Changes to user information will be saved to the system.
       </p>
 
       {message && (
@@ -159,14 +159,15 @@ function ManageTrainers() {
 
       {trainers.length === 0 ? (
         <div className="empty-state">
-          <p>No trainers found</p>
+          <p>No users found</p>
         </div>
       ) : (
         <div className="trainers-table-container">
           <table className="trainers-table">
             <thead>
               <tr>
-                <th>Trainer Name</th>
+                <th>User Name</th>
+                <th>Type</th>
                 <th>Email</th>
                 <th>Phone</th>
                 <th>Actions</th>
@@ -176,20 +177,21 @@ function ManageTrainers() {
               {trainers.map((trainer) => (
                 <tr key={trainer.name}>
                   <td>{trainer.name}</td>
+                  <td><span className={`user-type ${trainer.trainer_type?.toLowerCase().replace(' ', '-')}`}>{trainer.trainer_type || 'Assistant Trainer'}</span></td>
                   <td>{trainer.email || '-'}</td>
                   <td>{trainer.phone || '-'}</td>
                   <td className="actions">
                     <button
                       className="btn btn-edit"
                       onClick={() => handleEditClick(trainer)}
-                      title="Edit trainer"
+                      title="Edit user"
                     >
                       ✎
                     </button>
                     <button
                       className="btn btn-delete"
                       onClick={() => handleDeleteTrainer(trainer.name)}
-                      title="Delete trainer"
+                      title="Delete user"
                     >
                       🗑️
                     </button>
