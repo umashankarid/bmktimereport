@@ -11,19 +11,15 @@ HEADERS = {
 }
 
 BADMINTON_SWEDEN_BASE = "https://badmintonsweden.tournamentsoftware.com"
-FIND_URL = f"{BADMINTON_SWEDEN_BASE}/find"
 COOKIEWALL_URL = f"{BADMINTON_SWEDEN_BASE}/cookiewall/Save"
+FIND_URL = f"{BADMINTON_SWEDEN_BASE}/find"
+DOSEARCH_URL = f"{BADMINTON_SWEDEN_BASE}/find/tournament/DoSearch"
 
 # Swedish month mapping
 SWEDISH_MONTHS = {
     'januari': 1, 'februari': 2, 'mars': 3, 'april': 4,
     'maj': 5, 'juni': 6, 'juli': 7, 'augusti': 8,
     'september': 9, 'oktober': 10, 'november': 11, 'december': 12
-}
-
-SWEDISH_DAYS = {
-    'mån': 'Mon', 'tis': 'Tue', 'ons': 'Wed', 'tors': 'Thu',
-    'fre': 'Fri', 'lör': 'Sat', 'sön': 'Sun'
 }
 
 
@@ -34,7 +30,7 @@ def create_session_with_cookies():
     
     try:
         logger.info("Accepting cookies on Badminton Sweden...")
-        # Post to cookie wall to accept all cookies
+        # Post to cookie wall to accept all cookies - EXACT approach from old project
         resp = session.post(
             COOKIEWALL_URL,
             data={
@@ -55,11 +51,14 @@ def create_session_with_cookies():
 def parse_swedish_date(date_str):
     """Parse Swedish date like 'lör den 5 sep' to YYYY-MM-DD"""
     try:
+        # Handle ISO format first
+        if 'T' in date_str:
+            return date_str[:10]
+        
         # Remove leading day abbreviation if present (e.g., "lör den 5 sep")
         date_str = date_str.lower().strip()
         
         # Match pattern: "day den D month" or "D month"
-        # Example: "lör den 5 sep" or "5 september"
         match = re.search(r'(\d{1,2})\s+(\w+)', date_str)
         if not match:
             return None
@@ -96,183 +95,142 @@ def parse_swedish_date(date_str):
         return None
 
 
-def fetch_tournaments_list(session):
-    """Fetch tournaments from Badminton Sweden with 'komet' in the name"""
+def fetch_tournament_form_data(session):
+    """Load the find page to get form data - EXACT approach from old project"""
     try:
-        # Calculate date range: today to 5 months from now
         today = datetime.now()
-        end_date = today + timedelta(days=150)  # Roughly 5 months
+        end = today + timedelta(days=90)
         
-        params = {
-            'DateFilterType': 0,
-            'StartDate': today.strftime('%Y-%m-%d'),
-            'EndDate': end_date.strftime('%Y-%m-%d'),
-            'Distance': 10,
-            'page': 1,
-            'StatusFilterID': 2
-        }
+        # Load the find page to get form data
+        resp = session.get(
+            f"{FIND_URL}?StatusFilterID=2&DateFilterType=0&StartDate={today.strftime('%Y-%m-%dT00:00')}&EndDate={end.strftime('%Y-%m-%dT00:00')}&Distance=10&page=1&SportID=2",
+            timeout=10
+        )
         
-        logger.info(f"Fetching tournaments from Badminton Sweden with params: {params}")
-        url_params = "&".join(f'{k}={v}' for k, v in params.items())
-        logger.info(f"URL: {FIND_URL}?{url_params}")
+        logger.info(f"✅ Find page response: {resp.status_code}")
+        logger.info(f"📄 Find page size: {len(resp.text)} characters")
         
-        # Use session to handle cookies
-        response = session.get(FIND_URL, params=params, timeout=15, allow_redirects=True)
-        response.raise_for_status()
-        logger.info(f"✅ Response status: {response.status_code}")
-        logger.info(f"Response length: {len(response.text)} characters")
+        page_soup = BeautifulSoup(resp.text, "html.parser")
+        form = page_soup.select_one("#form_globalsearch")
         
-        soup = BeautifulSoup(response.text, 'html.parser')
+        form_data = {}
+        if form:
+            logger.info("✅ Found form_globalsearch")
+            for inp in form.find_all("input"):
+                name = inp.get("name", "")
+                value = inp.get("value", "")
+                if name:
+                    form_data[name] = value
+            logger.info(f"✅ Extracted {len(form_data)} form fields")
+        else:
+            logger.warning("⚠️  Could not find #form_globalsearch")
+        
+        # Set StatusFilterID to 2 for 'Online-anmälan öppen' (registration open)
+        form_data["TournamentExtendedFilter.StatusFilterID"] = "2"
+        logger.info(f"Form data: {form_data}")
+        
+        return form_data
+    
+    except Exception as e:
+        logger.error(f"Error fetching form data: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        return {}
+
+
+def fetch_tournaments_list(session, form_data):
+    """POST to /find/tournament/DoSearch to get results - EXACT approach from old project"""
+    try:
+        logger.info("POSTing to /find/tournament/DoSearch...")
+        
+        # POST to get results - EXACT approach from old project
+        resp = session.post(
+            DOSEARCH_URL,
+            data=form_data,
+            headers={"X-Requested-With": "XMLHttpRequest"},
+            timeout=10
+        )
+        
+        logger.info(f"✅ DoSearch response: {resp.status_code}")
+        logger.info(f"📄 Response size: {len(resp.text)} characters")
+        
+        soup = BeautifulSoup(resp.text, "html.parser")
         tournaments = []
         
-        # Log page structure
-        logger.info(f"📄 Total page text length: {len(response.text)} characters")
+        items = soup.select("li.list__item")
+        logger.info(f"📍 Found {len(items)} tournament items")
         
-        # Find all tournament items - try multiple selectors
-        selectors = ['div.list__item', 'li.list__item', 'a.media__link', 'div.tournament', 'tr', 'div', 'table']
-        all_items = []
-        
-        for selector in selectors:
-            items = soup.select(selector)
-            if items:
-                logger.info(f"📍 Selector '{selector}': found {len(items)} items")
-                if selector in ['div', 'table'] and len(items) > 50:
-                    logger.info(f"   (too many, not logging all)")
-                else:
-                    for item in items[:3]:
-                        text = item.get_text(strip=True)[:60]
-                        logger.info(f"     - {text}")
-                all_items.extend(items)
-        
-        logger.info(f"Total items found: {len(all_items)}")
-        
-        # Log all text content to see what's on the page
-        all_text = soup.get_text()
-        logger.info(f"📄 Page text length: {len(all_text)} characters")
-        
-        # Log first 500 chars of page text
-        logger.info(f"📄 Page text (first 500 chars):\n{all_text[:500]}")
-        
-        # Look for 'komet' anywhere on the page
-        if 'komet' in all_text.lower():
-            logger.info("✅ Found 'komet' in page text")
-            # Find all occurrences
-            komet_lines = [line.strip() for line in all_text.split('\n') if 'komet' in line.lower()]
-            logger.info(f"Lines containing 'komet': {len(komet_lines)}")
-            for i, line in enumerate(komet_lines[:10]):  # Log first 10
-                logger.info(f"  [{i}] {line[:100]}")
-        else:
-            logger.warning("❌ 'komet' not found in page text")
-            logger.warning(f"Looking for alternative keywords...")
-            for keyword in ['turner', 'match', 'badminton', 'tournament']:
-                count = all_text.lower().count(keyword)
-                logger.warning(f"  '{keyword}': {count} occurrences")
-        
-        # Process items
-        for idx, item in enumerate(all_items):
+        for idx, item in enumerate(items):
             try:
-                # Get tournament name - try multiple selectors
-                name_el = item.select_one('span.nav-link__value, .media__title, h3, .title, .name')
-                if not name_el:
-                    name_el = item
-                
-                name = name_el.get_text(strip=True)
-                
-                if not name:
-                    logger.debug(f"Item {idx}: No name found")
+                link = item.select_one("a.media__link")
+                if not link:
                     continue
                 
-                logger.info(f"Item {idx}: {name}")
+                name = link.get_text(strip=True)
+                href = link.get("href", "")
                 
-                # Filter for 'komet' (case-insensitive, can be part of larger word like "Kometslaget")
+                logger.info(f"  [{idx}] {name} → {href[:60]}")
+                
+                # Filter for 'komet' (case-insensitive)
                 if 'komet' not in name.lower():
+                    logger.debug(f"     Skipping (no 'komet')")
                     continue
                 
-                logger.info(f"✅ Matched 'komet': {name}")
+                logger.info(f"     ✅ Matched 'komet'!")
                 
-                # Get tournament link
-                link_el = item if item.name == 'a' else item.find('a', href=True)
-                if not link_el or not link_el.get('href'):
-                    logger.debug(f"No link found for tournament: {name}")
-                    continue
+                # Get location
+                location_el = item.select_one(".media__subheading .nav-link__value")
+                location = location_el.get_text(strip=True) if location_el else ""
                 
-                tournament_url = link_el.get('href')
-                if not tournament_url.startswith('http'):
-                    tournament_url = BADMINTON_SWEDEN_BASE + tournament_url
+                # Get dates
+                time_els = item.select("time")
+                date_start = time_els[0].get("datetime", "")[:10] if time_els else ""
+                date_end = time_els[1].get("datetime", "")[:10] if len(time_els) > 1 else ""
                 
-                logger.info(f"Tournament URL: {tournament_url}")
+                logger.info(f"     Location: {location}")
+                logger.info(f"     Dates: {date_start} to {date_end}")
+                
+                # Build full URL
+                tid_match = re.search(r'id=([A-Fa-f0-9-]+)', href)
+                tournament_url = f"{BADMINTON_SWEDEN_BASE}/tournament/{tid_match.group(1)}" if tid_match else ""
                 
                 tournaments.append({
                     'name': name,
-                    'url': tournament_url
+                    'url': tournament_url,
+                    'location': location,
+                    'date_start': date_start,
+                    'date_end': date_end
                 })
                 
             except Exception as e:
-                logger.warning(f"Error parsing tournament item {idx}: {e}")
+                logger.warning(f"Error parsing item {idx}: {e}")
                 continue
         
-        logger.info(f"✅ Final: Found {len(tournaments)} tournaments with 'komet'")
+        logger.info(f"✅ Found {len(tournaments)} tournaments with 'komet'")
         return tournaments
     
-    except requests.RequestException as e:
-        logger.error(f"❌ Error fetching tournaments list: {e}")
-        return []
     except Exception as e:
-        logger.error(f"❌ Unexpected error in fetch_tournaments_list: {e}")
+        logger.error(f"Error in DoSearch: {e}")
         import traceback
         logger.error(traceback.format_exc())
         return []
 
 
 def scrape_tournament_details(session, tournament_url):
-    """Scrape tournament page to get dates and address"""
+    """Scrape tournament page to get venue and additional details"""
     try:
-        logger.info(f"🔍 Scraping: {tournament_url}")
+        logger.info(f"🔍 Scraping details: {tournament_url}")
         
-        # Use session to handle cookies
         response = session.get(tournament_url, timeout=15, allow_redirects=True)
         response.raise_for_status()
-        logger.info(f"✅ Status: {response.status_code}, Length: {len(response.text)}")
+        logger.info(f"✅ Status: {response.status_code}")
         
         soup = BeautifulSoup(response.text, 'html.parser')
-        
-        details = {
-            'start_date': None,
-            'end_date': None,
-            'venue': None
-        }
-        
-        # Look for date information (Tävlingsstart, Tävlingsslu)
         text = soup.get_text()
-        logger.info(f"Page text length: {len(text)}")
         
-        # Log relevant sections
-        for line in text.split('\n'):
-            if any(keyword in line.lower() for keyword in ['tävling', 'start', 'address', 'adress', 'lokal', 'vägen']):
-                logger.debug(f"📍 {line.strip()[:80]}")
+        venue = "TBA"
         
-        # Find date patterns - look for Swedish date format
-        start_match = re.search(r'Tävlingsstart[^0-9]*(\d{1,2}\s+\w+|\w+\s+den\s+\d{1,2}\s+\w+)', text, re.IGNORECASE)
-        if start_match:
-            date_str = start_match.group(1)
-            details['start_date'] = parse_swedish_date(date_str)
-            logger.info(f"✅ Start date found: '{date_str}' → {details['start_date']}")
-        else:
-            logger.warning(f"⚠️  No start date found (Tävlingsstart)")
-        
-        end_match = re.search(r'Tävlingsslu[^0-9]*(\d{1,2}\s+\w+|\w+\s+den\s+\d{1,2}\s+\w+)', text, re.IGNORECASE)
-        if end_match:
-            date_str = end_match.group(1)
-            details['end_date'] = parse_swedish_date(date_str)
-            logger.info(f"✅ End date found: '{date_str}' → {details['end_date']}")
-        else:
-            logger.warning(f"⚠️  No end date found (Tävlingsslu)")
-        
-        # If no end date, use start date
-        if details['start_date'] and not details['end_date']:
-            details['end_date'] = details['start_date']
-        
-        # Look for address (Girovägen 8, etc.)
+        # Look for address patterns
         address_patterns = [
             r'Lokal[^<]*?([A-Zäöå][a-zäöå]+vägen\s+\d+[^<]*)',
             r'Adress[^<]*?([A-Zäöå][a-zäöå]+vägen\s+\d+[^<]*)',
@@ -285,31 +243,22 @@ def scrape_tournament_details(session, tournament_url):
                 venue = match.group(1).strip()
                 venue = re.sub(r'<[^>]+>', '', venue)
                 venue = venue.split('\n')[0]
-                details['venue'] = venue.strip()
-                logger.info(f"✅ Venue found: {details['venue']}")
-                break
+                logger.info(f"✅ Venue: {venue}")
+                return venue
         
-        if not details['venue']:
-            logger.warning(f"⚠️  No venue found")
-        
-        logger.info(f"Final details: {details}")
-        return details
+        logger.warning(f"⚠️  No venue found, using TBA")
+        return venue
     
-    except requests.RequestException as e:
-        logger.error(f"❌ Error scraping {tournament_url}: {e}")
-        return None
     except Exception as e:
-        logger.error(f"❌ Unexpected error scraping: {e}")
-        import traceback
-        logger.error(traceback.format_exc())
-        return None
+        logger.error(f"Error scraping details: {e}")
+        return "TBA"
 
 
 def import_tournaments_from_badminton_sweden():
-    """Main function to import tournaments from Badminton Sweden"""
+    """Main function to import tournaments from Badminton Sweden - EXACT approach from old project"""
     try:
         logger.warning("\n" + "="*70)
-        logger.warning("🏸 TOURNAMENT SCRAPER STARTED")
+        logger.warning("🏸 TOURNAMENT SCRAPER STARTED (OLD PROJECT APPROACH)")
         logger.warning("="*70)
         
         # Create session and accept cookies
@@ -317,13 +266,26 @@ def import_tournaments_from_badminton_sweden():
         session = create_session_with_cookies()
         logger.warning("✅ Cookie wall accepted\n")
         
-        # Fetch tournament list
-        logger.warning("2️⃣  FETCHING TOURNAMENT LIST...")
-        tournaments_list = fetch_tournaments_list(session)
-        logger.warning(f"\n✅ Found {len(tournaments_list)} tournaments with 'komet' in the name")
+        # Fetch form data
+        logger.warning("2️⃣  LOADING FORM DATA...")
+        form_data = fetch_tournament_form_data(session)
+        if not form_data:
+            logger.warning("❌ Could not load form data")
+            logger.warning("="*70 + "\n")
+            return {
+                'success': False,
+                'message': 'Could not load search form',
+                'imported': []
+            }
+        logger.warning("✅ Form data loaded\n")
+        
+        # Fetch tournaments via DoSearch
+        logger.warning("3️⃣  SEARCHING FOR TOURNAMENTS WITH 'komet'...")
+        tournaments_list = fetch_tournaments_list(session, form_data)
+        logger.warning(f"\n✅ Found {len(tournaments_list)} tournaments with 'komet'\n")
         
         if not tournaments_list:
-            logger.warning("\n❌ No tournaments found!")
+            logger.warning("❌ No tournaments found!")
             logger.warning("="*70 + "\n")
             return {
                 'success': False,
@@ -331,22 +293,26 @@ def import_tournaments_from_badminton_sweden():
                 'imported': []
             }
         
-        imported_tournaments = []
-        
         # Scrape details for each tournament
-        logger.warning(f"\n3️⃣  SCRAPING DETAILS FOR {len(tournaments_list)} TOURNAMENTS...")
+        imported_tournaments = []
+        logger.warning(f"4️⃣  SCRAPING DETAILS FOR {len(tournaments_list)} TOURNAMENTS...")
+        
         for idx, tournament in enumerate(tournaments_list, 1):
             logger.warning(f"\n   [{idx}/{len(tournaments_list)}] {tournament['name']}")
-            details = scrape_tournament_details(session, tournament['url'])
             
-            if not details or not details['start_date']:
-                logger.warning(f"   ❌ Could not get details, skipping")
+            venue = scrape_tournament_details(session, tournament['url'])
+            
+            # Use date_start, or parse if needed
+            start_date = tournament['date_start'] or parse_swedish_date(tournament['name'])
+            
+            if not start_date:
+                logger.warning(f"   ⚠️  No date found, skipping")
                 continue
             
             tournament_data = {
                 'Tournament Name': tournament['name'],
-                'Date': details['start_date'],
-                'Venue': details['venue'] or 'TBA',
+                'Date': start_date,
+                'Venue': venue or tournament['location'] or 'TBA',
                 'Start Time': '09:00',
                 'End Time': '17:00',
                 'Available Slots': '4',
@@ -354,7 +320,7 @@ def import_tournaments_from_badminton_sweden():
             }
             
             imported_tournaments.append(tournament_data)
-            logger.warning(f"   ✅ Date: {details['start_date']}, Venue: {details['venue']}")
+            logger.warning(f"   ✅ Ready to import")
         
         logger.warning(f"\n✅ Successfully prepared {len(imported_tournaments)} tournaments for import")
         logger.warning("="*70 + "\n")
@@ -366,7 +332,7 @@ def import_tournaments_from_badminton_sweden():
         }
     
     except Exception as e:
-        logger.error(f"\n❌ Error in import_tournaments_from_badminton_sweden: {e}")
+        logger.error(f"\n❌ Error: {e}")
         import traceback
         logger.error(traceback.format_exc())
         logger.warning("="*70 + "\n")
