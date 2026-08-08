@@ -64,10 +64,7 @@ def create_app():
     try:
         cache.load_initial_data(sheets_manager)
         logger.warning(f"✅ Data cache initialized and loaded")
-        
-        # Start background sync thread
-        cache.start_background_sync(sheets_manager, poll_interval=120)
-        logger.warning(f"✅ Background sync thread started")
+        logger.warning(f"ℹ️  Cache will stay in sync via write operations (no background polling)")
     except Exception as e:
         logger.error(f"❌ Error initializing cache: {e}")
         logger.warning(f"⚠️  Continuing without cache - will use direct sheet access")

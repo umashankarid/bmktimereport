@@ -18,8 +18,6 @@ class DataCache:
         }
         self.lock = threading.RLock()  # Recursive lock for thread-safe access
         self.last_sync = None
-        self.sync_in_progress = False
-        self.syncing = False
 
     def load_initial_data(self, sheets_manager):
         """Load all data from sheets on startup"""
@@ -66,75 +64,14 @@ class DataCache:
             logger.error(f"❌ Error loading initial data: {e}")
             raise
 
-    def start_background_sync(self, sheets_manager, poll_interval=60):
-        """Start background thread to sync data periodically"""
-        if self.syncing:
-            logger.warning("⚠️  Background sync already running")
-            return
-        
-        self.syncing = True
-        
-        def sync_loop():
-            logger.info(f"🔄 Starting background sync thread (interval: {poll_interval}s)")
-            
-            while self.syncing:
-                try:
-                    time.sleep(poll_interval)
-                    self.sync_from_sheets(sheets_manager)
-                except Exception as e:
-                    logger.error(f"❌ Error in background sync: {e}")
-                    # Continue syncing even on error
-        
-        # Start as daemon thread
-        sync_thread = threading.Thread(target=sync_loop, daemon=True, name="DataCacheSyncThread")
-        sync_thread.start()
-        logger.info("✅ Background sync thread started")
+    def start_background_sync(self, sheets_manager, poll_interval=None):
+        """Background sync disabled - cache is kept in sync via write operations"""
+        logger.info("ℹ️  Background sync disabled (cache synced via write operations)")
+        # No background polling needed if all writes go through the app
 
     def sync_from_sheets(self, sheets_manager):
-        """Fetch latest data from sheets and update cache"""
-        if self.sync_in_progress:
-            logger.debug("⏳ Sync already in progress, skipping...")
-            return
-        
-        self.sync_in_progress = True
-        start_time = time.time()
-        
-        try:
-            with self.lock:
-                logger.debug("🔄 Syncing data from Google Sheets...")
-                
-                # Sync activities
-                result = sheets_manager.get_all_activities(limit=1000)
-                if result['success']:
-                    self.data['activities'] = result['data']
-                    logger.debug(f"✅ Synced {len(self.data['activities'])} activities")
-                
-                # Sync trainers
-                result = sheets_manager.get_trainers_details()
-                if result['success']:
-                    self.data['trainers'] = result['data']
-                    logger.debug(f"✅ Synced {len(self.data['trainers'])} trainers")
-                
-                # Sync tournaments
-                result = sheets_manager.get_tournaments()
-                if result['success']:
-                    self.data['tournaments'] = result['data']
-                    logger.debug(f"✅ Synced {len(self.data['tournaments'])} tournaments")
-                
-                # Sync volunteer registrations (fetch all)
-                result = sheets_manager.get_volunteer_registrations('')
-                if result['success']:
-                    self.data['volunteer_registrations'] = result['data']
-                    logger.debug(f"✅ Synced {len(self.data['volunteer_registrations'])} volunteer registrations")
-                
-                self.last_sync = datetime.now()
-                elapsed = time.time() - start_time
-                logger.info(f"🔄 Sync complete in {elapsed:.2f}s at {self.last_sync}")
-                
-        except Exception as e:
-            logger.error(f"❌ Error during sync: {e}")
-        finally:
-            self.sync_in_progress = False
+        """Deprecated - cache is kept in sync via write operations"""
+        logger.debug("ℹ️  Direct sync not needed - cache synced via write operations")
 
     def get_activities(self):
         """Get all activities from cache"""
