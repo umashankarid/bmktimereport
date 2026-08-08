@@ -5,6 +5,9 @@ import os
 from config import Config
 import threading
 import time
+import logging
+
+logger = logging.getLogger(__name__)
 
 class GoogleSheetsManager:
     """Manages Google Sheets API interactions with demo/fallback mode"""
