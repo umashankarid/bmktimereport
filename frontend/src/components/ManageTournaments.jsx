@@ -24,7 +24,7 @@ function ManageTournaments() {
   const fetchTournaments = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/tournaments');
+      const response = await fetch('/api/tournaments/with-volunteers');
       const result = await response.json();
       if (result.success && result.data) {
         setTournaments(result.data);
@@ -363,6 +363,7 @@ function ManageTournaments() {
                 <th>End Date</th>
                 <th>Venue</th>
                 <th>Time</th>
+                <th>Volunteers</th>
                 <th>Status</th>
                 <th>Actions</th>
               </tr>
@@ -376,6 +377,21 @@ function ManageTournaments() {
                   <td>{tournament.Venue || '-'}</td>
                   <td className="time">
                     {tournament['Start Time']} - {tournament['End Time'] || 'TBA'}
+                  </td>
+                  <td className="volunteers-cell">
+                    {tournament.volunteer_count > 0 ? (
+                      <div className="volunteer-info">
+                        <span className="volunteer-badge">{tournament.volunteer_count}</span>
+                        <span 
+                          className="volunteer-list-btn"
+                          title={tournament.volunteers.join(', ')}
+                        >
+                          👥
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="no-volunteers">-</span>
+                    )}
                   </td>
                   <td>
                     <span className={`status-badge ${tournament.Status?.toLowerCase()}`}>

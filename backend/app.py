@@ -767,6 +767,39 @@ def create_app():
                 'message': f'Error fetching tournaments: {str(e)}'
             }), 500
     
+    # Get tournaments with volunteer info (for admin dashboard)
+    @app.route('/api/tournaments/with-volunteers', methods=['GET'])
+    def get_tournaments_with_volunteers():
+        """Get list of tournaments with volunteer registration info"""
+        try:
+            sheets = get_sheets_manager()
+            result = sheets.get_tournaments()
+            
+            if not result['success']:
+                return jsonify({
+                    'success': False,
+                    'message': 'Failed to fetch tournaments'
+                }), 500
+            
+            tournaments = result['data']
+            
+            # Add volunteer info to each tournament
+            for tournament in tournaments:
+                tournament_name = tournament.get('Tournament Name', '')
+                vol_result = sheets.get_tournament_volunteers(tournament_name)
+                tournament['volunteers'] = vol_result['volunteers']
+                tournament['volunteer_count'] = vol_result['count']
+            
+            return jsonify({
+                'success': True,
+                'data': tournaments
+            }), 200
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'message': f'Error fetching tournaments: {str(e)}'
+            }), 500
+    
     # Import tournaments from Badminton Sweden
     @app.route('/api/tournaments/import', methods=['POST'])
     def import_tournaments():

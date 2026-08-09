@@ -1569,6 +1569,52 @@ class GoogleSheetsManager:
             logger.error(f"Error checking tournament existence: {e}")
             return False
 
+    def get_tournament_volunteers(self, tournament_name):
+        """Get list of volunteers registered for a specific tournament"""
+        try:
+            if not self.authenticated:
+                return {
+                    'success': False,
+                    'volunteers': [],
+                    'count': 0
+                }
+
+            if self.demo_mode:
+                return {
+                    'success': True,
+                    'volunteers': [],
+                    'count': 0
+                }
+
+            sheet_id = os.getenv('GOOGLE_SHEET_ID')
+            if not sheet_id or sheet_id == 'demo-sheet-id':
+                return {'success': True, 'volunteers': [], 'count': 0}
+
+            spreadsheet = self.client.open_by_key(sheet_id)
+            vol_reg_sheet = spreadsheet.worksheet(self.VOLUNTEER_REGISTRATIONS_SHEET)
+            all_registrations = vol_reg_sheet.get_all_records()
+            
+            # Filter for this tournament and status='Registered'
+            volunteers = [
+                reg.get('Volunteer Name', '')
+                for reg in all_registrations
+                if (reg.get('Tournament Name', '') == tournament_name and 
+                    reg.get('Status', '') == 'Registered')
+            ]
+            
+            return {
+                'success': True,
+                'volunteers': volunteers,
+                'count': len(volunteers)
+            }
+        except Exception as e:
+            logger.error(f"Error getting tournament volunteers: {e}")
+            return {
+                'success': False,
+                'volunteers': [],
+                'count': 0
+            }
+
     def repair_tournaments_sheet(self):
         """Repair the Tournaments sheet if headers are misaligned"""
         try:
