@@ -16,13 +16,25 @@ function ReportsPage({ currentTrainer = null }) {
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   });
 
-  // Date filter for specific day
+  // Date filter for specific day or range
   const [selectedDate, setSelectedDate] = useState(() => {
     const now = new Date();
     return now.toISOString().split('T')[0];
   });
   
+  const [dateRangeStart, setDateRangeStart] = useState(() => {
+    const now = new Date();
+    now.setDate(now.getDate() - 7); // Default to 7 days ago
+    return now.toISOString().split('T')[0];
+  });
+  
+  const [dateRangeEnd, setDateRangeEnd] = useState(() => {
+    const now = new Date();
+    return now.toISOString().split('T')[0];
+  });
+  
   const [useDateFilter, setUseDateFilter] = useState(false);
+  const [dateFilterMode, setDateFilterMode] = useState('single'); // 'single' or 'range'
   
   // Separate reports by trainer type
   const [reportTrainerType, setReportTrainerType] = useState('Assistant Trainer');
@@ -58,7 +70,7 @@ function ReportsPage({ currentTrainer = null }) {
 
   useEffect(() => {
     fetchReports();
-  }, [activeReport, selectedTrainer, selectedMonth, selectedDate, useDateFilter, reportTrainerType]);
+  }, [activeReport, selectedTrainer, selectedMonth, selectedDate, dateRangeStart, dateRangeEnd, useDateFilter, dateFilterMode, reportTrainerType]);
 
   // Filter trainers based on trainer type and set default selection
   useEffect(() => {
@@ -96,9 +108,14 @@ function ReportsPage({ currentTrainer = null }) {
       if (selectedTrainer) {
         params.append('trainer', selectedTrainer);
       }
-      // Use date filter if enabled, otherwise use month filter
-      if (useDateFilter && selectedDate) {
-        params.append('date', selectedDate);
+      // Use date filter if enabled
+      if (useDateFilter) {
+        if (dateFilterMode === 'single') {
+          params.append('date', selectedDate);
+        } else if (dateFilterMode === 'range') {
+          params.append('dateFrom', dateRangeStart);
+          params.append('dateTo', dateRangeEnd);
+        }
       } else if (selectedMonth) {
         params.append('month', selectedMonth);
       }
@@ -203,21 +220,65 @@ function ReportsPage({ currentTrainer = null }) {
                     onChange={(e) => setUseDateFilter(e.target.checked)}
                     className="date-toggle-checkbox"
                   />
-                  <span>Also filter by specific date</span>
+                  <span>Filter by specific date(s)</span>
                 </label>
               </div>
 
               {useDateFilter && (
-                <div className="filter-group">
-                  <label htmlFor="date-filter">Specific Date:</label>
-                  <input
-                    type="date"
-                    id="date-filter"
-                    value={selectedDate}
-                    onChange={(e) => setSelectedDate(e.target.value)}
-                    className="filter-input"
-                  />
-                </div>
+                <>
+                  <div className="filter-group">
+                    <label className="date-mode-label">
+                      <input
+                        type="radio"
+                        value="single"
+                        checked={dateFilterMode === 'single'}
+                        onChange={(e) => setDateFilterMode(e.target.value)}
+                      />
+                      <span>Single Day</span>
+                    </label>
+                    <label className="date-mode-label">
+                      <input
+                        type="radio"
+                        value="range"
+                        checked={dateFilterMode === 'range'}
+                        onChange={(e) => setDateFilterMode(e.target.value)}
+                      />
+                      <span>Date Range</span>
+                    </label>
+                  </div>
+
+                  {dateFilterMode === 'single' ? (
+                    <div className="filter-group">
+                      <label htmlFor="date-filter">📅 Select Date:</label>
+                      <input
+                        type="date"
+                        id="date-filter"
+                        value={selectedDate}
+                        onChange={(e) => setSelectedDate(e.target.value)}
+                        className="filter-input"
+                      />
+                    </div>
+                  ) : (
+                    <div className="filter-group date-range-group">
+                      <label htmlFor="date-from">📅 From Date:</label>
+                      <input
+                        type="date"
+                        id="date-from"
+                        value={dateRangeStart}
+                        onChange={(e) => setDateRangeStart(e.target.value)}
+                        className="filter-input"
+                      />
+                      <label htmlFor="date-to">📅 To Date:</label>
+                      <input
+                        type="date"
+                        id="date-to"
+                        value={dateRangeEnd}
+                        onChange={(e) => setDateRangeEnd(e.target.value)}
+                        className="filter-input"
+                      />
+                    </div>
+                  )}
+                </>
               )}
             </div>
           )}

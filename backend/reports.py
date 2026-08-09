@@ -28,14 +28,39 @@ class ReportsManager:
             print(f"Error getting activities: {e}")
             return []
     
-    def activity_summary_by_trainer(self, trainer_filter=None):
-        """Generate activity summary grouped by trainer with quota tracking"""
+    def activity_summary_by_trainer(self, trainer_filter=None, date_filter=None, date_from=None, date_to=None):
+        """Generate activity summary grouped by trainer with quota tracking
+        
+        Args:
+            trainer_filter: Filter by specific trainer name
+            date_filter: Filter by specific date (YYYY-MM-DD)
+            date_from: Filter from this date (YYYY-MM-DD)
+            date_to: Filter to this date (YYYY-MM-DD)
+        """
         try:
             activities = self.get_all_activities()
             
             # Filter by trainer if specified
             if trainer_filter:
                 activities = [a for a in activities if a.get('Trainer Name') == trainer_filter]
+            
+            # Filter by date if specified
+            if date_filter:
+                activities = [a for a in activities if a.get('Date') == date_filter]
+            elif date_from or date_to:
+                filtered_activities = []
+                for a in activities:
+                    activity_date = a.get('Date', '')
+                    if not activity_date:
+                        continue
+                    
+                    if date_from and activity_date < date_from:
+                        continue
+                    if date_to and activity_date > date_to:
+                        continue
+                    
+                    filtered_activities.append(a)
+                activities = filtered_activities
             
             summary = defaultdict(lambda: {
                 'total_activities': 0,
@@ -121,8 +146,8 @@ class ReportsManager:
                 'error': str(e)
             }
     
-    def activity_types_distribution(self, trainer_filter=None, month_filter=None):
-        """Generate distribution of activity types, optionally filtered by trainer and/or month"""
+    def activity_types_distribution(self, trainer_filter=None, month_filter=None, date_filter=None, date_from=None, date_to=None):
+        """Generate distribution of activity types, optionally filtered by trainer, month, or dates"""
         try:
             activities = self.get_all_activities()
             
@@ -130,8 +155,26 @@ class ReportsManager:
             if trainer_filter:
                 activities = [a for a in activities if a.get('Trainer Name') == trainer_filter]
             
-            # Filter by month if specified
-            if month_filter:
+            # Filter by specific date if specified
+            if date_filter:
+                activities = [a for a in activities if a.get('Date') == date_filter]
+            # Filter by date range if specified
+            elif date_from or date_to:
+                filtered_activities = []
+                for a in activities:
+                    activity_date = a.get('Date', '')
+                    if not activity_date:
+                        continue
+                    
+                    if date_from and activity_date < date_from:
+                        continue
+                    if date_to and activity_date > date_to:
+                        continue
+                    
+                    filtered_activities.append(a)
+                activities = filtered_activities
+            # Filter by month if specified (only if no date filter)
+            elif month_filter:
                 filtered_activities = []
                 for activity in activities:
                     date_str = activity.get('Date', '')
@@ -202,7 +245,7 @@ class ReportsManager:
                 'error': str(e)
             }
     
-    def training_hours_report(self, trainer_filter=None, month_filter=None):
+    def training_hours_report(self, trainer_filter=None, month_filter=None, date_filter=None, date_from=None, date_to=None):
         """Generate training hours report with monthly quota and overtime"""
         try:
             activities = self.get_all_activities()
@@ -211,8 +254,26 @@ class ReportsManager:
             if trainer_filter:
                 activities = [a for a in activities if a.get('Trainer Name') == trainer_filter]
             
-            # Filter by month if specified
-            if month_filter:
+            # Filter by specific date if specified
+            if date_filter:
+                activities = [a for a in activities if a.get('Date') == date_filter]
+            # Filter by date range if specified
+            elif date_from or date_to:
+                filtered_activities = []
+                for a in activities:
+                    activity_date = a.get('Date', '')
+                    if not activity_date:
+                        continue
+                    
+                    if date_from and activity_date < date_from:
+                        continue
+                    if date_to and activity_date > date_to:
+                        continue
+                    
+                    filtered_activities.append(a)
+                activities = filtered_activities
+            # Filter by month if specified (only if no date filter)
+            elif month_filter:
                 filtered_activities = []
                 for activity in activities:
                     date_str = activity.get('Date', '')
@@ -336,7 +397,7 @@ class ReportsManager:
                 'error': str(e)
             }
     
-    def monthly_activity_trends(self, trainer_filter=None, month_filter=None):
+    def monthly_activity_trends(self, trainer_filter=None, month_filter=None, date_filter=None, date_from=None, date_to=None):
         """Generate monthly activity trends, optionally filtered by trainer and/or month"""
         try:
             activities = self.get_all_activities()
@@ -344,6 +405,25 @@ class ReportsManager:
             # Filter by trainer if specified
             if trainer_filter:
                 activities = [a for a in activities if a.get('Trainer Name') == trainer_filter]
+            
+            # Filter by specific date if specified
+            if date_filter:
+                activities = [a for a in activities if a.get('Date') == date_filter]
+            # Filter by date range if specified
+            elif date_from or date_to:
+                filtered_activities = []
+                for a in activities:
+                    activity_date = a.get('Date', '')
+                    if not activity_date:
+                        continue
+                    
+                    if date_from and activity_date < date_from:
+                        continue
+                    if date_to and activity_date > date_to:
+                        continue
+                    
+                    filtered_activities.append(a)
+                activities = filtered_activities
             
             trends = defaultdict(lambda: defaultdict(lambda: {
                 'count': 0,

@@ -563,7 +563,15 @@ def create_app():
             sheets = get_sheets_manager()
             reports = ReportsManager(sheets)
             trainer_filter = request.args.get('trainer')
-            result = reports.activity_summary_by_trainer(trainer_filter=trainer_filter)
+            date_filter = request.args.get('date')
+            date_from = request.args.get('dateFrom')
+            date_to = request.args.get('dateTo')
+            result = reports.activity_summary_by_trainer(
+                trainer_filter=trainer_filter,
+                date_filter=date_filter,
+                date_from=date_from,
+                date_to=date_to
+            )
             
             return jsonify(result), 200 if result.get('success') else 400
         except Exception as e:
@@ -581,7 +589,16 @@ def create_app():
             reports = ReportsManager(sheets)
             trainer_filter = request.args.get('trainer')
             month_filter = request.args.get('month')
-            result = reports.activity_types_distribution(trainer_filter=trainer_filter, month_filter=month_filter)
+            date_filter = request.args.get('date')
+            date_from = request.args.get('dateFrom')
+            date_to = request.args.get('dateTo')
+            result = reports.activity_types_distribution(
+                trainer_filter=trainer_filter,
+                month_filter=month_filter,
+                date_filter=date_filter,
+                date_from=date_from,
+                date_to=date_to
+            )
             
             return jsonify(result), 200 if result.get('success') else 400
         except Exception as e:
@@ -599,7 +616,16 @@ def create_app():
             reports = ReportsManager(sheets)
             trainer_filter = request.args.get('trainer')
             month_filter = request.args.get('month')
-            result = reports.training_hours_report(trainer_filter=trainer_filter, month_filter=month_filter)
+            date_filter = request.args.get('date')
+            date_from = request.args.get('dateFrom')
+            date_to = request.args.get('dateTo')
+            result = reports.training_hours_report(
+                trainer_filter=trainer_filter,
+                month_filter=month_filter,
+                date_filter=date_filter,
+                date_from=date_from,
+                date_to=date_to
+            )
             
             return jsonify(result), 200 if result.get('success') else 400
         except Exception as e:
@@ -617,7 +643,16 @@ def create_app():
             reports = ReportsManager(sheets)
             trainer_filter = request.args.get('trainer')
             month_filter = request.args.get('month')
-            result = reports.monthly_activity_trends(trainer_filter=trainer_filter, month_filter=month_filter)
+            date_filter = request.args.get('date')
+            date_from = request.args.get('dateFrom')
+            date_to = request.args.get('dateTo')
+            result = reports.monthly_activity_trends(
+                trainer_filter=trainer_filter,
+                month_filter=month_filter,
+                date_filter=date_filter,
+                date_from=date_from,
+                date_to=date_to
+            )
             
             return jsonify(result), 200 if result.get('success') else 400
         except Exception as e:
