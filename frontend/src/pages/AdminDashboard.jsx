@@ -30,6 +30,26 @@ function AdminDashboard({ onLogout }) {
   const [trainers, setTrainers] = useState([]);
   const [reportTrainerType, setReportTrainerType] = useState('Assistant Trainer');
 
+  // Date filter for specific day or range
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const now = new Date();
+    return now.toISOString().split('T')[0];
+  });
+  
+  const [dateRangeStart, setDateRangeStart] = useState(() => {
+    const now = new Date();
+    now.setDate(now.getDate() - 7);
+    return now.toISOString().split('T')[0];
+  });
+  
+  const [dateRangeEnd, setDateRangeEnd] = useState(() => {
+    const now = new Date();
+    return now.toISOString().split('T')[0];
+  });
+  
+  const [useDateFilter, setUseDateFilter] = useState(false);
+  const [dateFilterMode, setDateFilterMode] = useState('single');
+
   // Fetch trainers on mount
   React.useEffect(() => {
     fetchTrainers();
@@ -321,10 +341,87 @@ function AdminDashboard({ onLogout }) {
               </div>
             </div>
 
+            <div className="report-filters">
+              <div className="filter-group">
+                <label htmlFor="date-toggle" className="date-toggle-label">
+                  <input
+                    type="checkbox"
+                    id="date-toggle"
+                    checked={useDateFilter}
+                    onChange={(e) => setUseDateFilter(e.target.checked)}
+                    className="date-toggle-checkbox"
+                  />
+                  <span>Filter by specific date(s)</span>
+                </label>
+              </div>
+
+              {useDateFilter && (
+                <>
+                  <div className="filter-group">
+                    <label className="date-mode-label">
+                      <input
+                        type="radio"
+                        value="single"
+                        checked={dateFilterMode === 'single'}
+                        onChange={(e) => setDateFilterMode(e.target.value)}
+                      />
+                      <span>Single Day</span>
+                    </label>
+                    <label className="date-mode-label">
+                      <input
+                        type="radio"
+                        value="range"
+                        checked={dateFilterMode === 'range'}
+                        onChange={(e) => setDateFilterMode(e.target.value)}
+                      />
+                      <span>Date Range</span>
+                    </label>
+                  </div>
+
+                  {dateFilterMode === 'single' ? (
+                    <div className="filter-group">
+                      <label htmlFor="date-filter">📅 Select Date:</label>
+                      <input
+                        type="date"
+                        id="date-filter"
+                        value={selectedDate}
+                        onChange={(e) => setSelectedDate(e.target.value)}
+                        className="filter-input"
+                      />
+                    </div>
+                  ) : (
+                    <div className="filter-group date-range-group">
+                      <label htmlFor="date-from">📅 From Date:</label>
+                      <input
+                        type="date"
+                        id="date-from"
+                        value={dateRangeStart}
+                        onChange={(e) => setDateRangeStart(e.target.value)}
+                        className="filter-input"
+                      />
+                      <label htmlFor="date-to">📅 To Date:</label>
+                      <input
+                        type="date"
+                        id="date-to"
+                        value={dateRangeEnd}
+                        onChange={(e) => setDateRangeEnd(e.target.value)}
+                        className="filter-input"
+                      />
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
             <ActivitySummaryTable 
               trainerFilter={selectedTrainer} 
               selectedMonth={selectedMonth}
               trainerType={reportTrainerType}
+              useDateFilter={useDateFilter}
+              dateFilterMode={dateFilterMode}
+              selectedDate={selectedDate}
+              dateRangeStart={dateRangeStart}
+              dateRangeEnd={dateRangeEnd}
             />
           </div>
         )}
