@@ -2,6 +2,7 @@ import threading
 import time
 from datetime import datetime
 import logging
+import threading
 
 logger = logging.getLogger(__name__)
 
@@ -66,6 +67,15 @@ class DataCache:
                         logger.info(f"✅ Loaded {len(self.data['tournaments'])} tournaments")
                 except Exception as e:
                     logger.warning(f"⚠️  Could not load tournaments: {e}")
+                
+                # Load volunteer registrations with retry
+                try:
+                    result = sheets_manager.get_all_volunteer_registrations()
+                    if result['success']:
+                        self.data['volunteer_registrations'] = result['data']
+                        logger.info(f"✅ Loaded {len(self.data['volunteer_registrations'])} volunteer registrations")
+                except Exception as e:
+                    logger.warning(f"⚠️  Could not load volunteer registrations: {e}")
                 
                 self.last_sync = datetime.now()
                 elapsed = time.time() - start_time

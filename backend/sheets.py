@@ -1779,7 +1779,7 @@ class GoogleSheetsManager:
             }
 
     def get_volunteer_registrations(self, volunteer_name):
-        """Get all tournament registrations for a volunteer"""
+        """Get all tournament registrations for a specific volunteer"""
         try:
             if not self.authenticated:
                 return {
@@ -1818,6 +1818,41 @@ class GoogleSheetsManager:
             return {
                 'success': False,
                 'message': f'Error fetching volunteer registrations: {str(e)}'
+            }
+
+    def get_all_volunteer_registrations(self):
+        """Get all volunteer registrations (for cache loading)"""
+        try:
+            if not self.authenticated:
+                return {
+                    'success': False,
+                    'data': []
+                }
+
+            if self.demo_mode:
+                return {
+                    'success': True,
+                    'data': []
+                }
+
+            sheet_id = os.getenv('GOOGLE_SHEET_ID')
+            if not sheet_id or sheet_id == 'demo-sheet-id':
+                return {'success': True, 'data': []}
+
+            spreadsheet = self.client.open_by_key(sheet_id)
+            vol_reg_sheet = spreadsheet.worksheet(self.VOLUNTEER_REGISTRATIONS_SHEET)
+            all_registrations = vol_reg_sheet.get_all_records()
+            
+            return {
+                'success': True,
+                'data': all_registrations
+            }
+
+        except Exception as e:
+            logger.error(f"Error fetching all volunteer registrations: {e}")
+            return {
+                'success': False,
+                'data': []
             }
 
 
