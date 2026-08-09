@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import '../styles/AdminDashboard.css';
 import ActivityHistoryView from '../components/ActivityHistoryView';
 import ActivitySummaryTable from '../components/ActivitySummaryTable';
@@ -7,7 +8,18 @@ import ManageTournaments from '../components/ManageTournaments';
 import TimeReportStatus from '../components/TimeReportStatus';
 
 function AdminDashboard({ onLogout }) {
-  const [activeTab, setActiveTab] = useState('reports'); // reports, activities, config
+  const navigate = useNavigate();
+  const location = useLocation();
+  
+  // Get active tab from URL, default to reports
+  const getActiveTab = () => {
+    const path = location.pathname.split('/admin/')[1] || 'reports';
+    return path === '' ? 'reports' : path;
+  };
+  
+  const activeTab = getActiveTab();
+  const setActiveTab = (tab) => navigate(`/admin/${tab}`);
+  
   const [configFile, setConfigFile] = useState(null);
   const [sheetId, setSheetId] = useState('');
   const [loading, setLoading] = useState(false);
