@@ -393,9 +393,39 @@ function ManageTournaments() {
               className="btn-submit"
               disabled={loading}
             >
-              {loading ? 'Adding...' : 'Add Tournament'}
+              {editingTournament ? (loading ? 'Updating...' : 'Update Tournament') : (loading ? 'Adding...' : 'Add Tournament')}
             </button>
+
+            {editingTournament && (
+              <button 
+                type="button"
+                className="btn-cancel"
+                onClick={() => {
+                  setEditingTournament(null);
+                  setFormData({
+                    tournament_name: '',
+                    start_date: '',
+                    end_date: '',
+                    venue: '',
+                    start_time: '',
+                    end_time: '',
+                    status: 'Upcoming'
+                  });
+                }}
+                disabled={loading}
+              >
+                Cancel Edit
+              </button>
+            )}
           </form>
+
+          {editingTournament && (
+            <div className="volunteers-management-section">
+              <h4>📋 Manage Volunteers for {editingTournament}</h4>
+              <p className="section-hint">Volunteers currently registered can be viewed in the volunteer list modal above.</p>
+              <p className="section-hint">💡 To add/remove volunteers, they can register/unregister from the Volunteer Dashboard.</p>
+            </div>
+          )}
         </div>
       )}
 

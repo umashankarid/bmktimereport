@@ -198,6 +198,30 @@
   cursor: not-allowed;
 }
 
+.btn-cancel {
+  background: #999;
+  color: white;
+  border: none;
+  padding: 0.8rem 2rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.95rem;
+  margin-left: 1rem;
+  transition: all 0.3s ease;
+}
+
+.btn-cancel:hover:not(:disabled) {
+  background: #666;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.btn-cancel:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .loading {
   text-align: center;
   padding: 2rem;
@@ -428,6 +452,27 @@
   color: #999;
   padding: 2rem;
   margin: 0;
+}
+
+.volunteers-management-section {
+  background: #f0f7ff;
+  border: 1px solid #667eea;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.volunteers-management-section h4 {
+  margin: 0 0 1rem 0;
+  color: #667eea;
+  font-size: 1.1rem;
+}
+
+.section-hint {
+  margin: 0.5rem 0;
+  color: #666;
+  font-size: 0.9rem;
+  line-height: 1.4;
 }
 
 .status-badge {
