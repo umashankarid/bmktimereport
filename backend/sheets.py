@@ -9,6 +9,43 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+def with_exponential_backoff(func, max_retries=3, initial_wait=1):
+    """Decorator to retry a function with exponential backoff on rate limit errors"""
+    def wrapper(*args, **kwargs):
+        wait_time = initial_wait
+        last_error = None
+        
+        for attempt in range(max_retries):
+            try:
+                return func(*args, **kwargs)
+            except Exception as e:
+                error_str = str(e)
+                last_error = e
+                
+                # Check if it's a rate limit error
+                if any(x in error_str for x in ['429', 'RESOURCE_EXHAUSTED', 'Quota exceeded', 'Read requests per minute']):
+                    if attempt < max_retries - 1:
+                        logger.warning(f"⏱️  Rate limit hit (attempt {attempt+1}/{max_retries}), waiting {wait_time}s before retry...")
+                        time.sleep(wait_time)
+                        wait_time *= 2  # Exponential backoff
+                        continue
+                elif '403' in error_str or 'Forbidden' in error_str or 'PERMISSION_DENIED' in error_str:
+                    # Don't retry auth errors
+                    raise
+                elif attempt < max_retries - 1:
+                    # Retry other errors too, but with shorter wait
+                    logger.warning(f"⚠️  Error on attempt {attempt+1}/{max_retries}: {type(e).__name__}, retrying in {wait_time}s...")
+                    time.sleep(wait_time)
+                    wait_time *= 1.5
+                    continue
+                
+                raise
+        
+        # If all retries exhausted, raise last error
+        raise last_error
+    
+    return wrapper
+
 class GoogleSheetsManager:
     """Manages Google Sheets API interactions with demo/fallback mode"""
     

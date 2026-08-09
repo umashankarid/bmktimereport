@@ -1,12 +1,50 @@
 """Trainer authentication using Google Sheets"""
 import hashlib
 import secrets
+import time
 from sheets import get_sheets_manager
 import gspread
 import logging
 
 # Use Python logging instead of print for proper output capture
 logger = logging.getLogger(__name__)
+
+def with_retry(func, max_retries=3, initial_wait=1):
+    """Decorator to retry a function with exponential backoff on rate limit errors"""
+    def wrapper(*args, **kwargs):
+        wait_time = initial_wait
+        last_error = None
+        
+        for attempt in range(max_retries):
+            try:
+                return func(*args, **kwargs)
+            except Exception as e:
+                error_str = str(e)
+                last_error = e
+                
+                # Check if it's a rate limit error
+                if '429' in error_str or 'RESOURCE_EXHAUSTED' in error_str or 'Quota exceeded' in error_str:
+                    if attempt < max_retries - 1:
+                        logger.warning(f"⏱️  Rate limit hit (attempt {attempt+1}/{max_retries}), waiting {wait_time}s before retry...")
+                        time.sleep(wait_time)
+                        wait_time *= 2  # Exponential backoff
+                        continue
+                elif '403' in error_str or 'Forbidden' in error_str:
+                    # Don't retry auth errors
+                    raise
+                elif attempt < max_retries - 1:
+                    # Retry other errors too, but with shorter wait
+                    logger.warning(f"⚠️  Error on attempt {attempt+1}/{max_retries}: {type(e).__name__}, retrying in {wait_time}s...")
+                    time.sleep(wait_time)
+                    wait_time *= 1.5
+                    continue
+                
+                raise
+        
+        # If all retries exhausted, raise last error
+        raise last_error
+    
+    return wrapper
 
 class TrainerAuthManager:
     """Manages trainer authentication with Google Sheets"""
@@ -38,7 +76,17 @@ class TrainerAuthManager:
     
     @staticmethod
     def get_login_sheet():
-        """Get or create Login sheet - with robust error handling"""
+        """Get or create Login sheet - with robust error handling and retry logic"""
+        # Use retry wrapper to handle rate limits
+        @with_retry
+        def _get_sheet_with_retry():
+            return TrainerAuthManager._get_login_sheet_internal()
+        
+        return _get_sheet_with_retry()
+    
+    @staticmethod
+    def _get_login_sheet_internal():
+        """Internal implementation of get_login_sheet"""
         try:
             sheets_manager = get_sheets_manager()
             
@@ -131,7 +179,7 @@ class TrainerAuthManager:
                 raise create_error
             
         except Exception as e:
-            logger.error(f"❌ Error in get_login_sheet: {type(e).__name__}: {e}")
+            logger.error(f"❌ Error in _get_login_sheet_internal: {type(e).__name__}: {e}")
             import traceback
             traceback.print_exc()
             raise
@@ -139,6 +187,15 @@ class TrainerAuthManager:
     @staticmethod
     def register_trainer(trainer_name, password, email='', phone='', photo_base64=None, trainer_type='Assistant Trainer'):
         """Register a new trainer"""
+        @with_retry
+        def _do_register():
+            return TrainerAuthManager._register_trainer_internal(trainer_name, password, email, phone, photo_base64, trainer_type)
+        
+        return _do_register()
+    
+    @staticmethod
+    def _register_trainer_internal(trainer_name, password, email='', phone='', photo_base64=None, trainer_type='Assistant Trainer'):
+        """Internal implementation of register_trainer"""
         try:
             print(f"\n{'='*60}")
             print(f"📝 REGISTERING TRAINER: {trainer_name}")
@@ -229,6 +286,15 @@ class TrainerAuthManager:
     @staticmethod
     def login_trainer(trainer_name, password):
         """Authenticate trainer with name and password"""
+        @with_retry
+        def _do_login():
+            return TrainerAuthManager._login_trainer_internal(trainer_name, password)
+        
+        return _do_login()
+    
+    @staticmethod
+    def _login_trainer_internal(trainer_name, password):
+        """Internal implementation of login_trainer"""
         try:
             logger.warning(f"\n{'='*60}")
             logger.warning(f"🔐 LOGIN ATTEMPT: {trainer_name}")
