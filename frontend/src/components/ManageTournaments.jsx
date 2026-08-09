@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import '../styles/ManageTournaments.css';
+import TimeInput from './TimeInput';
 
 function ManageTournaments() {
   const [tournaments, setTournaments] = useState([]);
@@ -449,23 +450,19 @@ function ManageTournaments() {
             <div className="form-row">
               <div className="form-group">
                 <label>Start Time</label>
-                <input
-                  type="time"
-                  name="start_time"
+                <TimeInput
                   value={formData.start_time}
-                  onChange={handleInputChange}
-                  disabled={loading}
+                  onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
+                  label="Start Time"
                 />
               </div>
 
               <div className="form-group">
                 <label>End Time</label>
-                <input
-                  type="time"
-                  name="end_time"
+                <TimeInput
                   value={formData.end_time}
-                  onChange={handleInputChange}
-                  disabled={loading}
+                  onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
+                  label="End Time"
                 />
               </div>
             </div>
