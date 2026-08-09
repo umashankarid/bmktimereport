@@ -36,11 +36,17 @@ function VolunteerDashboard({ volunteer, onLogout }) {
 
   const fetchRegistrations = async () => {
     try {
+      console.log(`Fetching registrations for volunteer: ${volunteer.name}`);
       const response = await fetch(`/api/tournaments/registrations/${encodeURIComponent(volunteer.name)}`);
       const result = await response.json();
       
+      console.log('Registrations result:', result);
+      
       if (result.success) {
         setRegistrations(result.data || []);
+        console.log(`Loaded ${result.data?.length || 0} registrations`);
+      } else {
+        console.error('Failed to fetch registrations:', result.message);
       }
     } catch (err) {
       console.error('Error fetching registrations:', err);
@@ -50,6 +56,8 @@ function VolunteerDashboard({ volunteer, onLogout }) {
   const handleRegister = async (tournamentName) => {
     try {
       setLoading(true);
+      console.log(`Registering ${volunteer.name} for ${tournamentName}`);
+      
       const response = await fetch('/api/tournaments/register', {
         method: 'POST',
         headers: {
@@ -62,10 +70,12 @@ function VolunteerDashboard({ volunteer, onLogout }) {
       });
 
       const result = await response.json();
+      console.log('Registration result:', result);
 
       if (result.success) {
         setMessage(`✅ Successfully registered for ${tournamentName}`);
         setMessageType('success');
+        // Refresh both lists
         fetchTournaments();
         fetchRegistrations();
       } else {
@@ -73,6 +83,7 @@ function VolunteerDashboard({ volunteer, onLogout }) {
         setMessageType('error');
       }
     } catch (err) {
+      console.error('Registration error:', err);
       setMessage('Registration failed: ' + err.message);
       setMessageType('error');
     } finally {
@@ -172,34 +183,40 @@ function VolunteerDashboard({ volunteer, onLogout }) {
           )}
         </section>
 
-        {registrations.length > 0 && (
+        {registrations && (
           <section className="registrations-section">
             <h2>📋 My Tournament Registrations</h2>
             
-            <div className="registrations-table-container">
-              <table className="registrations-table">
-                <thead>
-                  <tr>
-                    <th>Tournament</th>
-                    <th>Registered Date</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {registrations.map((reg, idx) => (
-                    <tr key={idx}>
-                      <td>{reg['Tournament Name']}</td>
-                      <td>{reg['Registration Date']}</td>
-                      <td>
-                        <span className={`status ${reg.Status?.toLowerCase()}`}>
-                          {reg.Status}
-                        </span>
-                      </td>
+            {registrations.length === 0 ? (
+              <div className="empty-registrations">
+                <p>You haven't registered for any tournaments yet. Choose one above to register!</p>
+              </div>
+            ) : (
+              <div className="registrations-table-container">
+                <table className="registrations-table">
+                  <thead>
+                    <tr>
+                      <th>Tournament</th>
+                      <th>Registered Date</th>
+                      <th>Status</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {registrations.map((reg, idx) => (
+                      <tr key={idx}>
+                        <td>{reg['Tournament Name']}</td>
+                        <td>{reg['Registration Date']}</td>
+                        <td>
+                          <span className={`status ${reg.Status?.toLowerCase()}`}>
+                            {reg.Status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </section>
         )}
       </main>
