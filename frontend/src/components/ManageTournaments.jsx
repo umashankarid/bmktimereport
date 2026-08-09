@@ -9,6 +9,9 @@ function ManageTournaments() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [selectedTournamentVolunteers, setSelectedTournamentVolunteers] = useState(null);
   const [editingTournament, setEditingTournament] = useState(null);
+  const [availableVolunteers, setAvailableVolunteers] = useState([]);
+  const [selectedVolunteer, setSelectedVolunteer] = useState('');
+  const [volunteerComment, setVolunteerComment] = useState('');
   const [formData, setFormData] = useState({
     tournament_name: '',
     start_date: '',
@@ -214,6 +217,85 @@ function ManageTournaments() {
       status: tournament.Status || 'Upcoming'
     });
     setShowAddForm(true);
+  };
+
+  const handleAddVolunteerToTournament = async () => {
+    if (!selectedVolunteer || !editingTournament) {
+      setMessage('Please select a volunteer');
+      setMessageType('error');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const response = await fetch('/api/tournaments/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+        },
+        body: JSON.stringify({
+          volunteer_name: selectedVolunteer,
+          tournament_name: editingTournament,
+          comments: volunteerComment
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setMessage(`✅ ${selectedVolunteer} added to tournament`);
+        setMessageType('success');
+        setSelectedVolunteer('');
+        setVolunteerComment('');
+        fetchTournaments();
+      } else {
+        setMessage(`❌ ${result.message}`);
+        setMessageType('error');
+      }
+    } catch (err) {
+      setMessage('Error adding volunteer: ' + err.message);
+      setMessageType('error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRemoveVolunteerFromTournament = async (volunteerName) => {
+    if (!window.confirm(`Remove ${volunteerName} from ${editingTournament}?`)) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const response = await fetch('/api/tournaments/unregister', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+        },
+        body: JSON.stringify({
+          volunteer_name: volunteerName,
+          tournament_name: editingTournament
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setMessage(`✅ ${volunteerName} removed from tournament`);
+        setMessageType('success');
+        fetchTournaments();
+      } else {
+        setMessage(`❌ ${result.message}`);
+        setMessageType('error');
+      }
+    } catch (err) {
+      setMessage('Error removing volunteer: ' + err.message);
+      setMessageType('error');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -422,8 +504,73 @@ function ManageTournaments() {
           {editingTournament && (
             <div className="volunteers-management-section">
               <h4>📋 Manage Volunteers for {editingTournament}</h4>
-              <p className="section-hint">Volunteers currently registered can be viewed in the volunteer list modal above.</p>
-              <p className="section-hint">💡 To add/remove volunteers, they can register/unregister from the Volunteer Dashboard.</p>
+              
+              <div className="volunteer-management-section">
+                <div className="add-volunteer-form">
+                  <h5>Add Volunteer</h5>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Volunteer Name *</label>
+                      <input
+                        type="text"
+                        value={selectedVolunteer}
+                        onChange={(e) => setSelectedVolunteer(e.target.value)}
+                        placeholder="Enter volunteer name"
+                        disabled={loading}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Comments (optional)</label>
+                      <input
+                        type="text"
+                        value={volunteerComment}
+                        onChange={(e) => setVolunteerComment(e.target.value)}
+                        placeholder="e.g., Experience level, notes"
+                        maxLength="200"
+                        disabled={loading}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleAddVolunteerToTournament}
+                      className="btn-add-volunteer"
+                      disabled={loading}
+                    >
+                      + Add
+                    </button>
+                  </div>
+                </div>
+
+                <div className="current-volunteers">
+                  <h5>Current Volunteers</h5>
+                  {editingTournament && tournaments.find(t => t['Tournament Name'] === editingTournament)?.volunteers && tournaments.find(t => t['Tournament Name'] === editingTournament).volunteers.length > 0 ? (
+                    <ul className="volunteer-list-edit">
+                      {tournaments.find(t => t['Tournament Name'] === editingTournament).volunteers.map((volunteer, idx) => {
+                        const volunteerName = volunteer['Volunteer Name'] || (typeof volunteer === 'string' ? volunteer : '');
+                        const comments = volunteer['Comments'] || '';
+                        return (
+                          <li key={idx} className="volunteer-item-edit">
+                            <div className="volunteer-info">
+                              <span className="volunteer-name">👤 {volunteerName}</span>
+                              {comments && <span className="volunteer-comment">💬 {comments}</span>}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveVolunteerFromTournament(volunteerName)}
+                              className="btn-remove-volunteer"
+                              disabled={loading}
+                            >
+                              Remove
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  ) : (
+                    <p className="no-volunteers-msg">No volunteers registered yet</p>
+                  )}
+                </div>
+              </div>
             </div>
           )}
         </div>

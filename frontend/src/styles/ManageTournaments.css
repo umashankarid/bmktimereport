@@ -468,6 +468,134 @@
   font-size: 1.1rem;
 }
 
+.volunteer-management-section {
+  background: #f0f7ff;
+  border: 1px solid #667eea;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.volunteer-management-section h5 {
+  margin: 1rem 0 0.75rem 0;
+  color: #333;
+  font-size: 1rem;
+}
+
+.volunteer-management-section h5:first-child {
+  margin-top: 0;
+}
+
+.add-volunteer-form {
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.add-volunteer-form .form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 0.75rem;
+  align-items: flex-end;
+  margin: 0;
+}
+
+.btn-add-volunteer {
+  background: #667eea;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  transition: all 0.3s ease;
+}
+
+.btn-add-volunteer:hover:not(:disabled) {
+  background: #5568d3;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.btn-add-volunteer:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.current-volunteers {
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 1rem;
+}
+
+.volunteer-list-edit {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.volunteer-item-edit {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  background: #f9f9f9;
+  border-radius: 6px;
+  margin-bottom: 0.5rem;
+  border-left: 3px solid #667eea;
+}
+
+.volunteer-item-edit:last-child {
+  margin-bottom: 0;
+}
+
+.volunteer-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.volunteer-name {
+  font-weight: 600;
+  color: #333;
+}
+
+.volunteer-comment {
+  font-size: 0.85rem;
+  color: #666;
+  font-style: italic;
+}
+
+.btn-remove-volunteer {
+  background: #ff6b6b;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.85rem;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+  margin-left: 1rem;
+}
+
+.btn-remove-volunteer:hover:not(:disabled) {
+  background: #ee5a52;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(255, 107, 107, 0.3);
+}
+
+.btn-remove-volunteer:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .section-hint {
   margin: 0.5rem 0;
   color: #666;
