@@ -179,19 +179,21 @@ main.container {
 }
 
 .btn-primary {
-  background-color: #667eea;
-  color: white;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  color: white !important;
 }
 
 .btn-primary:hover:not(:disabled) {
-  background-color: #5568d3;
+  background: linear-gradient(135deg, #5568d3 0%, #6b3b8a 100%) !important;
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  color: white !important;
 }
 
 .btn-primary:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+  color: white !important;
 }
 
 .btn-refresh {
