@@ -484,6 +484,11 @@
   color: #ff6b6b;
 }
 
+.btn-edit {
+  color: #667eea;
+  margin-right: 0.5rem;
+}
+
 /* Mobile responsive */
 @media (max-width: 768px) {
   .manage-tournaments-container {

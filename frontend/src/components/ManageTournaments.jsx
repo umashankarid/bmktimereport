@@ -8,6 +8,7 @@ function ManageTournaments() {
   const [messageType, setMessageType] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
   const [selectedTournamentVolunteers, setSelectedTournamentVolunteers] = useState(null);
+  const [editingTournament, setEditingTournament] = useState(null);
   const [formData, setFormData] = useState({
     tournament_name: '',
     start_date: '',
@@ -201,6 +202,20 @@ function ManageTournaments() {
     }
   };
 
+  const handleEditTournament = (tournament) => {
+    setEditingTournament(tournament['Tournament Name']);
+    setFormData({
+      tournament_name: tournament['Tournament Name'],
+      start_date: tournament['Start Date'],
+      end_date: tournament['End Date'],
+      venue: tournament.Venue || '',
+      start_time: tournament['Start Time'] || '',
+      end_time: tournament['End Time'] || '',
+      status: tournament.Status || 'Upcoming'
+    });
+    setShowAddForm(true);
+  };
+
   return (
     <div className="manage-tournaments-container">
       <h2>Manage Tournaments</h2>
@@ -259,9 +274,9 @@ function ManageTournaments() {
               {selectedTournamentVolunteers.volunteers && selectedTournamentVolunteers.volunteers.length > 0 ? (
                 <ul className="volunteer-list">
                   {selectedTournamentVolunteers.volunteers.map((volunteer, idx) => {
-                    // volunteer could be a string (name) or object with full registration data
-                    const volunteerName = typeof volunteer === 'string' ? volunteer : volunteer['Volunteer Name'];
-                    const comments = typeof volunteer === 'string' ? '' : volunteer.get('Comments', '');
+                    // volunteer is an object with Volunteer Name and Comments
+                    const volunteerName = volunteer['Volunteer Name'] || (typeof volunteer === 'string' ? volunteer : '');
+                    const comments = volunteer['Comments'] || '';
                     
                     return (
                       <li key={idx} className="volunteer-item">
@@ -435,6 +450,13 @@ function ManageTournaments() {
                     </span>
                   </td>
                   <td className="actions">
+                    <button
+                      className="btn btn-edit"
+                      onClick={() => handleEditTournament(tournament)}
+                      title="Edit tournament"
+                    >
+                      ✏️
+                    </button>
                     <button
                       className="btn btn-delete"
                       onClick={() => handleDeleteTournament(tournament['Tournament Name'])}
