@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import '../styles/ActivitySummaryTable.css';
 
-function ActivitySummaryTable({ trainerFilter, selectedMonth, trainerType = 'Assistant Trainer' }) {
+function ActivitySummaryTable({ trainerFilter, selectedMonth, trainerType = 'Assistant Trainer', useDateFilter, dateFilterMode, selectedDate, dateRangeStart, dateRangeEnd }) {
   const [activities, setActivities] = useState([]);
   const [totals, setTotals] = useState({
     total_hours: 0,
@@ -13,7 +13,7 @@ function ActivitySummaryTable({ trainerFilter, selectedMonth, trainerType = 'Ass
 
   useEffect(() => {
     fetchActivities();
-  }, [trainerFilter, selectedMonth, trainerType]);
+  }, [trainerFilter, selectedMonth, trainerType, useDateFilter, dateFilterMode, selectedDate, dateRangeStart, dateRangeEnd]);
 
   const fetchActivities = async () => {
     try {
@@ -25,9 +25,19 @@ function ActivitySummaryTable({ trainerFilter, selectedMonth, trainerType = 'Ass
       if (trainerFilter) {
         params.append('trainer', trainerFilter);
       }
-      if (selectedMonth) {
+      
+      // Use date filter if enabled, otherwise use month filter
+      if (useDateFilter) {
+        if (dateFilterMode === 'single') {
+          params.append('date', selectedDate);
+        } else if (dateFilterMode === 'range') {
+          params.append('dateFrom', dateRangeStart);
+          params.append('dateTo', dateRangeEnd);
+        }
+      } else if (selectedMonth) {
         params.append('month', selectedMonth);
       }
+      
       // Pass trainer_type to filter by trainer type
       if (trainerType) {
         params.append('trainer_type', trainerType);
