@@ -258,9 +258,18 @@ function ManageTournaments() {
             <div className="volunteer-modal-body">
               {selectedTournamentVolunteers.volunteers && selectedTournamentVolunteers.volunteers.length > 0 ? (
                 <ul className="volunteer-list">
-                  {selectedTournamentVolunteers.volunteers.map((vol, idx) => (
-                    <li key={idx} className="volunteer-item">👤 {vol}</li>
-                  ))}
+                  {selectedTournamentVolunteers.volunteers.map((volunteer, idx) => {
+                    // volunteer could be a string (name) or object with full registration data
+                    const volunteerName = typeof volunteer === 'string' ? volunteer : volunteer['Volunteer Name'];
+                    const comments = typeof volunteer === 'string' ? '' : volunteer.get('Comments', '');
+                    
+                    return (
+                      <li key={idx} className="volunteer-item">
+                        <span className="volunteer-name">👤 {volunteerName}</span>
+                        {comments && <span className="volunteer-comment">💬 {comments}</span>}
+                      </li>
+                    );
+                  })}
                 </ul>
               ) : (
                 <p className="no-volunteers-msg">No volunteers registered yet</p>

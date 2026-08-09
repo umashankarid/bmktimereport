@@ -99,6 +99,48 @@
   margin-bottom: 3rem;
 }
 
+.comment-input-section {
+  background: #f9f9f9;
+  padding: 1.5rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  border: 1px solid #e0e0e0;
+}
+
+.comment-input-section label {
+  display: block;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 0.5rem;
+  font-size: 0.95rem;
+}
+
+.comment-input {
+  width: 100%;
+  padding: 0.8rem;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 80px;
+  transition: border-color 0.3s ease;
+}
+
+.comment-input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.char-count {
+  display: block;
+  font-size: 0.75rem;
+  color: #999;
+  margin-top: 0.3rem;
+  text-align: right;
+}
+
 .tournaments-section h2,
 .registrations-section h2 {
   font-size: 1.8rem;
@@ -281,6 +323,12 @@
 
 .registrations-table tbody tr:hover {
   background: #f9f9f9;
+}
+
+.comments-cell {
+  font-size: 0.9rem;
+  color: #666;
+  font-style: italic;
 }
 
 .status {

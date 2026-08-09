@@ -6,7 +6,8 @@ function VolunteerDashboard({ volunteer, onLogout }) {
   const [registrations, setRegistrations] = useState([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
-  const [messageType, setMessageType] = useState(''); // 'success' or 'error'
+  const [messageType, setMessageType] = useState('');
+  const [comments, setComments] = useState(''); // For registration comments // 'success' or 'error'
 
   useEffect(() => {
     fetchTournaments();
@@ -65,7 +66,8 @@ function VolunteerDashboard({ volunteer, onLogout }) {
         },
         body: JSON.stringify({
           volunteer_name: volunteer.name,
-          tournament_name: tournamentName
+          tournament_name: tournamentName,
+          comments: comments
         })
       });
 
@@ -75,6 +77,7 @@ function VolunteerDashboard({ volunteer, onLogout }) {
       if (result.success) {
         setMessage(`✅ Successfully registered for ${tournamentName}`);
         setMessageType('success');
+        setComments(''); // Clear comments
         // Refresh both lists
         fetchTournaments();
         fetchRegistrations();
@@ -85,6 +88,48 @@ function VolunteerDashboard({ volunteer, onLogout }) {
     } catch (err) {
       console.error('Registration error:', err);
       setMessage('Registration failed: ' + err.message);
+      setMessageType('error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUnregister = async (tournamentName) => {
+    if (!window.confirm(`Are you sure you want to unregister from ${tournamentName}?`)) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      console.log(`Unregistering ${volunteer.name} from ${tournamentName}`);
+      
+      const response = await fetch('/api/tournaments/unregister', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          volunteer_name: volunteer.name,
+          tournament_name: tournamentName
+        })
+      });
+
+      const result = await response.json();
+      console.log('Unregister result:', result);
+
+      if (result.success) {
+        setMessage(`✅ Successfully unregistered from ${tournamentName}`);
+        setMessageType('success');
+        // Refresh both lists
+        fetchTournaments();
+        fetchRegistrations();
+      } else {
+        setMessage(`❌ ${result.message}`);
+        setMessageType('error');
+      }
+    } catch (err) {
+      console.error('Unregister error:', err);
+      setMessage('Unregister failed: ' + err.message);
       setMessageType('error');
     } finally {
       setLoading(false);
@@ -124,6 +169,20 @@ function VolunteerDashboard({ volunteer, onLogout }) {
       <main className="volunteer-content">
         <section className="tournaments-section">
           <h2>🏸 Available Tournaments</h2>
+          
+          <div className="comment-input-section">
+            <label htmlFor="comments">💬 Add a comment (optional)</label>
+            <textarea
+              id="comments"
+              value={comments}
+              onChange={(e) => setComments(e.target.value)}
+              placeholder="e.g., I can help from 9:00-12:00, or any other relevant info"
+              className="comment-input"
+              disabled={loading}
+              maxLength={200}
+            />
+            <span className="char-count">{comments.length}/200</span>
+          </div>
           
           {loading && <div className="loading">Loading tournaments...</div>}
           
@@ -171,10 +230,10 @@ function VolunteerDashboard({ volunteer, onLogout }) {
 
                     <button
                       className={`btn-register ${isRegistered ? 'registered' : ''}`}
-                      onClick={() => handleRegister(tournament['Tournament Name'])}
-                      disabled={isRegistered || loading}
+                      onClick={() => isRegistered ? handleUnregister(tournament['Tournament Name']) : handleRegister(tournament['Tournament Name'])}
+                      disabled={loading}
                     >
-                      {isRegistered ? '✓ Registered' : 'Register Support'}
+                      {isRegistered ? '✓ Registered (Click to unregister)' : 'Register Support'}
                     </button>
                   </div>
                 );
@@ -199,6 +258,7 @@ function VolunteerDashboard({ volunteer, onLogout }) {
                       <th>Tournament</th>
                       <th>Registered Date</th>
                       <th>Status</th>
+                      <th>Comments</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -211,6 +271,7 @@ function VolunteerDashboard({ volunteer, onLogout }) {
                             {reg.Status}
                           </span>
                         </td>
+                        <td className="comments-cell">{reg['Comments'] || '-'}</td>
                       </tr>
                     ))}
                   </tbody>

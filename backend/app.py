@@ -970,7 +970,59 @@ def create_app():
     # Register volunteer for tournament
     @app.route('/api/tournaments/register', methods=['POST'])
     def register_tournament():
-        """Register a volunteer for a tournament"""
+        """Register a volunteer for a tournament with optional comments"""
+        try:
+            data = request.get_json()
+            
+            if not data:
+                return jsonify({
+                    'success': False,
+                    'message': 'No data provided'
+                }), 400
+            
+            volunteer_name = data.get('volunteer_name')
+            tournament_name = data.get('tournament_name')
+            comments = data.get('comments', '')
+            
+            if not volunteer_name or not tournament_name:
+                return jsonify({
+                    'success': False,
+                    'message': 'Volunteer name and tournament name required'
+                }), 400
+            
+            # Write to sheets
+            sheets = get_sheets_manager()
+            result = sheets.register_volunteer(volunteer_name, tournament_name, comments)
+            
+            # If successful, also update cache
+            if result['success']:
+                try:
+                    from datetime import datetime
+                    cache = get_data_cache()
+                    registration = {
+                        'Volunteer Name': volunteer_name,
+                        'Tournament Name': tournament_name,
+                        'Registration Date': datetime.now().strftime('%Y-%m-%d'),
+                        'Status': 'Registered',
+                        'Comments': comments
+                    }
+                    cache.add_volunteer_registration(registration)
+                    logger.info(f"✅ Volunteer registration added to cache")
+                except Exception as e:
+                    logger.warning(f"⚠️  Could not update cache: {e}")
+            
+            
+            return jsonify(result), 200 if result['success'] else 400
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'message': f'Error registering volunteer: {str(e)}'
+            }), 500
+    
+    # Unregister volunteer from tournament
+    @app.route('/api/tournaments/unregister', methods=['POST'])
+    def unregister_tournament():
+        """Unregister a volunteer from a tournament"""
         try:
             data = request.get_json()
             
@@ -989,23 +1041,17 @@ def create_app():
                     'message': 'Volunteer name and tournament name required'
                 }), 400
             
-            # Write to sheets
+            # Remove from sheets
             sheets = get_sheets_manager()
-            result = sheets.register_volunteer(volunteer_name, tournament_name)
+            result = sheets.unregister_volunteer(volunteer_name, tournament_name)
             
-            # If successful, also update cache
+            # If successful, invalidate cache
             if result['success']:
                 try:
-                    from datetime import datetime
                     cache = get_data_cache()
-                    registration = {
-                        'Volunteer Name': volunteer_name,
-                        'Tournament Name': tournament_name,
-                        'Registration Date': datetime.now().strftime('%Y-%m-%d'),
-                        'Status': 'Registered'
-                    }
-                    cache.add_volunteer_registration(registration)
-                    logger.info(f"✅ Volunteer registration added to cache")
+                    with cache.lock:
+                        cache.data['volunteer_registrations'] = []
+                    logger.info(f"✅ Volunteer unregistration completed, cache invalidated")
                 except Exception as e:
                     logger.warning(f"⚠️  Could not update cache: {e}")
             
@@ -1013,7 +1059,7 @@ def create_app():
         except Exception as e:
             return jsonify({
                 'success': False,
-                'message': f'Error registering volunteer: {str(e)}'
+                'message': f'Error unregistering volunteer: {str(e)}'
             }), 500
     
     # Get volunteer registrations

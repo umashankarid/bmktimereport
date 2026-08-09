@@ -410,6 +410,19 @@
   margin-bottom: 0;
 }
 
+.volunteer-name {
+  font-weight: 600;
+  display: block;
+  margin-bottom: 0.3rem;
+}
+
+.volunteer-comment {
+  font-size: 0.85rem;
+  color: #666;
+  font-style: italic;
+  margin-top: 0.3rem;
+}
+
 .no-volunteers-msg {
   text-align: center;
   color: #999;

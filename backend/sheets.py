@@ -28,7 +28,7 @@ class GoogleSheetsManager:
     
     # Volunteer registrations sheet
     VOLUNTEER_REGISTRATIONS_SHEET = 'Volunteer Registrations'
-    VOLUNTEER_REG_HEADERS = ['Volunteer Name', 'Tournament Name', 'Registration Date', 'Status']
+    VOLUNTEER_REG_HEADERS = ['Volunteer Name', 'Tournament Name', 'Registration Date', 'Status', 'Comments']
     
     # Cache settings
     CACHE_TTL = 600  # Cache for 10 minutes (600 seconds) - increased for better scalability
@@ -1594,9 +1594,12 @@ class GoogleSheetsManager:
             vol_reg_sheet = spreadsheet.worksheet(self.VOLUNTEER_REGISTRATIONS_SHEET)
             all_registrations = vol_reg_sheet.get_all_records()
             
-            # Filter for this tournament and status='Registered'
+            # Filter for this tournament and status='Registered', return full registration objects
             volunteers = [
-                reg.get('Volunteer Name', '')
+                {
+                    'Volunteer Name': reg.get('Volunteer Name', ''),
+                    'Comments': reg.get('Comments', '')
+                }
                 for reg in all_registrations
                 if (reg.get('Tournament Name', '') == tournament_name and 
                     reg.get('Status', '') == 'Registered')
@@ -1726,8 +1729,8 @@ class GoogleSheetsManager:
                 'message': f'Error adding tournament: {str(e)}'
             }
 
-    def register_volunteer(self, volunteer_name, tournament_name):
-        """Register a volunteer for a tournament"""
+    def register_volunteer(self, volunteer_name, tournament_name, comments=''):
+        """Register a volunteer for a tournament with optional comments"""
         try:
             if not self.authenticated:
                 return {
@@ -1759,13 +1762,12 @@ class GoogleSheetsManager:
                         'message': 'Already registered for this tournament'
                     }
             
-            # Add new registration
+            # Add new registration with comments
             registration_date = datetime.now().strftime('%Y-%m-%d')
-            vol_reg_sheet.append_row([volunteer_name, tournament_name, registration_date, 'Registered'])
+            vol_reg_sheet.append_row([volunteer_name, tournament_name, registration_date, 'Registered', comments])
             
-            # Invalidate tournament cache since slots might have changed
-            self._cache['tournaments']['data'] = None
-            self._cache['tournaments']['timestamp'] = None
+            # Invalidate cache
+            self._cache['volunteer_registrations'] = []
             
             return {
                 'success': True,
@@ -1776,6 +1778,54 @@ class GoogleSheetsManager:
             return {
                 'success': False,
                 'message': f'Error registering volunteer: {str(e)}'
+            }
+
+    def unregister_volunteer(self, volunteer_name, tournament_name):
+        """Unregister a volunteer from a tournament"""
+        try:
+            if not self.authenticated:
+                return {
+                    'success': False,
+                    'message': 'Google Sheets not configured'
+                }
+
+            if self.demo_mode:
+                return {
+                    'success': True,
+                    'message': 'Unregistered (demo mode)'
+                }
+
+            sheet_id = os.getenv('GOOGLE_SHEET_ID')
+            if not sheet_id or sheet_id == 'demo-sheet-id':
+                return {'success': False, 'message': 'Google Sheets not configured'}
+
+            spreadsheet = self.client.open_by_key(sheet_id)
+            vol_reg_sheet = spreadsheet.worksheet(self.VOLUNTEER_REGISTRATIONS_SHEET)
+            
+            # Get all registrations
+            all_rows = vol_reg_sheet.get_all_records(empty2zero=False)
+            
+            # Find and delete the registration
+            for idx, reg in enumerate(all_rows, start=2):  # start at 2 because row 1 is header
+                if (reg.get('Volunteer Name', '').strip() == volunteer_name and 
+                    reg.get('Tournament Name', '').strip() == tournament_name):
+                    vol_reg_sheet.delete_rows(idx)
+                    # Invalidate cache
+                    self._cache['volunteer_registrations'] = []
+                    return {
+                        'success': True,
+                        'message': 'Successfully unregistered from tournament'
+                    }
+            
+            return {
+                'success': False,
+                'message': 'Registration not found'
+            }
+
+        except Exception as e:
+            return {
+                'success': False,
+                'message': f'Error unregistering volunteer: {str(e)}'
             }
 
     def get_volunteer_registrations(self, volunteer_name):
