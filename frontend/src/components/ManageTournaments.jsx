@@ -7,6 +7,7 @@ function ManageTournaments() {
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
+  const [selectedTournamentVolunteers, setSelectedTournamentVolunteers] = useState(null);
   const [formData, setFormData] = useState({
     tournament_name: '',
     start_date: '',
@@ -242,6 +243,33 @@ function ManageTournaments() {
         🔧 Repair Sheet
       </button>
 
+      {selectedTournamentVolunteers && (
+        <div className="volunteer-modal-overlay" onClick={() => setSelectedTournamentVolunteers(null)}>
+          <div className="volunteer-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="volunteer-modal-header">
+              <h3>Volunteers for {selectedTournamentVolunteers['Tournament Name']}</h3>
+              <button 
+                className="close-btn"
+                onClick={() => setSelectedTournamentVolunteers(null)}
+              >
+                ×
+              </button>
+            </div>
+            <div className="volunteer-modal-body">
+              {selectedTournamentVolunteers.volunteers && selectedTournamentVolunteers.volunteers.length > 0 ? (
+                <ul className="volunteer-list">
+                  {selectedTournamentVolunteers.volunteers.map((vol, idx) => (
+                    <li key={idx} className="volunteer-item">👤 {vol}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="no-volunteers-msg">No volunteers registered yet</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {showAddForm && (
         <div className="add-tournament-form">
           <h3>Add New Tournament</h3>
@@ -380,14 +408,13 @@ function ManageTournaments() {
                   </td>
                   <td className="volunteers-cell">
                     {tournament.volunteer_count > 0 ? (
-                      <div className="volunteer-info">
+                      <div 
+                        className="volunteer-info"
+                        onClick={() => setSelectedTournamentVolunteers(tournament)}
+                        style={{ cursor: 'pointer' }}
+                      >
                         <span className="volunteer-badge">{tournament.volunteer_count}</span>
-                        <span 
-                          className="volunteer-list-btn"
-                          title={tournament.volunteers.join(', ')}
-                        >
-                          👥
-                        </span>
+                        <span className="volunteer-list-btn">👥</span>
                       </div>
                     ) : (
                       <span className="no-volunteers">-</span>
