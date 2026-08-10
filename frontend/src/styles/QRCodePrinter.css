@@ -58,147 +58,142 @@
 }
 
 .page-content {
-  padding: 2rem;
-  min-height: 600px;
+  padding: 2.5rem;
+  min-height: 750px;
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
 }
 
-.page-header {
+.page-title-section {
   text-align: center;
   margin-bottom: 2rem;
   page-break-after: avoid;
 }
 
-.page-header h1 {
-  margin: 0 0 0.5rem 0;
-  color: #333;
-  font-size: 2rem;
+.page-title-section h1 {
+  margin: 0 0 0.3rem 0;
+  color: #667eea;
+  font-size: 2.2rem;
+  font-weight: 700;
+  letter-spacing: 1px;
 }
 
-.page-header h2 {
+.page-subtitle {
   margin: 0;
-  color: #667eea;
+  color: #999;
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+/* Trainer Page Specific */
+.trainer-page {
+  align-items: center;
+  justify-content: space-between;
+}
+
+.trainer-description {
+  text-align: center;
+  margin-bottom: 2rem;
+  background: #f8fafb;
+  padding: 1.5rem;
+  border-radius: 8px;
+  page-break-inside: avoid;
+}
+
+.trainer-description h2 {
+  margin: 0 0 1rem 0;
+  color: #333;
   font-size: 1.3rem;
   font-weight: 600;
 }
 
-.page-footer {
-  text-align: center;
-  margin-top: 2rem;
-  padding-top: 1rem;
-  border-top: 2px solid #f0f0f0;
-  page-break-before: avoid;
+.description-text {
+  text-align: left;
+  margin: 0;
+  color: #555;
+  line-height: 1.6;
 }
 
-.page-footer p {
-  margin: 0;
-  color: #666;
+.description-text p {
+  margin: 0 0 1rem 0;
   font-size: 0.95rem;
 }
 
-/* Trainer Page Styles */
-.trainer-page {
-  align-items: center;
-  justify-content: center;
+.description-text ul {
+  margin: 0;
+  padding-left: 1.2rem;
+  list-style: none;
 }
 
+.description-text li {
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+/* Trainer Card */
 .trainer-card {
-  margin: 1rem 0;
+  margin: 1.5rem 0;
+  max-width: 400px;
+  align-self: center;
 }
 
-/* Volunteer Page Styles */
+/* Volunteer Page Specific */
 .volunteer-page {
   justify-content: flex-start;
 }
 
-.two-column-layout {
+.volunteer-section {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 2rem;
+  gap: 2.5rem;
   flex: 1;
   align-items: start;
-}
-
-.column-left {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.column-right {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-
-.volunteer-card {
-  margin: 0;
-}
-
-.volunteer-guidelines {
-  background: #f9f9f9;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  padding: 1.5rem;
+  margin-bottom: 1.5rem;
   page-break-inside: avoid;
 }
 
-.volunteer-guidelines h3 {
-  margin: 0 0 1.2rem 0;
+.qr-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.qr-section h2 {
+  margin: 0 0 1.5rem 0;
   color: #333;
-  font-size: 1.1rem;
+  font-size: 1.3rem;
+  font-weight: 600;
   text-align: center;
 }
 
-.guidelines-list {
+.guidelines-section {
   display: flex;
   flex-direction: column;
-  gap: 0.8rem;
 }
 
-.guideline-item {
-  padding: 0.75rem;
-  background: white;
-  border-left: 3px solid #667eea;
-  border-radius: 4px;
-  page-break-inside: avoid;
-}
-
-.guideline-title {
-  font-weight: 600;
+.guidelines-section h2 {
+  margin: 0 0 1.2rem 0;
   color: #333;
-  font-size: 0.95rem;
-  margin-bottom: 0.3rem;
+  font-size: 1.2rem;
+  font-weight: 600;
 }
 
-.guideline-desc {
-  color: #666;
-  font-size: 0.85rem;
-  line-height: 1.4;
-}
-
-/* QR Code Card Styles */
+/* QR Code Card */
 .qr-code-card {
   border: 2px solid #e0e0e0;
   border-radius: 8px;
-  padding: 2rem;
+  padding: 1.5rem;
   text-align: center;
   background: #f9f9f9;
-  transition: all 0.3s ease;
   page-break-inside: avoid;
 }
 
 .qr-code-card:hover {
   border-color: #667eea;
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
-}
-
-.qr-code-title {
-  font-size: 1.2rem;
-  font-weight: 700;
-  color: #333;
-  margin-bottom: 1.5rem;
 }
 
 .qr-code-wrapper {
@@ -215,25 +210,77 @@
   margin: 0 auto;
 }
 
+.qr-scan-instruction {
+  color: #667eea;
+  font-weight: 600;
+  font-size: 0.95rem;
+  margin-bottom: 1rem;
+}
+
 .qr-code-url {
   background: #f0f0f0;
-  padding: 0.75rem;
+  padding: 0.6rem;
   border-radius: 6px;
-  margin-bottom: 1rem;
   font-family: 'Courier New', monospace;
   word-break: break-all;
 }
 
 .qr-code-url small {
   color: #666;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
 }
 
-.qr-code-instructions {
-  color: #667eea;
+/* Guidelines */
+.guidelines-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.guideline-item {
+  padding: 0.8rem;
+  background: white;
+  border-left: 3px solid #667eea;
+  border-radius: 4px;
+  page-break-inside: avoid;
+}
+
+.guideline-title {
   font-weight: 600;
-  font-size: 0.95rem;
-  margin-top: 1rem;
+  color: #333;
+  font-size: 0.9rem;
+  margin-bottom: 0.3rem;
+}
+
+.guideline-desc {
+  color: #666;
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+/* Page Footer */
+.page-footer {
+  text-align: center;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 2px solid #f0f0f0;
+  page-break-before: avoid;
+}
+
+.page-footer p {
+  margin: 0;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.trainer-footer p {
+  color: #667eea;
+  font-weight: 500;
+}
+
+.volunteer-footer p {
+  color: #10b981;
+  font-weight: 500;
 }
 
 .print-instructions {
@@ -270,6 +317,7 @@
   .qr-code-printer-container {
     box-shadow: none;
     padding: 0;
+    margin: 0;
   }
 
   .qr-printer-header {
@@ -283,7 +331,7 @@
   .print-page {
     display: block !important;
     border: none;
-    margin-bottom: 0;
+    margin: 0;
     page-break-after: always;
     page-break-inside: avoid;
   }
@@ -295,73 +343,83 @@
   .page-content {
     page-break-inside: avoid;
     min-height: 100vh;
-    padding: 1.5rem;
+    padding: 2rem;
+    margin: 0;
   }
 
-  .page-header {
+  .page-title-section {
     page-break-after: avoid;
   }
 
-  .page-header h1 {
-    font-size: 1.8rem;
+  .page-title-section h1 {
+    font-size: 2rem;
+    margin-bottom: 0.2rem;
   }
 
-  .page-header h2 {
-    font-size: 1.2rem;
+  .page-subtitle {
+    font-size: 0.9rem;
   }
 
-  .trainer-page {
-    justify-content: center;
+  .trainer-description {
+    background: #f8fafb;
+    padding: 1.2rem;
+    margin-bottom: 1.5rem;
+    page-break-inside: avoid;
   }
 
-  .two-column-layout {
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
+  .trainer-description h2 {
+    font-size: 1.1rem;
+    margin-bottom: 0.8rem;
   }
 
-  .column-left {
-    align-items: center;
+  .description-text p {
+    font-size: 0.85rem;
+    margin-bottom: 0.8rem;
+  }
+
+  .description-text li {
+    font-size: 0.8rem;
+    margin-bottom: 0.4rem;
   }
 
   .qr-code-card {
     border: 1px solid #333;
     background: white;
-    padding: 1.5rem;
+    padding: 1.2rem;
     page-break-inside: avoid;
   }
 
-  .qr-code-title {
-    font-size: 1rem;
-    margin-bottom: 1rem;
-  }
-
   .qr-code-wrapper {
-    padding: 0.5rem;
+    padding: 0.8rem;
     box-shadow: none;
     border: 1px solid #ccc;
-    margin-bottom: 0.75rem;
+    margin-bottom: 0.8rem;
+  }
+
+  .qr-scan-instruction {
+    font-size: 0.85rem;
+    margin-bottom: 0.8rem;
   }
 
   .qr-code-url {
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     padding: 0.5rem;
-    margin-bottom: 0.75rem;
   }
 
-  .qr-code-instructions {
-    font-size: 0.85rem;
-    margin-top: 0.75rem;
+  .volunteer-section {
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-bottom: 1rem;
   }
 
-  .volunteer-guidelines {
-    background: white;
-    border: 1px solid #333;
-    padding: 1rem;
+  .qr-section h2 {
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
   }
 
-  .volunteer-guidelines h3 {
+  .guidelines-section h2 {
     font-size: 1rem;
-    margin-bottom: 0.75rem;
+    margin-bottom: 0.8rem;
   }
 
   .guidelines-list {
@@ -369,28 +427,28 @@
   }
 
   .guideline-item {
-    padding: 0.5rem;
+    padding: 0.6rem;
     border-left-width: 2px;
   }
 
   .guideline-title {
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     margin-bottom: 0.2rem;
   }
 
   .guideline-desc {
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     line-height: 1.3;
   }
 
   .page-footer {
     margin-top: 1rem;
-    padding-top: 0.75rem;
+    padding-top: 0.8rem;
     page-break-before: avoid;
   }
 
   .page-footer p {
-    font-size: 0.85rem;
+    font-size: 0.8rem;
   }
 
   .print-instructions {
@@ -400,35 +458,27 @@
 
 /* Tablet */
 @media (max-width: 768px) {
-  .two-column-layout {
+  .volunteer-section {
     grid-template-columns: 1fr;
     gap: 1.5rem;
   }
 
-  .qr-code-card {
+  .page-content {
     padding: 1.5rem;
-  }
-
-  .qr-code-wrapper {
-    padding: 0.75rem;
   }
 
   @media print {
     .page-content {
-      padding: 1rem;
+      padding: 1.2rem;
     }
 
-    .two-column-layout {
+    .volunteer-section {
       grid-template-columns: 1fr;
-      gap: 1rem;
+      gap: 1.5rem;
     }
 
-    .qr-code-card {
-      padding: 1rem;
-    }
-
-    .volunteer-guidelines {
-      padding: 0.75rem;
+    .qr-code-wrapper {
+      padding: 0.6rem;
     }
   }
 }
@@ -438,15 +488,11 @@
     padding: 1rem;
   }
 
-  .qr-code-title {
-    font-size: 1rem;
+  .page-title-section h1 {
+    font-size: 1.6rem;
   }
 
-  .qr-code-wrapper {
-    padding: 0.5rem;
-  }
-
-  .two-column-layout {
+  .volunteer-section {
     grid-template-columns: 1fr;
   }
 }
