@@ -11,6 +11,8 @@ function PaymentManagement() {
   const [endDate, setEndDate] = useState('');
   const [freezeMonth, setFreezeMonth] = useState('');
   const [freezeReason, setFreezeReason] = useState('');
+  const [assistantTrainers, setAssistantTrainers] = useState([]);
+  const [selectedAssistantTrainer, setSelectedAssistantTrainer] = useState('All');
   
   // Junior Trainer State
   const [unpaidActivities, setUnpaidActivities] = useState([]);
@@ -26,6 +28,7 @@ function PaymentManagement() {
   useEffect(() => {
     fetchFrozenDates();
     fetchJuniors();
+    fetchAssistantTrainers();
   }, []);
 
   // Fetch unpaid activities when selected junior or date changes
@@ -58,6 +61,26 @@ function PaymentManagement() {
     }
   };
 
+  const fetchAssistantTrainers = async () => {
+    try {
+      const token = localStorage.getItem('adminToken');
+      if (!token) return;
+
+      const response = await fetch('/api/trainers/staff', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      const result = await response.json();
+      if (result.success && result.data) {
+        // Filter only Assistant Trainers
+        const assistants = result.data.filter(t => t.trainer_type === 'Assistant Trainer');
+        setAssistantTrainers(assistants);
+      }
+    } catch (err) {
+      console.error('Error fetching assistant trainers:', err);
+    }
+  };
+
   const handleAddFreeze = async () => {
     let freezeValue = '';
     
@@ -84,6 +107,12 @@ function PaymentManagement() {
       freezeValue = freezeMonth;
     }
 
+    if (selectedAssistantTrainer === 'All') {
+      setMessage('Please select a specific assistant trainer');
+      setMessageType('error');
+      return;
+    }
+
     try {
       setLoading(true);
       setMessage('');
@@ -98,14 +127,14 @@ function PaymentManagement() {
         body: JSON.stringify({
           freeze_type: freezeType,
           date_or_month: freezeValue,
-          reason: freezeReason
+          reason: freezeReason || `Frozen for ${selectedAssistantTrainer}`
         })
       });
 
       const result = await response.json();
 
       if (result.success) {
-        setMessage(`✅ ${freezeType} marked successfully`);
+        setMessage(`✅ Period locked for ${selectedAssistantTrainer}`);
         setMessageType('success');
         setStartDate('');
         setEndDate('');
@@ -316,6 +345,22 @@ function PaymentManagement() {
             <p className="tab-description">Lock date ranges after settlement approval</p>
             
             <div className="form-grid">
+              <div className="form-group">
+                <label>Assistant Trainer:</label>
+                <select
+                  value={selectedAssistantTrainer}
+                  onChange={(e) => setSelectedAssistantTrainer(e.target.value)}
+                  disabled={loading}
+                >
+                  <option value="All">-- Select a trainer --</option>
+                  {assistantTrainers.map((trainer) => (
+                    <option key={trainer.name} value={trainer.name}>
+                      {trainer.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               <div className="form-group">
                 <label>Period Type:</label>
                 <select
