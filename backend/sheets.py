@@ -55,7 +55,7 @@ class GoogleSheetsManager:
     ]
     
     SHEET_NAME = 'Activities'
-    HEADERS = ['Trainer Name', 'Date', 'Activity', 'Start Time', 'End Time', 'Note']
+    HEADERS = ['Trainer Name', 'Date', 'Activity', 'Start Time', 'End Time', 'Note', 'Paid']
     ALL_ACTIVITIES_SHEET = 'All Activities'
     ACTIVITIES_COLUMN = 'Activities'
     
@@ -1536,6 +1536,80 @@ class GoogleSheetsManager:
             return {
                 'success': False,
                 'message': f'Error deleting activity: {str(e)}'
+            }
+
+    def update_activity_paid(self, trainer_name, date, activity_name, paid_status):
+        """Update the Paid status of an activity (for Junior trainers only)"""
+        try:
+            if not self.authenticated:
+                return {
+                    'success': False,
+                    'message': 'Google Sheets not configured'
+                }
+            
+            if self.demo_mode:
+                # Demo mode: update in memory
+                for activity in self.demo_data:
+                    if (activity.get('Trainer Name', '').lower() == trainer_name.lower() and
+                        activity.get('Date') == date and
+                        activity.get('Activity') == activity_name):
+                        activity['Paid'] = 'Yes' if paid_status else 'No'
+                        return {'success': True, 'message': 'Activity paid status updated (DEMO MODE)'}
+                
+                return {'success': False, 'message': 'Activity not found'}
+            
+            # Real mode: update in Google Sheet
+            sheet_id = os.getenv('GOOGLE_SHEET_ID')
+            if not sheet_id or sheet_id == "demo-sheet-id":
+                raise ValueError("GOOGLE_SHEET_ID not configured")
+            
+            spreadsheet = self.client.open_by_key(sheet_id)
+            sheet = spreadsheet.worksheet(self.SHEET_NAME)
+            
+            # Get all records to find the one to update
+            all_records = sheet.get_all_records()
+            
+            for idx, record in enumerate(all_records):
+                record_trainer = record.get('Trainer Name', '').lower()
+                record_date = record.get('Date', '')
+                record_activity = record.get('Activity', '')
+                
+                if (record_trainer == trainer_name.lower() and
+                    record_date == date and
+                    record_activity == activity_name):
+                    
+                    # Found the record, update the Paid column (column 7)
+                    row_number = idx + 2  # +1 for header, +1 for 1-indexed
+                    paid_value = 'Yes' if paid_status else 'No'
+                    sheet.update_cell(row_number, 7, paid_value)  # Paid column
+                    
+                    logger.info(f"✅ Updated activity paid status at row {row_number}: {activity_name} = {paid_value}")
+                    
+                    # Invalidate cache after updating
+                    self._invalidate_cache('all_activities')
+                    
+                    return {
+                        'success': True,
+                        'message': f'Activity marked as {"paid" if paid_status else "unpaid"}',
+                        'data': {
+                            'trainer_name': trainer_name,
+                            'date': date,
+                            'activity': activity_name,
+                            'paid': paid_value
+                        }
+                    }
+            
+            return {
+                'success': False,
+                'message': 'Activity not found'
+            }
+        except Exception as e:
+            logger.error(f"❌ Error updating activity paid status: {e}")
+            import traceback
+            traceback.print_exc()
+            return {
+                'success': False,
+                'message': f'Error updating activity paid status: {str(e)}'
             }
 
     def get_tournaments(self):

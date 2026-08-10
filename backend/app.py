@@ -211,6 +211,69 @@ def create_app():
                 'message': error_msg
             }), 500
     
+    # Mark activity as paid
+    @app.route('/api/activities/mark-paid', methods=['POST'])
+    @verify_token
+    def mark_activity_paid():
+        """Mark an activity as paid (only for Junior trainers)"""
+        try:
+            data = request.get_json()
+            
+            if not data:
+                return jsonify({'success': False, 'message': 'No data provided'}), 400
+            
+            trainer_name = data.get('trainer_name', '').strip()
+            activity_date = data.get('date', '').strip()
+            activity_type = data.get('activity', '').strip()
+            paid_status = data.get('paid', False)  # True or False
+            
+            if not trainer_name or not activity_date or not activity_type:
+                return jsonify({
+                    'success': False,
+                    'message': 'Trainer name, date, and activity are required'
+                }), 400
+            
+            sheets = get_sheets_manager()
+            
+            # Update the activity's paid status
+            result = sheets.update_activity_paid(trainer_name, activity_date, activity_type, paid_status)
+            
+            if result['success']:
+                # Invalidate cache
+                try:
+                    cache = get_data_cache()
+                    with cache.lock:
+                        cache.data['activities'] = []
+                    logger.info("✅ Cache invalidated after marking activity as paid")
+                except Exception as e:
+                    logger.warning(f"⚠️  Could not invalidate cache: {e}")
+                
+                # If marking as paid, automatically freeze the date
+                if paid_status:
+                    freeze_result = sheets.add_freeze('Date Range', activity_date + ' to ' + activity_date, 
+                                                      f'Auto-frozen: Activity paid for {trainer_name}', 'admin')
+                    logger.info(f"✅ Activity frozen after marking as paid: {trainer_name} on {activity_date}")
+                
+                logger.warning(f"✅ Activity marked as {'paid' if paid_status else 'unpaid'}: {trainer_name} - {activity_date} - {activity_type}")
+                
+                return jsonify({
+                    'success': True,
+                    'message': f'Activity marked as {"paid" if paid_status else "unpaid"}'
+                }), 200
+            else:
+                logger.error(f"❌ Failed to mark activity as paid: {result.get('message')}")
+                return jsonify({
+                    'success': False,
+                    'message': result.get('message', 'Failed to mark activity as paid')
+                }), 400
+        
+        except Exception as e:
+            logger.error(f"❌ Error marking activity as paid: {str(e)}", exc_info=True)
+            return jsonify({
+                'success': False,
+                'message': f'Error: {str(e)}'
+            }), 500
+    
     # Get all activities
     @app.route('/api/activities', methods=['GET'])
     def get_activities():
