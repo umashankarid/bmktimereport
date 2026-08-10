@@ -39,7 +39,7 @@ function ActivityByDateTable({ trainerFilter, selectedMonth, trainerType = 'Assi
       }
 
       const query = params.toString();
-      const endpoint = query ? `/api/activities/summary?${query}` : '/api/activities/summary';
+      const endpoint = query ? `/api/activities?${query}` : '/api/activities';
 
       const response = await fetch(endpoint);
       const result = await response.json();
@@ -48,24 +48,21 @@ function ActivityByDateTable({ trainerFilter, selectedMonth, trainerType = 'Assi
         // Group activities by trainer and date
         const groupedActivities = {};
         
-        Object.entries(result.data).forEach(([trainer, trainerData]) => {
+        result.data.forEach(activity => {
+          const trainer = activity['Trainer Name'];
+          const date = activity['Date'];
+          
+          if (!trainer || !date) return;
+          
           if (!groupedActivities[trainer]) {
             groupedActivities[trainer] = {};
           }
           
-          // Get all activities for this trainer
-          const allActivities = result.raw_activities?.filter(a => a['Trainer Name'] === trainer) || [];
+          if (!groupedActivities[trainer][date]) {
+            groupedActivities[trainer][date] = [];
+          }
           
-          allActivities.forEach(activity => {
-            const date = activity['Date'];
-            if (!date) return;
-            
-            if (!groupedActivities[trainer][date]) {
-              groupedActivities[trainer][date] = [];
-            }
-            
-            groupedActivities[trainer][date].push(activity);
-          });
+          groupedActivities[trainer][date].push(activity);
         });
         
         setActivities(groupedActivities);
