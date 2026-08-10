@@ -150,8 +150,14 @@ function TimeReportStatus({ trainerType = 'Assistant Trainer' }) {
       const [startH, startM] = startTime.split(':').map(Number);
       const [endH, endM] = endTime.split(':').map(Number);
       const minutes = (endH - startH) * 60 + (endM - startM);
-      const hours = (minutes / 60).toFixed(1);
-      return `${hours}h`;
+      const hours = minutes / 60;
+      
+      // Return just the number: 11 if no decimal, 11.5 if has decimal
+      if (hours % 1 === 0) {
+        return hours.toString();
+      } else {
+        return hours.toFixed(1);
+      }
     } catch {
       return '-';
     }
@@ -334,7 +340,7 @@ function TimeReportStatus({ trainerType = 'Assistant Trainer' }) {
                         <th>Activity</th>
                         <th>Start Time</th>
                         <th>End Time</th>
-                        <th>Duration</th>
+                        <th>Duration (Hours)</th>
                         <th>Note</th>
                       </tr>
                     </thead>
@@ -361,7 +367,7 @@ function TimeReportStatus({ trainerType = 'Assistant Trainer' }) {
                       ))}
                       <tr className="total-row">
                         <td colSpan="5" className="total-label">Total Hours:</td>
-                        <td className="total-hours">{totalHours.toFixed(1)}h</td>
+                        <td className="total-hours">{totalHours % 1 === 0 ? totalHours.toString() : totalHours.toFixed(1)}</td>
                         <td></td>
                       </tr>
                     </tbody>
