@@ -27,6 +27,13 @@ function PaymentManagement() {
     fetchJuniors();
   }, []);
 
+  // Fetch unpaid activities when selected junior changes
+  useEffect(() => {
+    if (selectedJunior) {
+      fetchUnpaidActivities(selectedJunior);
+    }
+  }, [selectedJunior]);
+
   // ==================== ASSISTANT TRAINER FUNCTIONS ====================
   
   const fetchFrozenDates = async () => {
