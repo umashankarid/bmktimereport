@@ -67,6 +67,10 @@ class GoogleSheetsManager:
     VOLUNTEER_REGISTRATIONS_SHEET = 'Volunteer Registrations'
     VOLUNTEER_REG_HEADERS = ['Volunteer Name', 'Tournament Name', 'Registration Date', 'Status', 'Comments']
     
+    # Freeze Management
+    FREEZE_SHEET = 'Freeze Management'
+    FREEZE_HEADERS = ['Freeze Type', 'Date/Month', 'Freeze Date', 'Reason', 'Created By']
+    
     # Cache settings
     CACHE_TTL = 600  # Cache for 10 minutes (600 seconds) - increased for better scalability
     
@@ -2141,6 +2145,130 @@ class GoogleSheetsManager:
                 'success': False,
                 'message': f'Error removing volunteer: {str(e)}'
             }
+
+    def get_frozen_dates(self):
+        """Get all frozen dates and months"""
+        try:
+            if not self.authenticated:
+                return {'success': False, 'data': [], 'message': 'Google Sheets not configured'}
+            
+            if self.demo_mode:
+                return {'success': True, 'data': []}
+            
+            sheet_id = os.getenv('GOOGLE_SHEET_ID')
+            if not sheet_id or sheet_id == 'demo-sheet-id':
+                return {'success': True, 'data': []}
+            
+            spreadsheet = self.client.open_by_key(sheet_id)
+            
+            try:
+                freeze_sheet = spreadsheet.worksheet(self.FREEZE_SHEET)
+                all_freezes = freeze_sheet.get_all_records()
+                
+                logger.warning(f"✅ Retrieved {len(all_freezes)} frozen entries")
+                return {'success': True, 'data': all_freezes}
+            except gspread.exceptions.WorksheetNotFound:
+                logger.warning(f"⚠️  Freeze Management sheet not found, creating...")
+                try:
+                    freeze_sheet = spreadsheet.add_worksheet(title=self.FREEZE_SHEET, rows=100, cols=5)
+                    freeze_sheet.append_row(self.FREEZE_HEADERS)
+                    logger.warning(f"✅ Created Freeze Management sheet")
+                    return {'success': True, 'data': []}
+                except Exception as e:
+                    logger.error(f"❌ Could not create Freeze Management sheet: {e}")
+                    return {'success': False, 'data': [], 'message': str(e)}
+        
+        except Exception as e:
+            logger.error(f"Error fetching frozen dates: {e}")
+            return {'success': False, 'data': [], 'message': str(e)}
+
+    def add_freeze(self, freeze_type, date_or_month, reason='', created_by='admin'):
+        """Add a freeze entry for a date or month"""
+        try:
+            if not self.authenticated:
+                return {'success': False, 'message': 'Google Sheets not configured'}
+            
+            if self.demo_mode:
+                return {'success': True, 'message': 'Freeze added (demo mode)'}
+            
+            sheet_id = os.getenv('GOOGLE_SHEET_ID')
+            if not sheet_id or sheet_id == 'demo-sheet-id':
+                return {'success': False, 'message': 'Sheet ID not configured'}
+            
+            spreadsheet = self.client.open_by_key(sheet_id)
+            freeze_sheet = spreadsheet.worksheet(self.FREEZE_SHEET)
+            
+            freeze_date = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            freeze_sheet.append_row([freeze_type, date_or_month, freeze_date, reason, created_by])
+            
+            logger.warning(f"✅ Added freeze: {freeze_type} - {date_or_month}")
+            return {'success': True, 'message': f'Freeze added for {date_or_month}'}
+        
+        except Exception as e:
+            logger.error(f"Error adding freeze: {e}")
+            return {'success': False, 'message': str(e)}
+
+    def remove_freeze(self, freeze_type, date_or_month):
+        """Remove a freeze entry"""
+        try:
+            if not self.authenticated:
+                return {'success': False, 'message': 'Google Sheets not configured'}
+            
+            if self.demo_mode:
+                return {'success': True, 'message': 'Freeze removed (demo mode)'}
+            
+            sheet_id = os.getenv('GOOGLE_SHEET_ID')
+            if not sheet_id or sheet_id == 'demo-sheet-id':
+                return {'success': False, 'message': 'Sheet ID not configured'}
+            
+            spreadsheet = self.client.open_by_key(sheet_id)
+            freeze_sheet = spreadsheet.worksheet(self.FREEZE_SHEET)
+            all_freezes = freeze_sheet.get_all_records()
+            
+            rows_to_delete = []
+            for idx, freeze in enumerate(all_freezes, start=2):
+                if freeze.get('Freeze Type') == freeze_type and freeze.get('Date/Month') == date_or_month:
+                    rows_to_delete.append(idx)
+            
+            for row_idx in sorted(rows_to_delete, reverse=True):
+                freeze_sheet.delete_rows(row_idx)
+            
+            logger.warning(f"✅ Removed {len(rows_to_delete)} freeze entries")
+            return {'success': True, 'message': f'Freeze removed for {date_or_month}', 'removed': len(rows_to_delete)}
+        
+        except Exception as e:
+            logger.error(f"Error removing freeze: {e}")
+            return {'success': False, 'message': str(e)}
+
+    def is_date_frozen(self, date_str):
+        """Check if a specific date is frozen"""
+        try:
+            result = self.get_frozen_dates()
+            if not result['success']:
+                return False
+            
+            freezes = result['data']
+            date_obj = datetime.strptime(date_str, '%Y-%m-%d')
+            
+            for freeze in freezes:
+                freeze_value = freeze.get('Date/Month', '')
+                freeze_type = freeze.get('Freeze Type', '')
+                
+                if freeze_type == 'Date' and freeze_value == date_str:
+                    return True
+                elif freeze_type == 'Month':
+                    # Check if date is in the frozen month
+                    try:
+                        freeze_month = datetime.strptime(freeze_value, '%Y-%m')
+                        if date_obj.year == freeze_month.year and date_obj.month == freeze_month.month:
+                            return True
+                    except:
+                        pass
+            
+            return False
+        except Exception as e:
+            logger.error(f"Error checking if date is frozen: {e}")
+            return False
 
 
 # Initialize global instance
