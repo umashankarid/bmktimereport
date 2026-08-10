@@ -1,5 +1,5 @@
 import React from 'react';
-import QRCode from 'qrcode.react';
+import { QRCodeSVG } from 'qrcode.react';
 import '../styles/QRCodePrinter.css';
 
 function QRCodePrinter() {
@@ -26,12 +26,11 @@ function QRCodePrinter() {
         <div className="qr-code-card">
           <div className="qr-code-title">👥 Trainer Login</div>
           <div className="qr-code-wrapper">
-            <QRCode 
+            <QRCodeSVG 
               value={trainerLoginUrl}
               size={250}
               level="H"
               includeMargin={true}
-              renderAs="canvas"
             />
           </div>
           <div className="qr-code-url">
@@ -46,12 +45,11 @@ function QRCodePrinter() {
         <div className="qr-code-card">
           <div className="qr-code-title">🤝 Volunteer Login</div>
           <div className="qr-code-wrapper">
-            <QRCode 
+            <QRCodeSVG 
               value={volunteerLoginUrl}
               size={250}
               level="H"
               includeMargin={true}
-              renderAs="canvas"
             />
           </div>
           <div className="qr-code-url">
