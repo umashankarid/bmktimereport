@@ -1536,7 +1536,11 @@ def create_app():
             cache = get_data_cache()
             sheets = get_sheets_manager()
             
-            # Reload all data from sheets first (before clearing cache)
+            # First, invalidate sheets manager's internal cache
+            sheets._invalidate_cache()
+            logger.warning("✅ Invalidated sheets internal cache")
+            
+            # Reload all data from sheets (will fetch fresh from Google Sheets)
             activities = sheets.get_all_activities(limit=500)
             trainers = sheets.get_trainers_details()
             freezes = sheets.get_all_freezes()
