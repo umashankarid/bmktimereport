@@ -49,6 +49,8 @@ function AdminDashboard({ onLogout }) {
   
   const [useDateFilter, setUseDateFilter] = useState(false);
   const [dateFilterMode, setDateFilterMode] = useState('single');
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Fetch trainers on mount
   React.useEffect(() => {
@@ -76,6 +78,18 @@ function AdminDashboard({ onLogout }) {
       }
     } catch (err) {
       console.error('Error fetching trainers:', err);
+    }
+  };
+
+  const handleRefreshReport = async () => {
+    setIsRefreshing(true);
+    try {
+      // Force ActivitySummaryTable to re-fetch by changing the key
+      setRefreshKey(prev => prev + 1);
+      // Small delay to show refresh animation
+      await new Promise(resolve => setTimeout(resolve, 500));
+    } finally {
+      setIsRefreshing(false);
     }
   };
 
@@ -411,7 +425,19 @@ function AdminDashboard({ onLogout }) {
               </div>
             )}
 
+            <div className="report-actions">
+              <button 
+                className="btn-refresh"
+                onClick={handleRefreshReport}
+                disabled={isRefreshing}
+                title="Refresh report data"
+              >
+                {isRefreshing ? '🔄 Refreshing...' : '🔄 Refresh Report'}
+              </button>
+            </div>
+
             <ActivitySummaryTable 
+              key={refreshKey}
               trainerFilter={selectedTrainer} 
               selectedMonth={selectedMonth}
               trainerType={reportTrainerType}
