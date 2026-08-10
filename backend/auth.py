@@ -92,14 +92,16 @@ def register_auth_routes(app, sheets_manager):
             all_users = login_sheet.get_all_records()
             
             # Look for user in Login sheet
+            user_found_in_sheet = False
             for user in all_users:
                 user_name = user.get('Trainer Name', '').strip()
                 if user_name.lower() == username.lower():
+                    user_found_in_sheet = True
                     user_type = user.get('Trainer Type', 'Assistant Trainer')
                     stored_hash = user.get('Password Hash', '')
                     salt = user.get('Salt', '')
                     
-                    # Verify password
+                    # Verify password if hash exists
                     if stored_hash and salt:
                         if TrainerAuthManager.verify_password(stored_hash, password, salt):
                             # Generate token
@@ -124,9 +126,11 @@ def register_auth_routes(app, sheets_manager):
                                 'message': 'Invalid username or password'
                             }), 401
                     else:
-                        logger.warning(f"⚠️  No password hash for user: {user_name}")
+                        # User in sheet but no password hash yet - check fallback credentials
+                        logger.warning(f"⚠️  No password hash for user: {user_name}, checking fallback credentials")
+                        break
             
-            # If not found in sheet, try hardcoded admin credentials (fallback)
+            # If not found in sheet or no hash in sheet, try hardcoded admin credentials (fallback)
             if username in ADMIN_CREDENTIALS:
                 cred = ADMIN_CREDENTIALS[username]
                 if cred['password'] == password:
