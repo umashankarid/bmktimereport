@@ -1945,7 +1945,10 @@ class GoogleSheetsManager:
     def get_all_volunteers(self):
         """Get list of all unique volunteers with their info"""
         try:
+            logger.warning("📝 get_all_volunteers() called")
+            
             if not self.authenticated:
+                logger.error("❌ Google Sheets not authenticated")
                 return {
                     'success': False,
                     'data': [],
@@ -1953,21 +1956,28 @@ class GoogleSheetsManager:
                 }
 
             if self.demo_mode:
+                logger.warning("⚠️  Demo mode - returning empty volunteers")
                 return {
                     'success': True,
                     'data': []
                 }
 
             sheet_id = os.getenv('GOOGLE_SHEET_ID')
+            logger.warning(f"🔑 Sheet ID: {sheet_id[:30]}..." if sheet_id else "❌ No Sheet ID")
+            
             if not sheet_id or sheet_id == 'demo-sheet-id':
+                logger.warning("⚠️  No valid sheet ID configured")
                 return {'success': True, 'data': []}
 
+            logger.warning(f"🔄 Opening spreadsheet with sheet ID: {sheet_id[:30]}...")
             spreadsheet = self.client.open_by_key(sheet_id)
             
             # Try to get volunteers sheet (used for volunteer login/profile)
             try:
+                logger.warning("📋 Trying to fetch 'Volunteers' sheet...")
                 volunteers_sheet = spreadsheet.worksheet('Volunteers')
                 all_volunteers = volunteers_sheet.get_all_records()
+                logger.warning(f"✅ Found Volunteers sheet with {len(all_volunteers)} records")
                 
                 volunteers_list = []
                 seen_names = set()
@@ -1982,33 +1992,47 @@ class GoogleSheetsManager:
                         })
                         seen_names.add(vol_name)
                 
+                logger.warning(f"✅ Processed {len(volunteers_list)} unique volunteers from Volunteers sheet")
                 return {
                     'success': True,
                     'data': volunteers_list
                 }
             except gspread.exceptions.WorksheetNotFound:
+                logger.warning("⚠️  Volunteers sheet not found, trying Volunteer Registrations sheet...")
                 # If Volunteers sheet doesn't exist, get unique volunteers from registrations
-                vol_reg_sheet = spreadsheet.worksheet(self.VOLUNTEER_REGISTRATIONS_SHEET)
-                all_registrations = vol_reg_sheet.get_all_records()
-                
-                volunteers_dict = {}
-                for reg in all_registrations:
-                    vol_name = reg.get('Volunteer Name', '').strip()
-                    if vol_name:
-                        if vol_name not in volunteers_dict:
-                            volunteers_dict[vol_name] = {
-                                'name': vol_name,
-                                'email': '',
-                                'phone': ''
-                            }
-                
-                return {
-                    'success': True,
-                    'data': list(volunteers_dict.values())
-                }
+                try:
+                    vol_reg_sheet = spreadsheet.worksheet(self.VOLUNTEER_REGISTRATIONS_SHEET)
+                    all_registrations = vol_reg_sheet.get_all_records()
+                    logger.warning(f"✅ Found Volunteer Registrations sheet with {len(all_registrations)} records")
+                    
+                    volunteers_dict = {}
+                    for reg in all_registrations:
+                        vol_name = reg.get('Volunteer Name', '').strip()
+                        if vol_name:
+                            if vol_name not in volunteers_dict:
+                                volunteers_dict[vol_name] = {
+                                    'name': vol_name,
+                                    'email': '',
+                                    'phone': ''
+                                }
+                    
+                    logger.warning(f"✅ Extracted {len(volunteers_dict)} unique volunteers from registrations")
+                    return {
+                        'success': True,
+                        'data': list(volunteers_dict.values())
+                    }
+                except gspread.exceptions.WorksheetNotFound as e2:
+                    logger.error(f"❌ Volunteer Registrations sheet not found: {e2}")
+                    return {
+                        'success': False,
+                        'data': [],
+                        'message': f'Volunteer Registrations sheet not found: {str(e2)}'
+                    }
 
         except Exception as e:
-            logger.error(f"Error fetching all volunteers: {e}")
+            logger.error(f"❌ Exception in get_all_volunteers: {str(e)}", exc_info=True)
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
             return {
                 'success': False,
                 'data': [],

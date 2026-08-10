@@ -1128,21 +1128,40 @@ def create_app():
     def get_all_volunteers():
         """Get list of all unique volunteers"""
         try:
+            logger.warning("📝 GET /api/volunteers/list - Fetching all volunteers")
             sheets = get_sheets_manager()
-            result = sheets.get_all_volunteers()
             
-            if result['success']:
-                return jsonify({
-                    'success': True,
-                    'data': result['data']
-                }), 200
-            else:
+            if not sheets.authenticated:
+                logger.error("❌ Google Sheets not authenticated")
                 return jsonify({
                     'success': False,
-                    'message': result.get('message', 'Failed to fetch volunteers')
+                    'message': 'Google Sheets not configured'
+                }), 400
+            
+            logger.warning(f"🔄 Google Sheets authenticated: {sheets.authenticated}")
+            result = sheets.get_all_volunteers()
+            
+            logger.warning(f"📊 Result from sheets.get_all_volunteers(): {result}")
+            
+            if result['success']:
+                volunteer_count = len(result.get('data', []))
+                logger.warning(f"✅ Successfully fetched {volunteer_count} volunteers")
+                return jsonify({
+                    'success': True,
+                    'data': result['data'],
+                    'count': volunteer_count
+                }), 200
+            else:
+                error_msg = result.get('message', 'Failed to fetch volunteers')
+                logger.error(f"❌ Error fetching volunteers: {error_msg}")
+                return jsonify({
+                    'success': False,
+                    'message': error_msg
                 }), 400
         except Exception as e:
-            logger.error(f"Error fetching volunteers: {e}")
+            logger.error(f"❌ Exception in get_all_volunteers: {str(e)}", exc_info=True)
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
             return jsonify({
                 'success': False,
                 'message': f'Error fetching volunteers: {str(e)}'
