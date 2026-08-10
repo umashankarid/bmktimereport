@@ -277,9 +277,10 @@ def create_app():
     # Get all activities
     @app.route('/api/activities', methods=['GET'])
     def get_activities():
-        """Retrieve all logged activities from cache"""
+        """Retrieve all logged activities from cache, optionally filtered by trainer"""
         try:
             limit = request.args.get('limit', 100, type=int)
+            trainer = request.args.get('trainer', None)  # Optional trainer filter
             cache = get_data_cache()
             all_activities = cache.get_activities()
             
@@ -293,6 +294,10 @@ def create_app():
                     # Update cache for next time
                     with cache.lock:
                         cache.data['activities'] = all_activities
+            
+            # Filter by trainer if specified
+            if trainer:
+                all_activities = [a for a in all_activities if a.get('Trainer Name') == trainer]
             
             # Apply limit
             activities = all_activities[:limit]
