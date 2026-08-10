@@ -473,7 +473,7 @@ function AdminDashboard({ onLogout }) {
 
         {activeTab === 'status' && (
           <div className="status-section">
-            <TimeReportStatus trainerType={timeReportTrainerType} onTrainerTypeChange={setTimeReportTrainerType} />
+            <TimeReportStatus trainerType={timeReportTrainerType} onTrainerTypeChange={setTimeReportTrainerType} isAdminView={true} />
           </div>
         )}
 

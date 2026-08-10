@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import '../styles/TimeReportStatus.css';
 
-function TimeReportStatus({ trainerType = 'Assistant Trainer', onTrainerTypeChange }) {
+function TimeReportStatus({ trainerType = 'Assistant Trainer', onTrainerTypeChange, isAdminView = false }) {
   const [reportData, setReportData] = useState({});
   const [trainers, setTrainers] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -180,7 +180,7 @@ function TimeReportStatus({ trainerType = 'Assistant Trainer', onTrainerTypeChan
         Track daily activity reports for each trainer. Highlighted trainers haven't reported for 3+ days.
       </p>
 
-      {trainerType !== 'Assistant Trainer' ? (
+      {!isAdminView && trainerType !== 'Assistant Trainer' ? (
         <div className="access-denied">
           <div className="denied-icon">🔒</div>
           <h3>Access Restricted</h3>
