@@ -7,7 +7,7 @@ import QRCodePrinter from '../components/QRCodePrinter';
 import ManageTrainers from '../components/ManageTrainers';
 import ManageTournaments from '../components/ManageTournaments';
 import ManageVolunteers from '../components/ManageVolunteers';
-import FreezeManagement from '../components/FreezeManagement';
+import PaymentManagement from '../components/PaymentManagement';
 import TimeReportStatus from '../components/TimeReportStatus';
 
 function AdminDashboard({ onLogout }) {
@@ -386,7 +386,7 @@ function AdminDashboard({ onLogout }) {
           <ManageVolunteers />
         )}
         {activeTab === 'freeze' && (
-          <FreezeManagement />
+          <PaymentManagement />
         )}
         {activeTab === 'trainers' && (
           <ManageTrainers />
