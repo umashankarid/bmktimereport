@@ -1346,7 +1346,7 @@ def create_app():
             if not freeze_type or not date_or_month:
                 return jsonify({'success': False, 'message': 'Freeze type and date/month required'}), 400
             
-            if freeze_type not in ['Date', 'Month']:
+            if freeze_type not in ['Date Range', 'Month']:
                 return jsonify({'success': False, 'message': 'Invalid freeze type'}), 400
             
             sheets = get_sheets_manager()
