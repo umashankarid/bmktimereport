@@ -337,6 +337,7 @@ function MainLoginPage({ onAdminLogin, onTrainerLogin }) {
                 </button>
 
                 <h2>Register as Trainer</h2>
+                <p className="registration-note">👨‍🏫 All young coaches should register as Junior Trainers</p>
 
             <div className="form-group">
               <label>Trainer Name</label>
