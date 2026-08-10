@@ -296,8 +296,8 @@ def create_app():
                     with cache.lock:
                         cache.data['trainers'] = trainers
             
-            # Filter out volunteers - keep only Assistant Trainer and Junior
-            staff_trainers = [t for t in trainers if t.get('trainer_type', 'Assistant Trainer') in ['Assistant Trainer', 'Junior']]
+            # Filter out volunteers - keep only Assistant Trainer and Junior (supports both 'Junior' and 'Junior Trainer')
+            staff_trainers = [t for t in trainers if t.get('trainer_type', 'Assistant Trainer') in ['Assistant Trainer', 'Junior', 'Junior Trainer']]
             
             return jsonify({
                 'success': True,
