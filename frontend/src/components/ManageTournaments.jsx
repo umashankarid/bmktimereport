@@ -25,7 +25,24 @@ function ManageTournaments() {
 
   useEffect(() => {
     fetchTournaments();
+    fetchAvailableVolunteers();
   }, []);
+
+  const fetchAvailableVolunteers = async () => {
+    try {
+      const response = await fetch('/api/volunteers/available', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+        }
+      });
+      const result = await response.json();
+      if (result.success && result.data) {
+        setAvailableVolunteers(result.data);
+      }
+    } catch (err) {
+      console.error('Error fetching available volunteers:', err);
+    }
+  };
 
   const fetchTournaments = async () => {
     try {
@@ -508,13 +525,19 @@ function ManageTournaments() {
                   <div className="form-row">
                     <div className="form-group">
                       <label>Volunteer Name *</label>
-                      <input
-                        type="text"
+                      <select
                         value={selectedVolunteer}
                         onChange={(e) => setSelectedVolunteer(e.target.value)}
-                        placeholder="Enter volunteer name"
-                        disabled={loading}
-                      />
+                        disabled={loading || availableVolunteers.length === 0}
+                        className="volunteer-dropdown"
+                      >
+                        <option value="">-- Select a volunteer --</option>
+                        {availableVolunteers.map((volunteer) => (
+                          <option key={volunteer} value={volunteer}>
+                            {volunteer}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                     <div className="form-group">
                       <label>Comments (optional)</label>

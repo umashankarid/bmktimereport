@@ -1167,6 +1167,49 @@ def create_app():
                 'message': f'Error fetching volunteers: {str(e)}'
             }), 500
 
+    # Get available volunteers for dropdown (no authentication required for dropdown)
+    @app.route('/api/volunteers/available', methods=['GET'])
+    @verify_token
+    def get_available_volunteers():
+        """Get list of registered volunteers for dropdown selection"""
+        try:
+            logger.warning("📝 GET /api/volunteers/available - Fetching available volunteers for dropdown")
+            sheets = get_sheets_manager()
+            
+            if not sheets.authenticated:
+                logger.error("❌ Google Sheets not authenticated")
+                return jsonify({
+                    'success': False,
+                    'message': 'Google Sheets not configured'
+                }), 400
+            
+            result = sheets.get_all_volunteers()
+            
+            if result['success']:
+                # Extract just the names for dropdown
+                volunteer_names = [v.get('name', v) for v in result.get('data', [])]
+                logger.warning(f"✅ Successfully fetched {len(volunteer_names)} available volunteers")
+                return jsonify({
+                    'success': True,
+                    'data': volunteer_names,
+                    'count': len(volunteer_names)
+                }), 200
+            else:
+                error_msg = result.get('message', 'Failed to fetch volunteers')
+                logger.error(f"❌ Error fetching available volunteers: {error_msg}")
+                return jsonify({
+                    'success': False,
+                    'message': error_msg
+                }), 400
+        except Exception as e:
+            logger.error(f"❌ Exception in get_available_volunteers: {str(e)}", exc_info=True)
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            return jsonify({
+                'success': False,
+                'message': f'Error fetching available volunteers: {str(e)}'
+            }), 500
+
     # Update volunteer
     @app.route('/api/volunteers/update', methods=['POST'])
     @verify_token
