@@ -47,14 +47,138 @@
   transform: translateY(0);
 }
 
-.qr-codes-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 2rem;
+/* Page Layout Styles */
+.print-page {
+  display: none;
   margin-bottom: 2rem;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.page-content {
+  padding: 2rem;
+  min-height: 600px;
+  display: flex;
+  flex-direction: column;
+}
+
+.page-header {
+  text-align: center;
+  margin-bottom: 2rem;
+  page-break-after: avoid;
+}
+
+.page-header h1 {
+  margin: 0 0 0.5rem 0;
+  color: #333;
+  font-size: 2rem;
+}
+
+.page-header h2 {
+  margin: 0;
+  color: #667eea;
+  font-size: 1.3rem;
+  font-weight: 600;
+}
+
+.page-footer {
+  text-align: center;
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 2px solid #f0f0f0;
+  page-break-before: avoid;
+}
+
+.page-footer p {
+  margin: 0;
+  color: #666;
+  font-size: 0.95rem;
+}
+
+/* Trainer Page Styles */
+.trainer-page {
+  align-items: center;
+  justify-content: center;
+}
+
+.trainer-card {
+  margin: 1rem 0;
+}
+
+/* Volunteer Page Styles */
+.volunteer-page {
+  justify-content: flex-start;
+}
+
+.two-column-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  flex: 1;
+  align-items: start;
+}
+
+.column-left {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.column-right {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.volunteer-card {
+  margin: 0;
+}
+
+.volunteer-guidelines {
+  background: #f9f9f9;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 1.5rem;
   page-break-inside: avoid;
 }
 
+.volunteer-guidelines h3 {
+  margin: 0 0 1.2rem 0;
+  color: #333;
+  font-size: 1.1rem;
+  text-align: center;
+}
+
+.guidelines-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.guideline-item {
+  padding: 0.75rem;
+  background: white;
+  border-left: 3px solid #667eea;
+  border-radius: 4px;
+  page-break-inside: avoid;
+}
+
+.guideline-title {
+  font-weight: 600;
+  color: #333;
+  font-size: 0.95rem;
+  margin-bottom: 0.3rem;
+}
+
+.guideline-desc {
+  color: #666;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+/* QR Code Card Styles */
 .qr-code-card {
   border: 2px solid #e0e0e0;
   border-radius: 8px;
@@ -71,7 +195,7 @@
 }
 
 .qr-code-title {
-  font-size: 1.3rem;
+  font-size: 1.2rem;
   font-weight: 700;
   color: #333;
   margin-bottom: 1.5rem;
@@ -149,18 +273,54 @@
   }
 
   .qr-printer-header {
-    margin-bottom: 1.5rem;
-    page-break-after: avoid;
+    display: none;
   }
 
   .btn-print-page {
     display: none;
   }
 
-  .qr-codes-grid {
+  .print-page {
+    display: block !important;
+    border: none;
+    margin-bottom: 0;
+    page-break-after: always;
+    page-break-inside: avoid;
+  }
+
+  .print-page:last-child {
+    page-break-after: auto;
+  }
+
+  .page-content {
+    page-break-inside: avoid;
+    min-height: 100vh;
+    padding: 1.5rem;
+  }
+
+  .page-header {
+    page-break-after: avoid;
+  }
+
+  .page-header h1 {
+    font-size: 1.8rem;
+  }
+
+  .page-header h2 {
+    font-size: 1.2rem;
+  }
+
+  .trainer-page {
+    justify-content: center;
+  }
+
+  .two-column-layout {
     grid-template-columns: 1fr 1fr;
-    gap: 1.5rem;
-    margin-bottom: 1rem;
+    gap: 1rem;
+  }
+
+  .column-left {
+    align-items: center;
   }
 
   .qr-code-card {
@@ -171,7 +331,7 @@
   }
 
   .qr-code-title {
-    font-size: 1.1rem;
+    font-size: 1rem;
     margin-bottom: 1rem;
   }
 
@@ -179,6 +339,58 @@
     padding: 0.5rem;
     box-shadow: none;
     border: 1px solid #ccc;
+    margin-bottom: 0.75rem;
+  }
+
+  .qr-code-url {
+    font-size: 0.75rem;
+    padding: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .qr-code-instructions {
+    font-size: 0.85rem;
+    margin-top: 0.75rem;
+  }
+
+  .volunteer-guidelines {
+    background: white;
+    border: 1px solid #333;
+    padding: 1rem;
+  }
+
+  .volunteer-guidelines h3 {
+    font-size: 1rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .guidelines-list {
+    gap: 0.6rem;
+  }
+
+  .guideline-item {
+    padding: 0.5rem;
+    border-left-width: 2px;
+  }
+
+  .guideline-title {
+    font-size: 0.85rem;
+    margin-bottom: 0.2rem;
+  }
+
+  .guideline-desc {
+    font-size: 0.75rem;
+    line-height: 1.3;
+  }
+
+  .page-footer {
+    margin-top: 1rem;
+    padding-top: 0.75rem;
+    page-break-before: avoid;
+  }
+
+  .page-footer p {
+    font-size: 0.85rem;
   }
 
   .print-instructions {
@@ -188,8 +400,9 @@
 
 /* Tablet */
 @media (max-width: 768px) {
-  .qr-codes-grid {
+  .two-column-layout {
     grid-template-columns: 1fr;
+    gap: 1.5rem;
   }
 
   .qr-code-card {
@@ -201,12 +414,21 @@
   }
 
   @media print {
-    .qr-codes-grid {
+    .page-content {
+      padding: 1rem;
+    }
+
+    .two-column-layout {
       grid-template-columns: 1fr;
+      gap: 1rem;
     }
 
     .qr-code-card {
       padding: 1rem;
+    }
+
+    .volunteer-guidelines {
+      padding: 0.75rem;
     }
   }
 }
@@ -217,10 +439,14 @@
   }
 
   .qr-code-title {
-    font-size: 1.1rem;
+    font-size: 1rem;
   }
 
   .qr-code-wrapper {
     padding: 0.5rem;
+  }
+
+  .two-column-layout {
+    grid-template-columns: 1fr;
   }
 }
