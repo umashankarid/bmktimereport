@@ -1523,6 +1523,57 @@ def create_app():
                 'success': False,
                 'message': str(e)
             }), 500
+
+    # ==================== CACHE MANAGEMENT ====================
+    
+    @app.route('/api/cache/refresh', methods=['POST'])
+    @verify_token
+    def refresh_cache():
+        """Force refresh all cached data from sheets"""
+        try:
+            logger.warning("🔄 CACHE REFRESH REQUESTED")
+            
+            cache = get_data_cache()
+            sheets = get_sheets_manager()
+            
+            # Clear all cache
+            with cache.lock:
+                cache.data = {}
+            
+            # Reload all data from sheets
+            activities = sheets.get_all_activities(limit=500)
+            trainers = sheets.get_trainers_details()
+            freezes = sheets.get_all_freezes()
+            
+            # Repopulate cache
+            with cache.lock:
+                if activities['success']:
+                    cache.data['activities'] = activities['data']
+                    logger.warning(f"✅ Reloaded {len(activities['data'])} activities from sheets")
+                
+                if trainers['success']:
+                    cache.data['trainers'] = trainers['data']
+                    logger.warning(f"✅ Reloaded {len(trainers['data'])} trainers from sheets")
+                
+                if freezes['success']:
+                    cache.data['freezes'] = freezes['data']
+                    logger.warning(f"✅ Reloaded {len(freezes['data'])} freezes from sheets")
+            
+            return jsonify({
+                'success': True,
+                'message': 'Cache refreshed successfully',
+                'data': {
+                    'activities_count': len(activities.get('data', [])),
+                    'trainers_count': len(trainers.get('data', [])),
+                    'freezes_count': len(freezes.get('data', []))
+                }
+            }), 200
+        except Exception as e:
+            logger.error(f"❌ Error refreshing cache: {str(e)}", exc_info=True)
+            return jsonify({
+                'success': False,
+                'message': f'Error refreshing cache: {str(e)}'
+            }), 500
     
     # Error handlers
     @app.errorhandler(404)

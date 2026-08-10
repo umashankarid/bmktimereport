@@ -108,6 +108,38 @@ function AdminDashboard({ onLogout }) {
     }
   };
 
+  const handleRefreshCache = async () => {
+    try {
+      setIsRefreshing(true);
+      setMessage('');
+      
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch('/api/cache/refresh', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        setMessage(`✅ Cache refreshed! Activities: ${result.data.activities_count}, Trainers: ${result.data.trainers_count}, Freezes: ${result.data.freezes_count}`);
+        setMessageType('success');
+        // Refresh all reports
+        setRefreshKey(prev => prev + 1);
+      } else {
+        setMessage(`❌ ${result.message}`);
+        setMessageType('error');
+      }
+    } catch (err) {
+      setMessage('Error refreshing cache: ' + err.message);
+      setMessageType('error');
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   const handleChangePassword = async (e) => {
     e.preventDefault();
     setChangePasswordMessage('');
@@ -613,6 +645,14 @@ function AdminDashboard({ onLogout }) {
                 title="Refresh report data"
               >
                 {isRefreshing ? '🔄 Refreshing...' : '🔄 Refresh Report'}
+              </button>
+              <button 
+                className="btn-refresh btn-cache-refresh"
+                onClick={handleRefreshCache}
+                disabled={isRefreshing}
+                title="Force refresh all cached data from sheets (trainers, activities, freezes)"
+              >
+                {isRefreshing ? '⚡ Syncing...' : '⚡ Sync Cache'}
               </button>
             </div>
 
