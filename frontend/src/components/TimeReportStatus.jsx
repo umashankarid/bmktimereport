@@ -47,6 +47,17 @@ function TimeReportStatus({ trainerType = 'Assistant Trainer' }) {
           grouped[trainer][date].push(activity);
         });
         
+        // Sort activities within each date by start time
+        for (const trainer in grouped) {
+          for (const date in grouped[trainer]) {
+            grouped[trainer][date].sort((a, b) => {
+              const timeA = a['Start Time'] || '00:00';
+              const timeB = b['Start Time'] || '00:00';
+              return timeA.localeCompare(timeB); // Ascending order (earliest first)
+            });
+          }
+        }
+        
         setActivities(grouped);
       }
     } catch (err) {

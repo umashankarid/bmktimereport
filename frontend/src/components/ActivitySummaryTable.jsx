@@ -75,12 +75,21 @@ function ActivitySummaryTable({ trainerFilter, selectedMonth, trainerType = 'Ass
           activitySubtotals[key] += (act.hours || 0);
         });
 
-        // Sort each group by date (ascending - oldest first)
+        // Sort each group by date (ascending - oldest first), then by start time
         for (const actType in grouped) {
           grouped[actType].sort((a, b) => {
             const dateA = new Date(a.Date || '');
             const dateB = new Date(b.Date || '');
-            return dateA - dateB; // Ascending order (oldest first)
+            
+            // First compare by date
+            if (dateA.getTime() !== dateB.getTime()) {
+              return dateA - dateB; // Ascending order (oldest first)
+            }
+            
+            // If dates are equal, sort by start time
+            const timeA = a['Start Time'] || '00:00';
+            const timeB = b['Start Time'] || '00:00';
+            return timeA.localeCompare(timeB); // Ascending order (earliest first)
           });
         }
 
