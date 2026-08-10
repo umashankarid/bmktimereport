@@ -3,7 +3,6 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import '../styles/AdminDashboard.css';
 import ActivityHistoryView from '../components/ActivityHistoryView';
 import ActivitySummaryTable from '../components/ActivitySummaryTable';
-import ActivityByDateTable from '../components/ActivityByDateTable';
 import ManageTrainers from '../components/ManageTrainers';
 import ManageTournaments from '../components/ManageTournaments';
 import TimeReportStatus from '../components/TimeReportStatus';
@@ -52,7 +51,6 @@ function AdminDashboard({ onLogout }) {
   const [dateFilterMode, setDateFilterMode] = useState('single');
   const [refreshKey, setRefreshKey] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [showActivityByDate, setShowActivityByDate] = useState(false);
 
   // Fetch trainers on mount
   React.useEffect(() => {
@@ -429,14 +427,6 @@ function AdminDashboard({ onLogout }) {
 
             <div className="report-actions">
               <button 
-                className={`btn-toggle-view ${showActivityByDate ? 'active' : ''}`}
-                onClick={() => setShowActivityByDate(!showActivityByDate)}
-                title="Toggle between summary and date-ordered view"
-              >
-                {showActivityByDate ? '📊 Show Summary View' : '📅 Show Activity by Date Order'}
-              </button>
-              
-              <button 
                 className="btn-refresh"
                 onClick={handleRefreshReport}
                 disabled={isRefreshing}
@@ -446,31 +436,17 @@ function AdminDashboard({ onLogout }) {
               </button>
             </div>
 
-            {showActivityByDate ? (
-              <ActivityByDateTable 
-                key={refreshKey}
-                trainerFilter={selectedTrainer} 
-                selectedMonth={selectedMonth}
-                trainerType={reportTrainerType}
-                useDateFilter={useDateFilter}
-                dateFilterMode={dateFilterMode}
-                selectedDate={selectedDate}
-                dateRangeStart={dateRangeStart}
-                dateRangeEnd={dateRangeEnd}
-              />
-            ) : (
-              <ActivitySummaryTable 
-                key={refreshKey}
-                trainerFilter={selectedTrainer} 
-                selectedMonth={selectedMonth}
-                trainerType={reportTrainerType}
-                useDateFilter={useDateFilter}
-                dateFilterMode={dateFilterMode}
-                selectedDate={selectedDate}
-                dateRangeStart={dateRangeStart}
-                dateRangeEnd={dateRangeEnd}
-              />
-            )}
+            <ActivitySummaryTable 
+              key={refreshKey}
+              trainerFilter={selectedTrainer} 
+              selectedMonth={selectedMonth}
+              trainerType={reportTrainerType}
+              useDateFilter={useDateFilter}
+              dateFilterMode={dateFilterMode}
+              selectedDate={selectedDate}
+              dateRangeStart={dateRangeStart}
+              dateRangeEnd={dateRangeEnd}
+            />
           </div>
         )}
 
