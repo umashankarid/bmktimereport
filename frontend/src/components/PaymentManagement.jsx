@@ -228,6 +228,13 @@ function PaymentManagement() {
       setMessage('');
 
       const token = localStorage.getItem('adminToken');
+      
+      // Optimistically remove from UI immediately
+      const activityKey = `${activity.Date}-${activity.Activity}`;
+      setUnpaidActivities(prev => 
+        prev.filter(a => `${a.Date}-${a.Activity}` !== activityKey)
+      );
+
       const response = await fetch('/api/activities/mark-paid', {
         method: 'POST',
         headers: {
@@ -247,14 +254,18 @@ function PaymentManagement() {
       if (result.success) {
         setMessage(`✅ Activity marked as paid and frozen`);
         setMessageType('success');
-        fetchUnpaidActivities(selectedJunior);
+        // Optional: refresh to ensure consistency, but not required since we optimistically updated
       } else {
         setMessage(`❌ ${result.message}`);
         setMessageType('error');
+        // On error, re-fetch to restore the activity to the list
+        fetchUnpaidActivities(selectedJunior);
       }
     } catch (err) {
       setMessage('Error marking as paid: ' + err.message);
       setMessageType('error');
+      // On error, re-fetch to restore the activity to the list
+      fetchUnpaidActivities(selectedJunior);
     } finally {
       setLoading(false);
     }
