@@ -29,9 +29,9 @@ function TimeInput({ value = '', onChange, label = '', required = false }) {
     return options;
   }, []);
 
-  // Generate minute options (00, 15, 30, 45 only)
+  // Generate minute options (00 and 30 only)
   const minuteOptions = useMemo(() => {
-    return ['00', '15', '30', '45'];
+    return ['00', '30'];
   }, []);
 
   const handleHourChange = (e) => {
@@ -78,7 +78,7 @@ function TimeInput({ value = '', onChange, label = '', required = false }) {
           onChange={handleMinuteChange}
           required={required}
         >
-          <option value="00">00 (default)</option>
+          <option value="00">00</option>
           {minuteOptions.map((minute) => (
             <option key={minute} value={minute}>
               {minute}
