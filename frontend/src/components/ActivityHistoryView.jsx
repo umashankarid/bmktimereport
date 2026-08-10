@@ -15,6 +15,14 @@ function ActivityHistoryView({ currentTrainer = null, isAdminView = false }) {
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState(''); // success, error
   
+  // Edit state
+  const [editingActivity, setEditingActivity] = useState(null);
+  const [editFormData, setEditFormData] = useState({
+    startTime: '',
+    endTime: '',
+    note: ''
+  });
+  
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -116,6 +124,76 @@ function ActivityHistoryView({ currentTrainer = null, isAdminView = false }) {
     // Reset month to all months
     setSelectedMonth(null);
     setCurrentPage(1);
+  };
+
+  const handleEditActivity = (activity) => {
+    setEditingActivity(activity);
+    setEditFormData({
+      startTime: activity['Start Time'],
+      endTime: activity['End Time'],
+      note: activity['Note'] || ''
+    });
+  };
+
+  const handleEditFormChange = (field, value) => {
+    setEditFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editFormData.startTime || !editFormData.endTime) {
+      setMessage('Start Time and End Time are required');
+      setMessageType('error');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setMessage('');
+
+      const response = await fetch(
+        `/api/activities/${editingActivity['Trainer Name']}/${editingActivity['Date']}/${editingActivity['Activity']}`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+          },
+          body: JSON.stringify({
+            start_time: editFormData.startTime,
+            end_time: editFormData.endTime,
+            note: editFormData.note,
+            old_start_time: editingActivity['Start Time'],
+            old_end_time: editingActivity['End Time']
+          })
+        }
+      );
+
+      const result = await response.json();
+
+      if (result.success) {
+        setMessage(`✅ Activity updated successfully`);
+        setMessageType('success');
+        setEditingActivity(null);
+        fetchActivityHistory();
+      } else {
+        setMessage(`❌ ${result.message || 'Failed to update activity'}`);
+        setMessageType('error');
+      }
+    } catch (err) {
+      console.error('Error updating activity:', err);
+      setMessage('Failed to update activity: ' + err.message);
+      setMessageType('error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingActivity(null);
+    setEditFormData({ startTime: '', endTime: '', note: '' });
   };
 
   const handleDeleteActivity = async (activity) => {
@@ -398,9 +476,18 @@ function ActivityHistoryView({ currentTrainer = null, isAdminView = false }) {
                       {isAdminView && (
                         <td className="actions-cell">
                           <button
+                            className="btn btn-edit-small"
+                            onClick={() => handleEditActivity(activity)}
+                            title="Edit activity"
+                            disabled={editingActivity !== null}
+                          >
+                            ✏️ Edit
+                          </button>
+                          <button
                             className="btn btn-delete-small"
                             onClick={() => handleDeleteActivity(activity)}
                             title="Delete activity"
+                            disabled={editingActivity !== null}
                           >
                             🗑️ Delete
                           </button>
@@ -446,6 +533,83 @@ function ActivityHistoryView({ currentTrainer = null, isAdminView = false }) {
           <span className="empty-icon">📭</span>
           <h3>No Activities Found</h3>
           <p>Try adjusting your filters or logging new activities</p>
+        </div>
+      )}
+
+      {/* Edit Modal */}
+      {editingActivity && (
+        <div className="modal-overlay" onClick={handleCancelEdit}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Edit Activity</h3>
+              <button className="modal-close" onClick={handleCancelEdit}>×</button>
+            </div>
+
+            <div className="modal-body">
+              <div className="activity-info">
+                <div className="info-row">
+                  <span className="label">Date:</span>
+                  <span className="value">{editingActivity['Date']}</span>
+                </div>
+                <div className="info-row">
+                  <span className="label">Trainer:</span>
+                  <span className="value">{editingActivity['Trainer Name']}</span>
+                </div>
+                <div className="info-row">
+                  <span className="label">Activity:</span>
+                  <span className="value">{editingActivity['Activity']}</span>
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label>Start Time:</label>
+                <input
+                  type="time"
+                  value={editFormData.startTime}
+                  onChange={(e) => handleEditFormChange('startTime', e.target.value)}
+                  className="form-input"
+                />
+              </div>
+
+              <div className="form-group">
+                <label>End Time:</label>
+                <input
+                  type="time"
+                  value={editFormData.endTime}
+                  onChange={(e) => handleEditFormChange('endTime', e.target.value)}
+                  className="form-input"
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Note:</label>
+                <textarea
+                  value={editFormData.note}
+                  onChange={(e) => handleEditFormChange('note', e.target.value)}
+                  className="form-textarea"
+                  placeholder="Optional note"
+                  rows="3"
+                />
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <button
+                className="btn btn-cancel"
+                onClick={handleCancelEdit}
+                disabled={loading}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn btn-save"
+                onClick={handleSaveEdit}
+                disabled={loading}
+              >
+                {loading ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
