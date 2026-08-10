@@ -481,7 +481,7 @@ function ActivityHistoryView({ currentTrainer = null, isAdminView = false }) {
                             title="Edit activity"
                             disabled={editingActivity !== null}
                           >
-                            ✏️ Edit
+                            ✏️
                           </button>
                           <button
                             className="btn btn-delete-small"
@@ -489,7 +489,7 @@ function ActivityHistoryView({ currentTrainer = null, isAdminView = false }) {
                             title="Delete activity"
                             disabled={editingActivity !== null}
                           >
-                            🗑️ Delete
+                            🗑️
                           </button>
                         </td>
                       )}
