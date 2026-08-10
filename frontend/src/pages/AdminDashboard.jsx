@@ -52,6 +52,7 @@ function AdminDashboard({ onLogout }) {
   const [dateFilterMode, setDateFilterMode] = useState('single');
   const [refreshKey, setRefreshKey] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [timeReportTrainerType, setTimeReportTrainerType] = useState('Assistant Trainer');
 
   // Fetch trainers on mount
   React.useEffect(() => {
@@ -462,7 +463,7 @@ function AdminDashboard({ onLogout }) {
 
         {activeTab === 'status' && (
           <div className="status-section">
-            <TimeReportStatus trainerType="Assistant Trainer" />
+            <TimeReportStatus trainerType={timeReportTrainerType} onTrainerTypeChange={setTimeReportTrainerType} />
           </div>
         )}
 

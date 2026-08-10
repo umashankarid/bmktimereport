@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import '../styles/TimeReportStatus.css';
 
-function TimeReportStatus({ trainerType = 'Assistant Trainer' }) {
+function TimeReportStatus({ trainerType = 'Assistant Trainer', onTrainerTypeChange }) {
   const [reportData, setReportData] = useState({});
   const [trainers, setTrainers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [activities, setActivities] = useState({});
+  const [localTrainerType, setLocalTrainerType] = useState(trainerType);
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -16,13 +17,13 @@ function TimeReportStatus({ trainerType = 'Assistant Trainer' }) {
     fetchReportStatus();
     fetchTrainers();
     fetchActivities();
-  }, [selectedMonth, trainerType]);
+  }, [selectedMonth, localTrainerType]);
 
   const fetchActivities = async () => {
     try {
       const params = new URLSearchParams();
       params.append('month', selectedMonth);
-      params.append('trainer_type', trainerType);
+      params.append('trainer_type', localTrainerType);
 
       const response = await fetch(`/api/activities?${params.toString()}`);
       const result = await response.json();
@@ -71,7 +72,7 @@ function TimeReportStatus({ trainerType = 'Assistant Trainer' }) {
       const result = await response.json();
       if (result.success && result.data) {
         // Filter trainers based on trainer type
-        const filteredTrainers = result.data.filter(t => t.trainer_type === trainerType);
+        const filteredTrainers = result.data.filter(t => t.trainer_type === localTrainerType);
         setTrainers(filteredTrainers);
       }
     } catch (err) {
@@ -84,7 +85,7 @@ function TimeReportStatus({ trainerType = 'Assistant Trainer' }) {
       setLoading(true);
       setError('');
 
-      const response = await fetch(`/api/reports/time-status?month=${selectedMonth}&trainer_type=${trainerType}`);
+      const response = await fetch(`/api/reports/time-status?month=${selectedMonth}&trainer_type=${localTrainerType}`);
       const result = await response.json();
 
       if (result.success) {
@@ -205,6 +206,24 @@ function TimeReportStatus({ trainerType = 'Assistant Trainer' }) {
                 onChange={(e) => setSelectedMonth(e.target.value)}
                 className="filter-input"
               />
+            </div>
+
+            <div className="filter-group">
+              <label htmlFor="trainer-type-filter">Trainer Type:</label>
+              <select
+                id="trainer-type-filter"
+                value={localTrainerType}
+                onChange={(e) => {
+                  setLocalTrainerType(e.target.value);
+                  if (onTrainerTypeChange) {
+                    onTrainerTypeChange(e.target.value);
+                  }
+                }}
+                className="filter-select"
+              >
+                <option value="Assistant Trainer">📊 Assistant Trainer</option>
+                <option value="Junior Trainer">👶 Junior Trainer</option>
+              </select>
             </div>
           </div>
 
