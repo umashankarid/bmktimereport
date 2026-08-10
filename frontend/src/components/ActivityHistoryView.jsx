@@ -69,10 +69,21 @@ function ActivityHistoryView({ currentTrainer = null, isAdminView = false }) {
     }
   };
 
-  const isFrozen = (date) => {
+  const isFrozen = (date, trainerName) => {
     return frozenDates.some(freeze => {
       const freezeValue = freeze['Date/Month'];
       const freezeType = freeze['Freeze Type'];
+      const reason = freeze['Reason'] || '';
+      
+      // Auto-freezes (from paid activities) only apply to that specific trainer
+      if (reason.includes('Auto-frozen: Activity paid for')) {
+        // Extract trainer name from reason: "Auto-frozen: Activity paid for TrainerName"
+        const autoFrozenTrainer = reason.replace('Auto-frozen: Activity paid for ', '').trim();
+        // Only apply freeze if it's for this trainer
+        if (autoFrozenTrainer !== trainerName) {
+          return false;
+        }
+      }
       
       if (freezeType === 'Date Range') {
         // Parse range format: "2024-01-01 to 2024-01-31"
@@ -532,8 +543,8 @@ function ActivityHistoryView({ currentTrainer = null, isAdminView = false }) {
                       <td className="duration-cell">{duration}</td>
                       <td className="note-cell">{activity['Note'] || '-'}</td>
                       {isAdminView && (
-                        <td className={`actions-cell ${isFrozen(activity['Date']) ? 'frozen' : ''}`}>
-                          {isFrozen(activity['Date']) ? (
+                        <td className={`actions-cell ${isFrozen(activity['Date'], activity['Trainer Name']) ? 'frozen' : ''}`}>
+                          {isFrozen(activity['Date'], activity['Trainer Name']) ? (
                             <>
                               <span className="frozen-indicator" title="This date is frozen">
                                 🔒

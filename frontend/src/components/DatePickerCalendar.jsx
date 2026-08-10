@@ -63,6 +63,17 @@ function DatePickerCalendar({ selectedDate, onChange, trainerName, frozenDates =
     return frozenDates.some(freeze => {
       const freezeValue = freeze['Date/Month'];
       const freezeType = freeze['Freeze Type'];
+      const reason = freeze['Reason'] || '';
+      
+      // Auto-freezes (from paid activities) only apply to that specific trainer
+      if (reason.includes('Auto-frozen: Activity paid for')) {
+        // Extract trainer name from reason: "Auto-frozen: Activity paid for TrainerName"
+        const autoFrozenTrainer = reason.replace('Auto-frozen: Activity paid for ', '').trim();
+        // Only apply freeze if it's for this trainer
+        if (autoFrozenTrainer !== trainerName) {
+          return false;
+        }
+      }
       
       if (freezeType === 'Date Range') {
         // Parse range format: "2024-01-01 to 2024-01-31"
