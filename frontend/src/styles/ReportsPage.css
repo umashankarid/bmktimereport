@@ -48,6 +48,29 @@
   gap: 0.75rem;
 }
 
+.checkbox-filter {
+  margin: 0;
+  gap: 0.5rem;
+}
+
+.filter-checkbox {
+  cursor: pointer;
+  width: 18px;
+  height: 18px;
+  accent-color: #667eea;
+}
+
+.checkbox-filter label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-weight: 500;
+  color: #333;
+  margin: 0;
+  user-select: none;
+}
+
 .filter-group label {
   font-weight: 500;
   color: #333;
@@ -325,6 +348,17 @@
   margin: 0 0 1rem 0;
   padding-bottom: 0.75rem;
   border-bottom: 2px solid #e0e0e0;
+}
+
+.frozen-dates-notice {
+  background: #fef3c7;
+  border-left: 4px solid #f59e0b;
+  color: #92400e;
+  padding: 12px 16px;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+  font-size: 14px;
+  font-weight: 500;
 }
 
 .report-subtitle {

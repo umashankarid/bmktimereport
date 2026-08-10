@@ -38,6 +38,10 @@ function ReportsPage({ currentTrainer = null }) {
   
   // Separate reports by trainer type
   const [reportTrainerType, setReportTrainerType] = useState('Assistant Trainer');
+  
+  // Frozen dates filtering
+  const [frozenDates, setFrozenDates] = useState([]);
+  const [showFrozen, setShowFrozen] = useState(true); // Show frozen dates by default
 
   useEffect(() => {
     // Check if this is a trainer view (not admin)
@@ -47,6 +51,9 @@ function ReportsPage({ currentTrainer = null }) {
       // Admin view - fetch all trainers
       fetchTrainers();
     }
+    
+    // Fetch frozen dates
+    fetchFrozenDates();
   }, [currentTrainer]);
 
   const fetchTrainers = async () => {
@@ -66,6 +73,45 @@ function ReportsPage({ currentTrainer = null }) {
     } catch (err) {
       console.error('Error fetching trainers:', err);
     }
+  };
+
+  const fetchFrozenDates = async () => {
+    try {
+      const token = localStorage.getItem('adminToken') || localStorage.getItem('trainerToken');
+      if (!token) return;
+
+      const response = await fetch('/api/freeze/dates', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        setFrozenDates(result.data || []);
+        console.log('❄️ Loaded frozen dates:', result.data);
+      }
+    } catch (err) {
+      console.error('Error fetching frozen dates:', err);
+    }
+  };
+
+  const isFrozen = (dateStr) => {
+    return frozenDates.some(freeze => {
+      const freezeValue = freeze['Date/Month'];
+      const freezeType = freeze['Freeze Type'];
+      
+      if (freezeType === 'Date' && freezeValue === dateStr) {
+        return true;
+      }
+      
+      if (freezeType === 'Month') {
+        const monthPart = dateStr.substring(0, 7);
+        return freezeValue === monthPart;
+      }
+      
+      return false;
+    });
   };
 
   useEffect(() => {
@@ -210,6 +256,19 @@ function ReportsPage({ currentTrainer = null }) {
                   className="filter-input"
                 />
               </div>
+              
+              <div className="filter-group checkbox-filter">
+                <label htmlFor="show-frozen">
+                  <input
+                    type="checkbox"
+                    id="show-frozen"
+                    checked={showFrozen}
+                    onChange={(e) => setShowFrozen(e.target.checked)}
+                    className="filter-checkbox"
+                  />
+                  <span>Show Frozen Dates (🔒)</span>
+                </label>
+              </div>
             </div>
           )}
 
@@ -353,7 +412,7 @@ function ReportsPage({ currentTrainer = null }) {
             ) : (
               <>
                 {activeReport === 'activity-summary' && (
-                  <ActivitySummaryReport data={reports['activity-summary']} trainerFilter={isTrainerView ? currentTrainer?.name : selectedTrainer} selectedMonth={selectedMonth} trainerType={reportTrainerType} />
+                  <ActivitySummaryReport data={reports['activity-summary']} trainerFilter={isTrainerView ? currentTrainer?.name : selectedTrainer} selectedMonth={selectedMonth} trainerType={reportTrainerType} frozenDates={frozenDates} showFrozen={showFrozen} />
                 )}
                 {activeReport === 'activity-distribution' && (
                   <ActivityDistributionReport data={reports['activity-distribution']} trainerFilter={isTrainerView ? currentTrainer?.name : selectedTrainer} selectedMonth={selectedMonth} />
@@ -397,7 +456,7 @@ function formatHoursToHHMM(decimalHours) {
 }
 
 // Activity Summary Report Component
-function ActivitySummaryReport({ data, trainerFilter, selectedMonth }) {
+function ActivitySummaryReport({ data, trainerFilter, selectedMonth, frozenDates = [], showFrozen = true }) {
   if (!data) {
     return <div className="empty-report">Loading report data...</div>;
   }
@@ -422,6 +481,13 @@ function ActivitySummaryReport({ data, trainerFilter, selectedMonth }) {
   return (
     <div className="report-section">
       <h2>Activity Summary {trainerFilter ? `for ${trainerFilter}` : 'by Trainer'} {selectedMonth && `(${formatMonthShort(selectedMonth)})`}</h2>
+      
+      {!showFrozen && frozenDates.length > 0 && (
+        <div className="frozen-dates-notice">
+          <span>🔒 Frozen dates are currently hidden from this report</span>
+        </div>
+      )}
+      
       <div className="summary-grid">
         {Object.entries(filteredData).map(([trainer, summary]) => (
           <div key={trainer} className="summary-card">
