@@ -21,7 +21,20 @@ function ManageVolunteers() {
     try {
       setLoading(true);
       setMessage('');
-      const response = await fetch('/api/volunteers/list');
+      
+      const token = localStorage.getItem('adminToken');
+      if (!token) {
+        setMessage('Authentication token not found. Please log in again.');
+        setMessageType('error');
+        setLoading(false);
+        return;
+      }
+      
+      const response = await fetch('/api/volunteers/list', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       const result = await response.json();
 
       if (result.success && result.data) {
