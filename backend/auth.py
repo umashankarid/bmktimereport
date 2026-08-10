@@ -236,6 +236,96 @@ def register_auth_routes(app, sheets_manager):
                 'message': f'Error changing password: {str(e)}'
             }), 500
 
+    @app.route('/api/auth/init-admin-users', methods=['POST'])
+    @verify_token
+    def init_admin_users():
+        """Initialize default admin users (andi and sugi) - admin only"""
+        try:
+            username = request.admin.get('username', '')
+            user_type = request.admin.get('type', '')
+            
+            # Only allow existing admins to create new admins
+            if user_type != 'admin':
+                return jsonify({
+                    'success': False,
+                    'message': 'Only admins can initialize admin users'
+                }), 403
+            
+            try:
+                from trainer_auth import TrainerAuthManager
+            except ImportError:
+                from backend.trainer_auth import TrainerAuthManager
+            
+            from datetime import datetime
+            
+            login_sheet = TrainerAuthManager.get_login_sheet()
+            all_users = login_sheet.get_all_records()
+            
+            # Admin users to create
+            admin_users = [
+                {'name': 'andi', 'password': 'komet123'},
+                {'name': 'sugi', 'password': 'komet123'}
+            ]
+            
+            created_count = 0
+            updated_count = 0
+            
+            for admin in admin_users:
+                trainer_name = admin['name']
+                password = admin['password']
+                
+                # Hash password
+                pwd_hash, salt = TrainerAuthManager.hash_password(password)
+                
+                # Check if user already exists
+                user_exists = False
+                user_row = None
+                for idx, user in enumerate(all_users, start=2):
+                    if user.get('Trainer Name', '').strip().lower() == trainer_name.lower():
+                        user_exists = True
+                        user_row = idx
+                        break
+                
+                if user_exists and user_row:
+                    # Update existing user
+                    login_sheet.update_cell(user_row, login_sheet.find('Password Hash').col, pwd_hash)
+                    login_sheet.update_cell(user_row, login_sheet.find('Salt').col, salt)
+                    updated_count += 1
+                    logger.warning(f"✅ Updated admin user: {trainer_name}")
+                else:
+                    # Create new admin user row
+                    created_date = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                    new_row = [
+                        trainer_name,      # Trainer Name
+                        '',                # Email
+                        '',                # Phone
+                        'Admin',           # Trainer Type
+                        '',                # Photo
+                        pwd_hash,          # Password Hash
+                        salt,              # Salt
+                        created_date       # Created Date
+                    ]
+                    
+                    login_sheet.append_row(new_row)
+                    created_count += 1
+                    logger.warning(f"✅ Created admin user: {trainer_name}")
+            
+            return jsonify({
+                'success': True,
+                'message': f'Admin users initialized: {created_count} created, {updated_count} updated',
+                'created': created_count,
+                'updated': updated_count,
+                'admins': ['andi', 'sugi'],
+                'password': 'komet123'
+            }), 200
+        
+        except Exception as e:
+            logger.error(f"❌ Error initializing admin users: {str(e)}", exc_info=True)
+            return jsonify({
+                'success': False,
+                'message': f'Error initializing admin users: {str(e)}'
+            }), 500
+
     @app.route('/api/auth/setup-sheets', methods=['POST'])
     @verify_token
     def setup_sheets():
