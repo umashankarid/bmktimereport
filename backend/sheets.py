@@ -1942,6 +1942,182 @@ class GoogleSheetsManager:
                 'data': []
             }
 
+    def get_all_volunteers(self):
+        """Get list of all unique volunteers with their info"""
+        try:
+            if not self.authenticated:
+                return {
+                    'success': False,
+                    'data': [],
+                    'message': 'Google Sheets not configured'
+                }
+
+            if self.demo_mode:
+                return {
+                    'success': True,
+                    'data': []
+                }
+
+            sheet_id = os.getenv('GOOGLE_SHEET_ID')
+            if not sheet_id or sheet_id == 'demo-sheet-id':
+                return {'success': True, 'data': []}
+
+            spreadsheet = self.client.open_by_key(sheet_id)
+            
+            # Try to get volunteers sheet (used for volunteer login/profile)
+            try:
+                volunteers_sheet = spreadsheet.worksheet('Volunteers')
+                all_volunteers = volunteers_sheet.get_all_records()
+                
+                volunteers_list = []
+                seen_names = set()
+                
+                for vol in all_volunteers:
+                    vol_name = vol.get('Volunteer Name', '').strip()
+                    if vol_name and vol_name not in seen_names:
+                        volunteers_list.append({
+                            'name': vol_name,
+                            'email': vol.get('Email', ''),
+                            'phone': vol.get('Phone', '')
+                        })
+                        seen_names.add(vol_name)
+                
+                return {
+                    'success': True,
+                    'data': volunteers_list
+                }
+            except gspread.exceptions.WorksheetNotFound:
+                # If Volunteers sheet doesn't exist, get unique volunteers from registrations
+                vol_reg_sheet = spreadsheet.worksheet(self.VOLUNTEER_REGISTRATIONS_SHEET)
+                all_registrations = vol_reg_sheet.get_all_records()
+                
+                volunteers_dict = {}
+                for reg in all_registrations:
+                    vol_name = reg.get('Volunteer Name', '').strip()
+                    if vol_name:
+                        if vol_name not in volunteers_dict:
+                            volunteers_dict[vol_name] = {
+                                'name': vol_name,
+                                'email': '',
+                                'phone': ''
+                            }
+                
+                return {
+                    'success': True,
+                    'data': list(volunteers_dict.values())
+                }
+
+        except Exception as e:
+            logger.error(f"Error fetching all volunteers: {e}")
+            return {
+                'success': False,
+                'data': [],
+                'message': str(e)
+            }
+
+    def update_volunteer(self, old_name, new_name, email='', phone=''):
+        """Update volunteer name and contact info"""
+        try:
+            if not self.authenticated:
+                return {
+                    'success': False,
+                    'message': 'Google Sheets not configured'
+                }
+
+            if self.demo_mode:
+                return {
+                    'success': True,
+                    'message': 'Demo mode - no actual update'
+                }
+
+            sheet_id = os.getenv('GOOGLE_SHEET_ID')
+            if not sheet_id or sheet_id == 'demo-sheet-id':
+                return {'success': False, 'message': 'Sheet ID not configured'}
+
+            spreadsheet = self.client.open_by_key(sheet_id)
+            
+            # Update in Volunteers sheet if it exists
+            try:
+                volunteers_sheet = spreadsheet.worksheet('Volunteers')
+                all_volunteers = volunteers_sheet.get_all_records()
+                
+                for idx, vol in enumerate(all_volunteers, start=2):  # +2 for header and 1-based indexing
+                    if vol.get('Volunteer Name', '').strip() == old_name.strip():
+                        volunteers_sheet.update_cell(idx, 1, new_name)  # Column A: Volunteer Name
+                        volunteers_sheet.update_cell(idx, volunteers_sheet.find('Email').col, email)  # Email
+                        volunteers_sheet.update_cell(idx, volunteers_sheet.find('Phone').col, phone)  # Phone
+            except gspread.exceptions.WorksheetNotFound:
+                pass
+            
+            # Update in Volunteer Registrations sheet
+            vol_reg_sheet = spreadsheet.worksheet(self.VOLUNTEER_REGISTRATIONS_SHEET)
+            all_registrations = vol_reg_sheet.get_all_records()
+            
+            updated_count = 0
+            for idx, reg in enumerate(all_registrations, start=2):
+                if reg.get('Volunteer Name', '').strip() == old_name.strip():
+                    vol_reg_sheet.update_cell(idx, 1, new_name)
+                    updated_count += 1
+            
+            return {
+                'success': True,
+                'message': f'Updated {updated_count} registration(s)',
+                'updated_count': updated_count
+            }
+
+        except Exception as e:
+            logger.error(f"Error updating volunteer: {e}")
+            return {
+                'success': False,
+                'message': f'Error updating volunteer: {str(e)}'
+            }
+
+    def remove_volunteer(self, volunteer_name):
+        """Remove volunteer from registrations"""
+        try:
+            if not self.authenticated:
+                return {
+                    'success': False,
+                    'message': 'Google Sheets not configured'
+                }
+
+            if self.demo_mode:
+                return {
+                    'success': True,
+                    'message': 'Demo mode - no actual removal'
+                }
+
+            sheet_id = os.getenv('GOOGLE_SHEET_ID')
+            if not sheet_id or sheet_id == 'demo-sheet-id':
+                return {'success': False, 'message': 'Sheet ID not configured'}
+
+            spreadsheet = self.client.open_by_key(sheet_id)
+            vol_reg_sheet = spreadsheet.worksheet(self.VOLUNTEER_REGISTRATIONS_SHEET)
+            all_registrations = vol_reg_sheet.get_all_records()
+            
+            # Find and delete all rows with this volunteer
+            rows_to_delete = []
+            for idx, reg in enumerate(all_registrations, start=2):  # +2 for header and 1-based indexing
+                if reg.get('Volunteer Name', '').strip() == volunteer_name.strip():
+                    rows_to_delete.append(idx)
+            
+            # Delete rows in reverse order to maintain row numbers
+            for row_idx in sorted(rows_to_delete, reverse=True):
+                vol_reg_sheet.delete_rows(row_idx)
+            
+            return {
+                'success': True,
+                'message': f'Removed {len(rows_to_delete)} registration(s)',
+                'removed_count': len(rows_to_delete)
+            }
+
+        except Exception as e:
+            logger.error(f"Error removing volunteer: {e}")
+            return {
+                'success': False,
+                'message': f'Error removing volunteer: {str(e)}'
+            }
+
 
 # Initialize global instance
 sheets_manager = None

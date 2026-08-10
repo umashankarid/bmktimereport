@@ -6,6 +6,7 @@ import ActivitySummaryTable from '../components/ActivitySummaryTable';
 import QRCodePrinter from '../components/QRCodePrinter';
 import ManageTrainers from '../components/ManageTrainers';
 import ManageTournaments from '../components/ManageTournaments';
+import ManageVolunteers from '../components/ManageVolunteers';
 import TimeReportStatus from '../components/TimeReportStatus';
 
 function AdminDashboard({ onLogout }) {
@@ -202,6 +203,12 @@ function AdminDashboard({ onLogout }) {
           🏸 Manage Tournaments
         </button>
         <button
+          className={`tab-btn ${activeTab === 'volunteers' ? 'active' : ''}`}
+          onClick={() => setActiveTab('volunteers')}
+        >
+          🙋 Manage Volunteers
+        </button>
+        <button
           className={`tab-btn ${activeTab === 'qrcodes' ? 'active' : ''}`}
           onClick={() => setActiveTab('qrcodes')}
         >
@@ -218,6 +225,9 @@ function AdminDashboard({ onLogout }) {
       <div className="admin-content">
         {activeTab === 'tournaments' && (
           <ManageTournaments />
+        )}
+        {activeTab === 'volunteers' && (
+          <ManageVolunteers />
         )}
         {activeTab === 'trainers' && (
           <ManageTrainers />

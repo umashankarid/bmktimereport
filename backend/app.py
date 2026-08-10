@@ -1121,6 +1121,119 @@ def create_app():
                 'success': False,
                 'message': f'Error fetching registrations: {str(e)}'
             }), 500
+
+    # Get all volunteers (for admin management)
+    @app.route('/api/volunteers/list', methods=['GET'])
+    @require_admin
+    def get_all_volunteers():
+        """Get list of all unique volunteers"""
+        try:
+            sheets = get_sheets_manager()
+            result = sheets.get_all_volunteers()
+            
+            if result['success']:
+                return jsonify({
+                    'success': True,
+                    'data': result['data']
+                }), 200
+            else:
+                return jsonify({
+                    'success': False,
+                    'message': result.get('message', 'Failed to fetch volunteers')
+                }), 400
+        except Exception as e:
+            logger.error(f"Error fetching volunteers: {e}")
+            return jsonify({
+                'success': False,
+                'message': f'Error fetching volunteers: {str(e)}'
+            }), 500
+
+    # Update volunteer
+    @app.route('/api/volunteers/update', methods=['POST'])
+    @require_admin
+    def update_volunteer():
+        """Update volunteer details"""
+        try:
+            data = request.get_json()
+            
+            if not data:
+                return jsonify({
+                    'success': False,
+                    'message': 'No data provided'
+                }), 400
+            
+            old_name = data.get('old_name', '').strip()
+            new_name = data.get('name', '').strip()
+            email = data.get('email', '').strip()
+            phone = data.get('phone', '').strip()
+            
+            if not old_name or not new_name:
+                return jsonify({
+                    'success': False,
+                    'message': 'Volunteer name cannot be empty'
+                }), 400
+            
+            sheets = get_sheets_manager()
+            result = sheets.update_volunteer(old_name, new_name, email, phone)
+            
+            if result['success']:
+                return jsonify({
+                    'success': True,
+                    'message': 'Volunteer updated successfully'
+                }), 200
+            else:
+                return jsonify({
+                    'success': False,
+                    'message': result.get('message', 'Failed to update volunteer')
+                }), 400
+        except Exception as e:
+            logger.error(f"Error updating volunteer: {e}")
+            return jsonify({
+                'success': False,
+                'message': f'Error updating volunteer: {str(e)}'
+            }), 500
+
+    # Remove volunteer
+    @app.route('/api/volunteers/remove', methods=['POST'])
+    @require_admin
+    def remove_volunteer():
+        """Remove volunteer from registrations"""
+        try:
+            data = request.get_json()
+            
+            if not data:
+                return jsonify({
+                    'success': False,
+                    'message': 'No data provided'
+                }), 400
+            
+            volunteer_name = data.get('name', '').strip()
+            
+            if not volunteer_name:
+                return jsonify({
+                    'success': False,
+                    'message': 'Volunteer name is required'
+                }), 400
+            
+            sheets = get_sheets_manager()
+            result = sheets.remove_volunteer(volunteer_name)
+            
+            if result['success']:
+                return jsonify({
+                    'success': True,
+                    'message': 'Volunteer removed successfully'
+                }), 200
+            else:
+                return jsonify({
+                    'success': False,
+                    'message': result.get('message', 'Failed to remove volunteer')
+                }), 400
+        except Exception as e:
+            logger.error(f"Error removing volunteer: {e}")
+            return jsonify({
+                'success': False,
+                'message': f'Error removing volunteer: {str(e)}'
+            }), 500
     
     # Error handlers
     @app.errorhandler(404)
