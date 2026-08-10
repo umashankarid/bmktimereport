@@ -102,7 +102,8 @@ function ActivityHistoryView({ currentTrainer = null, isAdminView = false }) {
 
   const fetchTrainers = async () => {
     try {
-      const response = await fetch('/api/trainers');
+      // Use /api/trainers/staff to get only Assistant Trainers and Juniors (no volunteers)
+      const response = await fetch('/api/trainers/staff');
       const result = await response.json();
       if (result.success && result.data) {
         setTrainers(result.data);

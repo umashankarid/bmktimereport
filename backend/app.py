@@ -277,6 +277,40 @@ def create_app():
                 'message': str(e)
             }), 500
 
+    # Get trainers excluding volunteers
+    @app.route('/api/trainers/staff', methods=['GET'])
+    def get_staff_trainers():
+        """Get list of trainers excluding volunteers (Assistant Trainers and Juniors only)"""
+        try:
+            cache = get_data_cache()
+            trainers = cache.get_trainers()
+            
+            # Fallback to sheets if cache is empty
+            if not trainers:
+                logger.warning("⚠️  Cache empty, fetching from sheets...")
+                sheets = get_sheets_manager()
+                result = sheets.get_trainers_details()
+                if result['success']:
+                    trainers = result['data']
+                    # Update cache for next time
+                    with cache.lock:
+                        cache.data['trainers'] = trainers
+            
+            # Filter out volunteers - keep only Assistant Trainer and Junior
+            staff_trainers = [t for t in trainers if t.get('trainer_type', 'Assistant Trainer') in ['Assistant Trainer', 'Junior']]
+            
+            return jsonify({
+                'success': True,
+                'data': staff_trainers,
+                'count': len(staff_trainers)
+            }), 200
+        except Exception as e:
+            logger.error(f"❌ Error fetching staff trainers: {str(e)}")
+            return jsonify({
+                'error': 'Failed to retrieve staff trainers',
+                'message': str(e)
+            }), 500
+
     # Get trainer details with email and phone
     @app.route('/api/trainers/details/all', methods=['GET'])
     def get_trainers_details():
