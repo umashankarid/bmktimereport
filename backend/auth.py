@@ -73,8 +73,8 @@ def register_auth_routes(app, sheets_manager):
                     'message': 'No credentials provided'
                 }), 400
 
-            username = data.get('username')
-            password = data.get('password')
+            username = data.get('username', '').strip()
+            password = data.get('password', '').strip()
 
             if not username or not password:
                 return jsonify({
@@ -82,57 +82,69 @@ def register_auth_routes(app, sheets_manager):
                     'message': 'Username and password required'
                 }), 400
 
-            # First try admin login from Login sheet
+            logger.warning(f"📝 Login attempt for username: {username}")
+            
+            # First try to get login sheet and check if user exists there
             try:
                 from trainer_auth import TrainerAuthManager
             except ImportError:
                 from backend.trainer_auth import TrainerAuthManager
             
-            login_sheet = TrainerAuthManager.get_login_sheet()
-            all_users = login_sheet.get_all_records()
-            
-            # Look for user in Login sheet
-            user_found_in_sheet = False
-            for user in all_users:
-                user_name = user.get('Trainer Name', '').strip()
-                if user_name.lower() == username.lower():
-                    user_found_in_sheet = True
-                    user_type = user.get('Trainer Type', 'Assistant Trainer')
-                    stored_hash = user.get('Password Hash', '')
-                    salt = user.get('Salt', '')
-                    
-                    # Verify password if hash exists
-                    if stored_hash and salt:
-                        if TrainerAuthManager.verify_password(stored_hash, password, salt):
-                            # Generate token
-                            user_data = {
-                                'username': user_name,
-                                'type': user_type,
-                                'email': user.get('Email', '')
-                            }
-                            token = generate_token(user_data)
-                            
-                            logger.warning(f"✅ Successful login for {user_type}: {user_name}")
-                            
-                            return jsonify({
-                                'success': True,
-                                'token': token,
-                                'admin': user_data
-                            }), 200
+            try:
+                login_sheet = TrainerAuthManager.get_login_sheet()
+                all_users = login_sheet.get_all_records()
+                logger.warning(f"✅ Found {len(all_users)} users in Login sheet")
+                
+                # Look for user in Login sheet
+                user_found_in_sheet = False
+                for user in all_users:
+                    user_name = user.get('Trainer Name', '').strip()
+                    if user_name.lower() == username.lower():
+                        user_found_in_sheet = True
+                        user_type = user.get('Trainer Type', 'Assistant Trainer')
+                        stored_hash = user.get('Password Hash', '').strip()
+                        salt = user.get('Salt', '').strip()
+                        
+                        logger.warning(f"👤 Found user in sheet: {user_name}, has_hash: {bool(stored_hash)}")
+                        
+                        # Verify password if hash exists
+                        if stored_hash and salt:
+                            if TrainerAuthManager.verify_password(stored_hash, password, salt):
+                                # Generate token
+                                user_data = {
+                                    'username': user_name,
+                                    'type': user_type,
+                                    'email': user.get('Email', '')
+                                }
+                                token = generate_token(user_data)
+                                
+                                logger.warning(f"✅ Successful login for {user_type}: {user_name}")
+                                
+                                return jsonify({
+                                    'success': True,
+                                    'token': token,
+                                    'admin': user_data
+                                }), 200
+                            else:
+                                logger.warning(f"❌ Invalid password for user: {user_name}")
+                                return jsonify({
+                                    'success': False,
+                                    'message': 'Invalid username or password'
+                                }), 401
                         else:
-                            logger.warning(f"❌ Invalid password for user: {user_name}")
-                            return jsonify({
-                                'success': False,
-                                'message': 'Invalid username or password'
-                            }), 401
-                    else:
-                        # User in sheet but no password hash yet - check fallback credentials
-                        logger.warning(f"⚠️  No password hash for user: {user_name}, checking fallback credentials")
-                        break
+                            # User in sheet but no password hash yet - check fallback credentials
+                            logger.warning(f"⚠️  No password hash for user: {user_name}, checking fallback credentials")
+                            break
+            
+            except Exception as e:
+                logger.warning(f"⚠️  Could not access Login sheet: {str(e)}, using fallback credentials only")
+                all_users = []
             
             # If not found in sheet or no hash in sheet, try hardcoded admin credentials (fallback)
+            logger.warning(f"🔐 Checking fallback credentials for: {username}")
             if username in ADMIN_CREDENTIALS:
                 cred = ADMIN_CREDENTIALS[username]
+                logger.warning(f"📋 Found fallback credential for {username}")
                 if cred['password'] == password:
                     admin_data = {'username': username, 'type': cred['type']}
                     token = generate_token(admin_data)
@@ -144,7 +156,9 @@ def register_auth_routes(app, sheets_manager):
                         'admin': admin_data
                     }), 200
                 else:
-                    logger.warning(f"❌ Invalid password for fallback user: {username}")
+                    logger.warning(f"❌ Invalid password for fallback user: {username}, got '{password}'")
+            else:
+                logger.warning(f"❌ No fallback credential for: {username}")
             
             logger.warning(f"❌ Login failed for username: {username}")
             return jsonify({
