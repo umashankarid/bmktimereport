@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import '../styles/DatePickerCalendar.css';
 
-function DatePickerCalendar({ selectedDate, onChange, trainerName }) {
+function DatePickerCalendar({ selectedDate, onChange, trainerName, frozenDates = [] }) {
   const [currentMonth, setCurrentMonth] = useState(() => {
     const date = new Date(selectedDate || new Date());
     return new Date(date.getFullYear(), date.getMonth(), 1);
@@ -57,6 +57,24 @@ function DatePickerCalendar({ selectedDate, onChange, trainerName }) {
 
   const getFirstDayOfMonth = (date) => {
     return new Date(date.getFullYear(), date.getMonth(), 1).getDay();
+  };
+
+  const isFrozen = (dateStr) => {
+    return frozenDates.some(freeze => {
+      const freezeValue = freeze['Date/Month'];
+      const freezeType = freeze['Freeze Type'];
+      
+      if (freezeType === 'Date' && freezeValue === dateStr) {
+        return true;
+      }
+      
+      if (freezeType === 'Month') {
+        const monthPart = dateStr.substring(0, 7); // YYYY-MM
+        return freezeValue === monthPart;
+      }
+      
+      return false;
+    });
   };
 
   const previousMonth = () => {
@@ -139,17 +157,19 @@ function DatePickerCalendar({ selectedDate, onChange, trainerName }) {
               const isFuture = dateStr > today;
               const isToday = dateStr === today;
               const isSelected = selectedDate === dateStr;
+              const frozen = isFrozen(dateStr);
 
               return (
                 <button
                   key={day}
-                  className={`day ${hasActivity ? 'has-activity' : 'no-activity'} ${isFuture ? 'future' : ''} ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''}`}
+                  className={`day ${hasActivity ? 'has-activity' : 'no-activity'} ${isFuture ? 'future' : ''} ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''} ${frozen ? 'frozen' : ''}`}
                   onClick={() => handleDateClick(day)}
                   disabled={isFuture}
-                  title={hasActivity ? 'Has activity' : 'No activity'}
+                  title={frozen ? '🔒 Frozen - Cannot edit' : (hasActivity ? 'Has activity' : 'No activity')}
                 >
                   <span className="day-number">{day}</span>
-                  {hasActivity && <span className="activity-indicator">●</span>}
+                  {frozen && <span className="frozen-indicator">🔒</span>}
+                  {hasActivity && !frozen && <span className="activity-indicator">●</span>}
                 </button>
               );
             })}
@@ -163,6 +183,10 @@ function DatePickerCalendar({ selectedDate, onChange, trainerName }) {
             <div className="legend-item">
               <span className="legend-dot no-activity">○</span>
               <span>No Activity</span>
+            </div>
+            <div className="legend-item">
+              <span className="legend-dot frozen">🔒</span>
+              <span>Frozen</span>
             </div>
           </div>
         </div>

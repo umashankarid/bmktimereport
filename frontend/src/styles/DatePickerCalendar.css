@@ -171,6 +171,23 @@
   border-color: #e0e0e0;
 }
 
+.day.frozen {
+  border-color: #f59e0b;
+  background: #fef3c7;
+  color: #92400e;
+  font-weight: 600;
+}
+
+.day.frozen:hover:not(:disabled) {
+  background: #fde68a;
+  border-color: #d97706;
+}
+
+.frozen-indicator {
+  position: absolute;
+  font-size: 12px;
+}
+
 .activity-indicator {
   position: absolute;
   bottom: 2px;
@@ -204,6 +221,10 @@
 
 .legend-dot.no-activity {
   color: #f44336;
+}
+
+.legend-dot.frozen {
+  font-size: 14px;
 }
 
 /* Mobile responsive */
