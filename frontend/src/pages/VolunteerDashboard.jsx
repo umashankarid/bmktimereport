@@ -7,7 +7,7 @@ function VolunteerDashboard({ volunteer, onLogout }) {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('');
-  const [comments, setComments] = useState(''); // For registration comments // 'success' or 'error'
+  const [tournamentComments, setTournamentComments] = useState({}); // Comments per tournament
 
   useEffect(() => {
     fetchTournaments();
@@ -67,7 +67,7 @@ function VolunteerDashboard({ volunteer, onLogout }) {
         body: JSON.stringify({
           volunteer_name: volunteer.name,
           tournament_name: tournamentName,
-          comments: comments
+          comments: tournamentComments[tournamentName] || ''
         })
       });
 
@@ -77,7 +77,11 @@ function VolunteerDashboard({ volunteer, onLogout }) {
       if (result.success) {
         setMessage(`✅ Successfully registered for ${tournamentName}`);
         setMessageType('success');
-        setComments(''); // Clear comments
+        // Clear comments for this tournament
+        setTournamentComments(prev => ({
+          ...prev,
+          [tournamentName]: ''
+        }));
         // Refresh both lists
         fetchTournaments();
         fetchRegistrations();
@@ -170,20 +174,6 @@ function VolunteerDashboard({ volunteer, onLogout }) {
         <section className="tournaments-section">
           <h2>🏸 Available Tournaments</h2>
           
-          <div className="comment-input-section">
-            <label htmlFor="comments">💬 Add a comment (optional)</label>
-            <textarea
-              id="comments"
-              value={comments}
-              onChange={(e) => setComments(e.target.value)}
-              placeholder="e.g., I can help from 9:00-12:00, or any other relevant info"
-              className="comment-input"
-              disabled={loading}
-              maxLength={200}
-            />
-            <span className="char-count">{comments.length}/200</span>
-          </div>
-          
           {loading && <div className="loading">Loading tournaments...</div>}
           
           {!loading && tournaments.length === 0 ? (
@@ -227,6 +217,27 @@ function VolunteerDashboard({ volunteer, onLogout }) {
                         </span>
                       </div>
                     </div>
+
+                    {!isRegistered && (
+                      <div className="comment-input-section">
+                        <label htmlFor={`comment-${idx}`}>💬 Add a comment (optional)</label>
+                        <textarea
+                          id={`comment-${idx}`}
+                          value={tournamentComments[tournament['Tournament Name']] || ''}
+                          onChange={(e) => setTournamentComments(prev => ({
+                            ...prev,
+                            [tournament['Tournament Name']]: e.target.value
+                          }))}
+                          placeholder="e.g., I can help from 9:00-12:00, or any other relevant info"
+                          className="comment-input"
+                          disabled={loading}
+                          maxLength={200}
+                        />
+                        <span className="char-count">
+                          {(tournamentComments[tournament['Tournament Name']] || '').length}/200
+                        </span>
+                      </div>
+                    )}
 
                     <button
                       className={`btn-register ${isRegistered ? 'registered' : ''}`}
