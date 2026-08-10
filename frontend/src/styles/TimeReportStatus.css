@@ -430,3 +430,143 @@
     font-size: 0.85rem;
   }
 }
+
+/* Detailed Activities by Trainer */
+.detailed-activities-container {
+  margin-top: 3rem;
+  padding-top: 2rem;
+  border-top: 2px solid #e0e0e0;
+}
+
+.detailed-activities-container h3 {
+  margin: 0 0 1.5rem 0;
+  color: #333;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.trainer-activities-section {
+  margin-bottom: 2rem;
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+.trainer-section-title {
+  background: #f5f7ff;
+  padding: 1rem 1.5rem;
+  margin: 0;
+  font-size: 1.1rem;
+  color: #333;
+  border-bottom: 2px solid #667eea;
+  font-weight: 600;
+}
+
+.detailed-activities-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+}
+
+.detailed-activities-table thead {
+  background: #f9f9f9;
+}
+
+.detailed-activities-table th {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  font-weight: 600;
+  color: #333;
+  border-bottom: 2px solid #e0e0e0;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.detailed-activities-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #e0e0e0;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.detailed-activities-table tbody tr:hover {
+  background: #f9f9f9;
+}
+
+.detailed-activities-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.day-column {
+  font-weight: 600;
+  color: #667eea;
+  min-width: 80px;
+}
+
+.date-column {
+  font-weight: 500;
+  color: #333;
+  min-width: 100px;
+}
+
+.activity-column {
+  font-weight: 500;
+  min-width: 120px;
+}
+
+.time-column {
+  text-align: center;
+  min-width: 90px;
+}
+
+.duration-column {
+  text-align: center;
+  font-weight: 600;
+  color: #667eea;
+  min-width: 80px;
+}
+
+.note-column {
+  color: #999;
+  font-style: italic;
+  max-width: 200px;
+  word-break: break-word;
+}
+
+@media (max-width: 768px) {
+  .detailed-activities-table th,
+  .detailed-activities-table td {
+    padding: 0.5rem;
+    font-size: 0.85rem;
+  }
+
+  .trainer-section-title {
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+  }
+
+  .day-column {
+    min-width: 60px;
+  }
+
+  .date-column {
+    min-width: 80px;
+  }
+
+  .activity-column {
+    min-width: 100px;
+  }
+
+  .time-column {
+    min-width: 70px;
+  }
+
+  .duration-column {
+    min-width: 60px;
+  }
+
+  .note-column {
+    max-width: 150px;
+  }
+}

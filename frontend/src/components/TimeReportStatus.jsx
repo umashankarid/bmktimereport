@@ -6,6 +6,7 @@ function TimeReportStatus({ trainerType = 'Assistant Trainer' }) {
   const [trainers, setTrainers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [activities, setActivities] = useState({});
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -14,7 +15,44 @@ function TimeReportStatus({ trainerType = 'Assistant Trainer' }) {
   useEffect(() => {
     fetchReportStatus();
     fetchTrainers();
+    fetchActivities();
   }, [selectedMonth, trainerType]);
+
+  const fetchActivities = async () => {
+    try {
+      const params = new URLSearchParams();
+      params.append('month', selectedMonth);
+      params.append('trainer_type', trainerType);
+
+      const response = await fetch(`/api/activities?${params.toString()}`);
+      const result = await response.json();
+
+      if (result.success && result.data) {
+        // Group activities by trainer and date
+        const grouped = {};
+        result.data.forEach(activity => {
+          const trainer = activity['Trainer Name'];
+          const date = activity['Date'];
+          
+          if (!trainer || !date) return;
+          
+          if (!grouped[trainer]) {
+            grouped[trainer] = {};
+          }
+          
+          if (!grouped[trainer][date]) {
+            grouped[trainer][date] = [];
+          }
+          
+          grouped[trainer][date].push(activity);
+        });
+        
+        setActivities(grouped);
+      }
+    } catch (err) {
+      console.error('Error fetching activities:', err);
+    }
+  };
 
   const fetchTrainers = async () => {
     try {
@@ -86,6 +124,26 @@ function TimeReportStatus({ trainerType = 'Assistant Trainer' }) {
 
   const isHighlighted = (trainer) => {
     return getDaysSinceLastReport(trainer) >= 3;
+  };
+
+  const getDayName = (dateString) => {
+    const date = new Date(dateString + 'T00:00:00');
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    return days[date.getDay()];
+  };
+
+  const calculateDuration = (startTime, endTime) => {
+    if (!startTime || !endTime) return '-';
+    
+    try {
+      const [startH, startM] = startTime.split(':').map(Number);
+      const [endH, endM] = endTime.split(':').map(Number);
+      const minutes = (endH - startH) * 60 + (endM - startM);
+      const hours = (minutes / 60).toFixed(1);
+      return `${hours}h`;
+    } catch {
+      return '-';
+    }
   };
 
   const daysInMonth = getDaysInMonth(selectedMonth);
@@ -227,6 +285,56 @@ function TimeReportStatus({ trainerType = 'Assistant Trainer' }) {
                 <span>Future Date</span>
               </div>
             </div>
+          </div>
+
+          {/* Detailed Activity Tables by Trainer */}
+          <div className="detailed-activities-container">
+            <h3>Detailed Activities by Trainer</h3>
+            {trainers.map(trainerObj => {
+              const trainerName = typeof trainerObj === 'string' ? trainerObj : trainerObj.name;
+              const trainerActivities = activities[trainerName] || {};
+              
+              // Sort dates and get activities
+              const sortedDates = Object.keys(trainerActivities).sort();
+              
+              if (sortedDates.length === 0) {
+                return null; // Skip trainers with no activities
+              }
+              
+              return (
+                <div key={trainerName} className="trainer-activities-section">
+                  <h4 className="trainer-section-title">👤 {trainerName}</h4>
+                  <table className="detailed-activities-table">
+                    <thead>
+                      <tr>
+                        <th>Day</th>
+                        <th>Date</th>
+                        <th>Activity</th>
+                        <th>Start Time</th>
+                        <th>End Time</th>
+                        <th>Duration</th>
+                        <th>Note</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sortedDates.map(date => (
+                        trainerActivities[date].map((activity, idx) => (
+                          <tr key={`${date}-${idx}`}>
+                            <td className="day-column">{getDayName(date)}</td>
+                            <td className="date-column">{date}</td>
+                            <td className="activity-column">{activity['Activity'] || '-'}</td>
+                            <td className="time-column">{activity['Start Time'] || '-'}</td>
+                            <td className="time-column">{activity['End Time'] || '-'}</td>
+                            <td className="duration-column">{calculateDuration(activity['Start Time'], activity['End Time'])}</td>
+                            <td className="note-column">{activity['Note'] || '-'}</td>
+                          </tr>
+                        ))
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })}
           </div>
             </>
           )}
