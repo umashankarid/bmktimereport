@@ -65,7 +65,7 @@ class GoogleSheetsManager:
     
     # Volunteer registrations sheet
     VOLUNTEER_REGISTRATIONS_SHEET = 'Volunteer Registrations'
-    VOLUNTEER_REG_HEADERS = ['Volunteer Name', 'Tournament Name', 'Registration Date', 'Status']
+    VOLUNTEER_REG_HEADERS = ['Volunteer Name', 'Tournament Name', 'Registration Date', 'Status', 'Comments']
     
     # Cache settings
     CACHE_TTL = 600  # Cache for 10 minutes (600 seconds) - increased for better scalability
@@ -1634,7 +1634,8 @@ class GoogleSheetsManager:
             # Filter for this tournament and status='Registered', return full registration objects
             volunteers = [
                 {
-                    'Volunteer Name': reg.get('Volunteer Name', '')
+                    'Volunteer Name': reg.get('Volunteer Name', ''),
+                    'Comments': reg.get('Comments', '')
                 }
                 for reg in all_registrations
                 if (reg.get('Tournament Name', '') == tournament_name and 
@@ -1765,8 +1766,8 @@ class GoogleSheetsManager:
                 'message': f'Error adding tournament: {str(e)}'
             }
 
-    def register_volunteer(self, volunteer_name, tournament_name):
-        """Register a volunteer for a tournament"""
+    def register_volunteer(self, volunteer_name, tournament_name, comments=''):
+        """Register a volunteer for a tournament with optional comments"""
         try:
             if not self.authenticated:
                 return {
@@ -1798,9 +1799,9 @@ class GoogleSheetsManager:
                         'message': 'Already registered for this tournament'
                     }
             
-            # Add new registration without comments
+            # Add new registration with comments
             registration_date = datetime.now().strftime('%Y-%m-%d')
-            vol_reg_sheet.append_row([volunteer_name, tournament_name, registration_date, 'Registered'])
+            vol_reg_sheet.append_row([volunteer_name, tournament_name, registration_date, 'Registered', comments])
             
             # Invalidate cache
             self._cache['volunteer_registrations'] = []
