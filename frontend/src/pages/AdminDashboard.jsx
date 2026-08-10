@@ -362,7 +362,7 @@ function AdminDashboard({ onLogout }) {
           className={`tab-btn ${activeTab === 'freeze' ? 'active' : ''}`}
           onClick={() => setActiveTab('freeze')}
         >
-          🔒 Freeze Management
+          💳 Payment Management
         </button>
         <button
           className={`tab-btn ${activeTab === 'qrcodes' ? 'active' : ''}`}

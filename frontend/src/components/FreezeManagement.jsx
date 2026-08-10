@@ -166,9 +166,9 @@ function FreezeManagement() {
 
   return (
     <div className="freeze-management-container">
-      <h2>🔒 Freeze Management</h2>
+      <h2>💳 Payment Management</h2>
       <p className="section-description">
-        Lock activity entries by date or month to prevent editing and deletion
+        Mark dates and months for which payments have been processed and locked
       </p>
 
       {message && (
@@ -180,7 +180,7 @@ function FreezeManagement() {
 
       {/* Add Freeze Section */}
       <div className="add-freeze-section">
-        <h3>Add Freeze</h3>
+        <h3>Mark Payment Period</h3>
         
         <div className="form-grid">
           <div className="form-group">
@@ -245,19 +245,19 @@ function FreezeManagement() {
           onClick={handleAddFreeze}
           disabled={loading}
         >
-          {loading ? 'Adding...' : '🔒 Add Freeze'}
+          {loading ? 'Marking...' : '💳 Mark Payment'}
         </button>
       </div>
 
       {/* Frozen Entries List */}
       <div className="frozen-entries-section">
-        <h3>Frozen Entries</h3>
+        <h3>Payment Periods</h3>
         
         {loading && frozenEntries.length === 0 ? (
-          <div className="loading">Loading frozen dates...</div>
+          <div className="loading">Loading payment periods...</div>
         ) : frozenEntries.length === 0 ? (
           <div className="empty-state">
-            <p>No frozen dates or months yet</p>
+            <p>No payment periods marked yet</p>
           </div>
         ) : (
           <div className="frozen-table-container">
@@ -265,10 +265,10 @@ function FreezeManagement() {
               <thead>
                 <tr>
                   <th>Type</th>
-                  <th>Date/Month</th>
-                  <th>Frozen On</th>
-                  <th>Reason</th>
-                  <th>Created By</th>
+                  <th>Payment Period</th>
+                  <th>Marked On</th>
+                  <th>Notes</th>
+                  <th>Marked By</th>
                   <th>Action</th>
                 </tr>
               </thead>
@@ -309,14 +309,14 @@ function FreezeManagement() {
       </div>
 
       <div className="freeze-info">
-        <h3>ℹ️ What happens when dates are frozen?</h3>
+        <h3>ℹ️ What happens when payment periods are marked?</h3>
         <ul>
-          <li>✅ Trainers cannot edit or delete activities on frozen dates</li>
-          <li>✅ Admin can still edit/delete, but with warnings</li>
-          <li>✅ Frozen dates show as 🟡 yellow in trainer calendar</li>
-          <li>✅ Activities are read-only for end-of-month review</li>
-          <li>✅ Reports include frozen date indicators</li>
-          <li>✅ Date ranges freeze all dates from start to end (inclusive)</li>
+          <li>✅ Activities on marked dates become locked and read-only</li>
+          <li>✅ Trainers cannot edit or delete activities on payment dates</li>
+          <li>✅ Marked dates show as 🟡 yellow in trainer calendar</li>
+          <li>✅ Ensures data integrity during payment processing</li>
+          <li>✅ Reports include payment period indicators</li>
+          <li>✅ Date ranges lock all dates from start to end (inclusive)</li>
         </ul>
       </div>
     </div>
