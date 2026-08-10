@@ -22,6 +22,9 @@ function ActivityHistoryView({ currentTrainer = null, isAdminView = false }) {
     endTime: '',
     note: ''
   });
+
+  // Frozen dates
+  const [frozenDates, setFrozenDates] = useState([]);
   
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -37,11 +40,52 @@ function ActivityHistoryView({ currentTrainer = null, isAdminView = false }) {
     
     // Load activity types
     fetchActivityTypes();
+    
+    // Load frozen dates
+    fetchFrozenDates();
   }, [currentTrainer, isAdminView]);
 
   useEffect(() => {
     fetchActivityHistory();
   }, [selectedTrainer, selectedActivity, selectedMonth]);
+
+  const fetchFrozenDates = async () => {
+    try {
+      const token = localStorage.getItem('adminToken') || localStorage.getItem('trainerToken');
+      if (!token) return;
+
+      const response = await fetch('/api/freeze/dates', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        setFrozenDates(result.data || []);
+      }
+    } catch (err) {
+      console.error('Error fetching frozen dates:', err);
+    }
+  };
+
+  const isFrozen = (date) => {
+    return frozenDates.some(freeze => {
+      const freezeValue = freeze['Date/Month'];
+      const freezeType = freeze['Freeze Type'];
+      
+      if (freezeType === 'Date' && freezeValue === date) {
+        return true;
+      }
+      
+      if (freezeType === 'Month') {
+        const monthPart = date.substring(0, 7); // YYYY-MM
+        return freezeValue === monthPart;
+      }
+      
+      return false;
+    });
+  };
 
   const fetchTrainers = async () => {
     try {
@@ -474,23 +518,33 @@ function ActivityHistoryView({ currentTrainer = null, isAdminView = false }) {
                       <td className="duration-cell">{duration}</td>
                       <td className="note-cell">{activity['Note'] || '-'}</td>
                       {isAdminView && (
-                        <td className="actions-cell">
-                          <button
-                            className="btn btn-edit-small"
-                            onClick={() => handleEditActivity(activity)}
-                            title="Edit activity"
-                            disabled={editingActivity !== null}
-                          >
-                            ✏️
-                          </button>
-                          <button
-                            className="btn btn-delete-small"
-                            onClick={() => handleDeleteActivity(activity)}
-                            title="Delete activity"
-                            disabled={editingActivity !== null}
-                          >
-                            🗑️
-                          </button>
+                        <td className={`actions-cell ${isFrozen(activity['Date']) ? 'frozen' : ''}`}>
+                          {isFrozen(activity['Date']) ? (
+                            <>
+                              <span className="frozen-indicator" title="This date is frozen">
+                                🔒
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <button
+                                className="btn btn-edit-small"
+                                onClick={() => handleEditActivity(activity)}
+                                title="Edit activity"
+                                disabled={editingActivity !== null}
+                              >
+                                ✏️
+                              </button>
+                              <button
+                                className="btn btn-delete-small"
+                                onClick={() => handleDeleteActivity(activity)}
+                                title="Delete activity"
+                                disabled={editingActivity !== null}
+                              >
+                                🗑️
+                              </button>
+                            </>
+                          )}
                         </td>
                       )}
                     </tr>

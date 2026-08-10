@@ -20,10 +20,12 @@ function ActivityForm({ onSubmit, trainers, currentTrainer }) {
   const [error, setError] = useState('');
   const [loadingActivities, setLoadingActivities] = useState(true);
   const [loadingExisting, setLoadingExisting] = useState(false);
+  const [frozenDates, setFrozenDates] = useState([]);
 
   // Fetch activity list on mount
   useEffect(() => {
     fetchActivityList();
+    fetchFrozenDates();
   }, [currentTrainer?.trainer_type]);
 
   // Update trainer name if it changes
@@ -69,6 +71,44 @@ function ActivityForm({ onSubmit, trainers, currentTrainer }) {
     } finally {
       setLoadingActivities(false);
     }
+  };
+
+  const fetchFrozenDates = async () => {
+    try {
+      const token = localStorage.getItem('trainerToken') || localStorage.getItem('adminToken');
+      if (!token) return;
+
+      const response = await fetch('/api/freeze/dates', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        setFrozenDates(result.data || []);
+      }
+    } catch (err) {
+      console.error('Error fetching frozen dates:', err);
+    }
+  };
+
+  const isFrozen = (date) => {
+    return frozenDates.some(freeze => {
+      const freezeValue = freeze['Date/Month'];
+      const freezeType = freeze['Freeze Type'];
+      
+      if (freezeType === 'Date' && freezeValue === date) {
+        return true;
+      }
+      
+      if (freezeType === 'Month') {
+        const monthPart = date.substring(0, 7);
+        return freezeValue === monthPart;
+      }
+      
+      return false;
+    });
   };
 
   const fetchExistingActivities = async () => {
@@ -509,7 +549,13 @@ function ActivityForm({ onSubmit, trainers, currentTrainer }) {
         {success && <div className="alert alert-success">{success}</div>}
         {error && <div className="alert alert-error">{error}</div>}
 
-        <form onSubmit={handleSubmit} className="activity-form">
+        {isFrozen(formData.date) && (
+          <div className="alert alert-frozen">
+            <span>🔒 This date is frozen and cannot be edited. Activities are locked for review.</span>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="activity-form" disabled={isFrozen(formData.date)}>
           <div className="trainer-info">
             <p>Logging as: <strong>{formData.trainer_name}</strong></p>
           </div>
@@ -520,6 +566,7 @@ function ActivityForm({ onSubmit, trainers, currentTrainer }) {
               selectedDate={formData.date}
               onChange={handleDateChange}
               trainerName={formData.trainer_name}
+              frozenDates={frozenDates}
             />
           </div>
 
@@ -664,9 +711,10 @@ function ActivityForm({ onSubmit, trainers, currentTrainer }) {
             <button 
               type="submit" 
               className="btn btn-primary"
-              disabled={submitting}
+              disabled={submitting || isFrozen(formData.date)}
+              title={isFrozen(formData.date) ? 'Cannot edit frozen dates' : 'Save activities'}
             >
-              {submitting ? 'Saving...' : 'Save Activities'}
+              {isFrozen(formData.date) ? '🔒 Date Frozen - Cannot Save' : (submitting ? 'Saving...' : 'Save Activities')}
             </button>
           )}
         </form>

@@ -422,6 +422,16 @@
   justify-content: center;
 }
 
+.actions-cell.frozen {
+  background: #fef3c7;
+}
+
+.frozen-indicator {
+  font-size: 1.2rem;
+  cursor: not-allowed;
+  title: "This date is frozen - no editing allowed";
+}
+
 .btn-edit-small,
 .btn-delete-small {
   padding: 0.5rem;
