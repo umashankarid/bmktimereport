@@ -1005,7 +1005,7 @@ def create_app():
     # Register volunteer for tournament
     @app.route('/api/tournaments/register', methods=['POST'])
     def register_tournament():
-        """Register a volunteer for a tournament with optional comments"""
+        """Register a volunteer for a tournament"""
         try:
             data = request.get_json()
             
@@ -1017,7 +1017,6 @@ def create_app():
             
             volunteer_name = data.get('volunteer_name')
             tournament_name = data.get('tournament_name')
-            comments = data.get('comments', '')
             
             if not volunteer_name or not tournament_name:
                 return jsonify({
@@ -1027,7 +1026,7 @@ def create_app():
             
             # Write to sheets
             sheets = get_sheets_manager()
-            result = sheets.register_volunteer(volunteer_name, tournament_name, comments)
+            result = sheets.register_volunteer(volunteer_name, tournament_name)
             
             # If successful, also update cache
             if result['success']:
@@ -1038,8 +1037,7 @@ def create_app():
                         'Volunteer Name': volunteer_name,
                         'Tournament Name': tournament_name,
                         'Registration Date': datetime.now().strftime('%Y-%m-%d'),
-                        'Status': 'Registered',
-                        'Comments': comments
+                        'Status': 'Registered'
                     }
                     cache.add_volunteer_registration(registration)
                     logger.info(f"✅ Volunteer registration added to cache")
