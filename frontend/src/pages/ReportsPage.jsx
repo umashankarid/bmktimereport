@@ -101,8 +101,21 @@ function ReportsPage({ currentTrainer = null }) {
       const freezeValue = freeze['Date/Month'];
       const freezeType = freeze['Freeze Type'];
       
-      if (freezeType === 'Date' && freezeValue === dateStr) {
-        return true;
+      if (freezeType === 'Date Range') {
+        // Parse range format: "2024-01-01 to 2024-01-31"
+        try {
+          const parts = freezeValue.split(' to ');
+          if (parts.length === 2) {
+            const startDate = parts[0].trim();
+            const endDate = parts[1].trim();
+            // Check if date falls within range
+            if (dateStr >= startDate && dateStr <= endDate) {
+              return true;
+            }
+          }
+        } catch (e) {
+          // If parsing fails, skip this freeze
+        }
       }
       
       if (freezeType === 'Month') {

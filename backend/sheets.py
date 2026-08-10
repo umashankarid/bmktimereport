@@ -2254,8 +2254,18 @@ class GoogleSheetsManager:
                 freeze_value = freeze.get('Date/Month', '')
                 freeze_type = freeze.get('Freeze Type', '')
                 
-                if freeze_type == 'Date' and freeze_value == date_str:
-                    return True
+                if freeze_type == 'Date Range':
+                    # Parse date range format: "2024-01-01 to 2024-01-31"
+                    try:
+                        parts = freeze_value.split(' to ')
+                        if len(parts) == 2:
+                            start_date = datetime.strptime(parts[0].strip(), '%Y-%m-%d')
+                            end_date = datetime.strptime(parts[1].strip(), '%Y-%m-%d')
+                            if start_date <= date_obj <= end_date:
+                                return True
+                    except:
+                        pass
+                
                 elif freeze_type == 'Month':
                     # Check if date is in the frozen month
                     try:

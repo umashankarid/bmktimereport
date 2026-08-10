@@ -8,8 +8,10 @@ function FreezeManagement() {
   const [messageType, setMessageType] = useState('');
 
   // Add freeze form
-  const [freezeType, setFreezeType] = useState('Date');
-  const [freezeValue, setFreezeValue] = useState('');
+  const [freezeType, setFreezeType] = useState('Date Range');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [freezeMonth, setFreezeMonth] = useState('');
   const [freezeReason, setFreezeReason] = useState('');
 
   useEffect(() => {
@@ -52,8 +54,32 @@ function FreezeManagement() {
   };
 
   const handleAddFreeze = async () => {
-    if (!freezeValue) {
-      setMessage('Please select a date or month');
+    let freezeValue = '';
+    
+    if (freezeType === 'Date Range') {
+      if (!startDate || !endDate) {
+        setMessage('Please select both start and end dates');
+        setMessageType('error');
+        return;
+      }
+      
+      // Validate that end date is after start date
+      if (new Date(startDate) > new Date(endDate)) {
+        setMessage('End date must be after start date');
+        setMessageType('error');
+        return;
+      }
+      
+      freezeValue = `${startDate} to ${endDate}`;
+    } else if (freezeType === 'Month') {
+      if (!freezeMonth) {
+        setMessage('Please select a month');
+        setMessageType('error');
+        return;
+      }
+      freezeValue = freezeMonth;
+    } else {
+      setMessage('Please select a freeze type');
       setMessageType('error');
       return;
     }
@@ -81,7 +107,9 @@ function FreezeManagement() {
       if (result.success) {
         setMessage(`✅ ${freezeType} frozen successfully`);
         setMessageType('success');
-        setFreezeValue('');
+        setStartDate('');
+        setEndDate('');
+        setFreezeMonth('');
         setFreezeReason('');
         fetchFrozenDates();
       } else {
@@ -162,22 +190,43 @@ function FreezeManagement() {
               onChange={(e) => setFreezeType(e.target.value)}
               disabled={loading}
             >
-              <option value="Date">🗓️ Single Date</option>
-              <option value="Month">📅 Entire Month</option>
+              <option value="Date Range">📅 Date Range</option>
+              <option value="Month">📆 Entire Month</option>
             </select>
           </div>
 
-          <div className="form-group">
-            <label>
-              {freezeType === 'Date' ? 'Date:' : 'Month:'}
-            </label>
-            <input
-              type={freezeType === 'Date' ? 'date' : 'month'}
-              value={freezeValue}
-              onChange={(e) => setFreezeValue(e.target.value)}
-              disabled={loading}
-            />
-          </div>
+          {freezeType === 'Date Range' ? (
+            <>
+              <div className="form-group">
+                <label>Start Date:</label>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  disabled={loading}
+                />
+              </div>
+              <div className="form-group">
+                <label>End Date:</label>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  disabled={loading}
+                />
+              </div>
+            </>
+          ) : (
+            <div className="form-group">
+              <label>Month:</label>
+              <input
+                type="month"
+                value={freezeMonth}
+                onChange={(e) => setFreezeMonth(e.target.value)}
+                disabled={loading}
+              />
+            </div>
+          )}
         </div>
 
         <div className="form-group">
@@ -227,7 +276,7 @@ function FreezeManagement() {
                 {frozenEntries.map((entry, idx) => (
                   <tr key={idx} className={`freeze-${entry['Freeze Type'].toLowerCase()}`}>
                     <td className="type-cell">
-                      {entry['Freeze Type'] === 'Date' ? '🗓️ Date' : '📅 Month'}
+                      {entry['Freeze Type'] === 'Date Range' ? '📅 Date Range' : '📆 Month'}
                     </td>
                     <td className="date-cell">
                       <strong>{entry['Date/Month']}</strong>
@@ -267,6 +316,7 @@ function FreezeManagement() {
           <li>✅ Frozen dates show as 🟡 yellow in trainer calendar</li>
           <li>✅ Activities are read-only for end-of-month review</li>
           <li>✅ Reports include frozen date indicators</li>
+          <li>✅ Date ranges freeze all dates from start to end (inclusive)</li>
         </ul>
       </div>
     </div>
