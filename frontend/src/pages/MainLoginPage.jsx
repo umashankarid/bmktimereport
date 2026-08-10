@@ -41,8 +41,9 @@ function MainLoginPage({ onAdminLogin, onTrainerLogin }) {
       return;
     }
 
-    // Check if admin
-    if (username.toLowerCase() === 'admin') {
+    // Check if admin (admin, andi, or sugi)
+    const adminUsers = ['admin', 'andi', 'sugi'];
+    if (adminUsers.includes(username.toLowerCase())) {
       const result = await onAdminLogin(username, password);
       if (!result.success) {
         setError(result.message);
@@ -263,7 +264,7 @@ function MainLoginPage({ onAdminLogin, onTrainerLogin }) {
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="Enter your username (or 'admin')"
+                placeholder="Enter your username (admin/andi/sugi for admins)"
                 disabled={loading}
               />
             </div>
