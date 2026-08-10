@@ -1253,6 +1253,131 @@ def create_app():
                 'success': False,
                 'message': f'Error removing volunteer: {str(e)}'
             }), 500
+
+    # Freeze Management endpoints
+    @app.route('/api/freeze/dates', methods=['GET'])
+    @verify_token
+    def get_frozen_dates():
+        """Get all frozen dates and months"""
+        try:
+            logger.warning("📝 GET /api/freeze/dates - Fetching frozen dates")
+            sheets = get_sheets_manager()
+            result = sheets.get_frozen_dates()
+            
+            if result['success']:
+                count = len(result.get('data', []))
+                logger.warning(f"✅ Retrieved {count} frozen entries")
+                return jsonify({
+                    'success': True,
+                    'data': result['data'],
+                    'count': count
+                }), 200
+            else:
+                logger.error(f"❌ Error fetching frozen dates: {result.get('message')}")
+                return jsonify({
+                    'success': False,
+                    'message': result.get('message', 'Failed to fetch frozen dates')
+                }), 400
+        except Exception as e:
+            logger.error(f"❌ Exception in get_frozen_dates: {str(e)}", exc_info=True)
+            return jsonify({
+                'success': False,
+                'message': f'Error fetching frozen dates: {str(e)}'
+            }), 500
+
+    @app.route('/api/freeze/add', methods=['POST'])
+    @verify_token
+    def add_freeze():
+        """Add a freeze for a date or month"""
+        try:
+            logger.warning("📝 POST /api/freeze/add - Adding freeze")
+            data = request.get_json()
+            
+            if not data:
+                return jsonify({'success': False, 'message': 'No data provided'}), 400
+            
+            freeze_type = data.get('freeze_type', '').strip()
+            date_or_month = data.get('date_or_month', '').strip()
+            reason = data.get('reason', '').strip()
+            
+            if not freeze_type or not date_or_month:
+                return jsonify({'success': False, 'message': 'Freeze type and date/month required'}), 400
+            
+            if freeze_type not in ['Date', 'Month']:
+                return jsonify({'success': False, 'message': 'Invalid freeze type'}), 400
+            
+            sheets = get_sheets_manager()
+            result = sheets.add_freeze(freeze_type, date_or_month, reason, 'admin')
+            
+            if result['success']:
+                logger.warning(f"✅ Added freeze: {freeze_type} - {date_or_month}")
+                return jsonify({'success': True, 'message': result['message']}), 200
+            else:
+                logger.error(f"❌ Failed to add freeze: {result.get('message')}")
+                return jsonify({
+                    'success': False,
+                    'message': result.get('message', 'Failed to add freeze')
+                }), 400
+        except Exception as e:
+            logger.error(f"❌ Exception in add_freeze: {str(e)}", exc_info=True)
+            return jsonify({
+                'success': False,
+                'message': f'Error adding freeze: {str(e)}'
+            }), 500
+
+    @app.route('/api/freeze/remove', methods=['POST'])
+    @verify_token
+    def remove_freeze():
+        """Remove a freeze"""
+        try:
+            logger.warning("📝 POST /api/freeze/remove - Removing freeze")
+            data = request.get_json()
+            
+            if not data:
+                return jsonify({'success': False, 'message': 'No data provided'}), 400
+            
+            freeze_type = data.get('freeze_type', '').strip()
+            date_or_month = data.get('date_or_month', '').strip()
+            
+            if not freeze_type or not date_or_month:
+                return jsonify({'success': False, 'message': 'Freeze type and date/month required'}), 400
+            
+            sheets = get_sheets_manager()
+            result = sheets.remove_freeze(freeze_type, date_or_month)
+            
+            if result['success']:
+                logger.warning(f"✅ Removed freeze: {freeze_type} - {date_or_month}")
+                return jsonify({'success': True, 'message': result['message']}), 200
+            else:
+                logger.error(f"❌ Failed to remove freeze: {result.get('message')}")
+                return jsonify({
+                    'success': False,
+                    'message': result.get('message', 'Failed to remove freeze')
+                }), 400
+        except Exception as e:
+            logger.error(f"❌ Exception in remove_freeze: {str(e)}", exc_info=True)
+            return jsonify({
+                'success': False,
+                'message': f'Error removing freeze: {str(e)}'
+            }), 500
+
+    @app.route('/api/freeze/check/<date>', methods=['GET'])
+    def check_if_frozen(date):
+        """Check if a date is frozen"""
+        try:
+            sheets = get_sheets_manager()
+            is_frozen = sheets.is_date_frozen(date)
+            return jsonify({
+                'success': True,
+                'date': date,
+                'is_frozen': is_frozen
+            }), 200
+        except Exception as e:
+            logger.error(f"Error checking if date is frozen: {e}")
+            return jsonify({
+                'success': False,
+                'message': str(e)
+            }), 500
     
     # Error handlers
     @app.errorhandler(404)

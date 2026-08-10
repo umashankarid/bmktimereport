@@ -7,6 +7,7 @@ import QRCodePrinter from '../components/QRCodePrinter';
 import ManageTrainers from '../components/ManageTrainers';
 import ManageTournaments from '../components/ManageTournaments';
 import ManageVolunteers from '../components/ManageVolunteers';
+import FreezeManagement from '../components/FreezeManagement';
 import TimeReportStatus from '../components/TimeReportStatus';
 
 function AdminDashboard({ onLogout }) {
@@ -209,6 +210,12 @@ function AdminDashboard({ onLogout }) {
           🙋 Manage Volunteers
         </button>
         <button
+          className={`tab-btn ${activeTab === 'freeze' ? 'active' : ''}`}
+          onClick={() => setActiveTab('freeze')}
+        >
+          🔒 Freeze Management
+        </button>
+        <button
           className={`tab-btn ${activeTab === 'qrcodes' ? 'active' : ''}`}
           onClick={() => setActiveTab('qrcodes')}
         >
@@ -228,6 +235,9 @@ function AdminDashboard({ onLogout }) {
         )}
         {activeTab === 'volunteers' && (
           <ManageVolunteers />
+        )}
+        {activeTab === 'freeze' && (
+          <FreezeManagement />
         )}
         {activeTab === 'trainers' && (
           <ManageTrainers />
