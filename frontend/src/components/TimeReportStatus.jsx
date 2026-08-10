@@ -330,10 +330,15 @@ function TimeReportStatus({ trainerType = 'Assistant Trainer' }) {
                     <tbody>
                       {sortedDates.map((date, dateIdx) => (
                         <React.Fragment key={date}>
+                          <tr className="day-header-row">
+                            <td colSpan="7" className="day-header-cell">
+                              📅 {getDayName(date)} - {date}
+                            </td>
+                          </tr>
                           {trainerActivities[date].map((activity, actIdx) => (
                             <tr key={`${date}-${actIdx}`} className={`activity-row ${dateIdx % 2 === 0 ? 'even-date' : 'odd-date'}`}>
-                              <td className="day-column">{getDayName(date)}</td>
-                              <td className="date-column">{date}</td>
+                              <td className="day-column">-</td>
+                              <td className="date-column">-</td>
                               <td className="activity-column">{activity['Activity'] || '-'}</td>
                               <td className="time-column">{activity['Start Time'] || '-'}</td>
                               <td className="time-column">{activity['End Time'] || '-'}</td>

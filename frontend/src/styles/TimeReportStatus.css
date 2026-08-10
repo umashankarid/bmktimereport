@@ -509,19 +509,35 @@
 }
 
 .detailed-activities-table tbody tr.odd-date {
-  background-color: #f0f4ff;
+  background-color: #f8fafb;
 }
 
 .detailed-activities-table tbody tr.even-date:hover {
-  background-color: #f9f9f9;
+  background-color: #f5f7fa;
 }
 
 .detailed-activities-table tbody tr.odd-date:hover {
-  background-color: #e8f0ff;
+  background-color: #f0f3f7;
+}
+
+.day-header-row {
+  background-color: #e8eef5 !important;
+}
+
+.day-header-cell {
+  font-weight: 700;
+  color: #4a5c7a;
+  padding: 0.85rem 1rem !important;
+  font-size: 0.95rem;
+  letter-spacing: 0.3px;
+}
+
+.day-header-row:hover {
+  background-color: #dfe8f0 !important;
 }
 
 .detailed-activities-table tbody tr.total-row {
-  background-color: #f5f7ff;
+  background-color: #e8eef5;
   font-weight: 600;
   border-top: 2px solid #667eea;
   border-bottom: 2px solid #667eea;
