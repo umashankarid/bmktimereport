@@ -75,6 +75,15 @@ function ActivitySummaryTable({ trainerFilter, selectedMonth, trainerType = 'Ass
           activitySubtotals[key] += (act.hours || 0);
         });
 
+        // Sort each group by date (descending - newest first)
+        for (const actType in grouped) {
+          grouped[actType].sort((a, b) => {
+            const dateA = new Date(a.Date || '');
+            const dateB = new Date(b.Date || '');
+            return dateB - dateA; // Descending order (newest first)
+          });
+        }
+
         // Flatten with merge info and add subtotal rows
         const flatActivities = [];
         for (const [actType, acts] of Object.entries(grouped)) {
