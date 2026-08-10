@@ -75,12 +75,12 @@ function ActivitySummaryTable({ trainerFilter, selectedMonth, trainerType = 'Ass
           activitySubtotals[key] += (act.hours || 0);
         });
 
-        // Sort each group by date (descending - newest first)
+        // Sort each group by date (ascending - oldest first)
         for (const actType in grouped) {
           grouped[actType].sort((a, b) => {
             const dateA = new Date(a.Date || '');
             const dateB = new Date(b.Date || '');
-            return dateB - dateA; // Descending order (newest first)
+            return dateA - dateB; // Ascending order (oldest first)
           });
         }
 
