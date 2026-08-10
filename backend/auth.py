@@ -573,8 +573,8 @@ def register_auth_routes(app, sheets_manager):
                     'message': 'No data provided'
                 }), 400
             
-            trainer_name = data.get('trainer_name')
-            password = data.get('password')
+            trainer_name = data.get('trainer_name', '').strip()
+            password = data.get('password', '').strip()
             
             logger.warning(f"📝 Extracted values:")
             logger.warning(f"   trainer_name: '{trainer_name}' (type: {type(trainer_name).__name__}, len: {len(trainer_name) if trainer_name else 'None'})")
