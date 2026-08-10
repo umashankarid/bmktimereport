@@ -16,6 +16,7 @@ function PaymentManagement() {
   const [unpaidActivities, setUnpaidActivities] = useState([]);
   const [selectedJunior, setSelectedJunior] = useState('');
   const [juniors, setJuniors] = useState([]);
+  const [selectedDate, setSelectedDate] = useState(''); // No default date
   
   // General State
   const [loading, setLoading] = useState(false);
@@ -27,12 +28,12 @@ function PaymentManagement() {
     fetchJuniors();
   }, []);
 
-  // Fetch unpaid activities when selected junior changes
+  // Fetch unpaid activities when selected junior or date changes
   useEffect(() => {
     if (selectedJunior) {
       fetchUnpaidActivities(selectedJunior);
     }
-  }, [selectedJunior]);
+  }, [selectedJunior, selectedDate]);
 
   // ==================== ASSISTANT TRAINER FUNCTIONS ====================
   
@@ -202,7 +203,13 @@ function PaymentManagement() {
       const result = await response.json();
       if (result.success && result.data) {
         // Filter only unpaid activities
-        const unpaid = result.data.filter(a => !a.Paid || a.Paid === 'No' || a.Paid === '');
+        let unpaid = result.data.filter(a => !a.Paid || a.Paid === 'No' || a.Paid === '');
+        
+        // Filter by date if selected
+        if (selectedDate) {
+          unpaid = unpaid.filter(a => a.Date === selectedDate);
+        }
+        
         setUnpaidActivities(unpaid);
       }
     } catch (err) {
@@ -432,20 +439,41 @@ function PaymentManagement() {
       {activeTab === 'juniors' && (
         <div className="tab-content">
           <div className="junior-section">
-            <div className="junior-selector">
-              <label>Select Junior Trainer:</label>
-              <select
-                value={selectedJunior}
-                onChange={handleJuniorChange}
-                disabled={loading || juniors.length === 0}
-              >
-                <option value="">-- Select a junior trainer --</option>
-                {juniors.map((junior) => (
-                  <option key={junior.name} value={junior.name}>
-                    {junior.name}
-                  </option>
-                ))}
-              </select>
+            <div className="junior-selector-row">
+              <div className="junior-selector">
+                <label>Select Junior Trainer:</label>
+                <select
+                  value={selectedJunior}
+                  onChange={handleJuniorChange}
+                  disabled={loading || juniors.length === 0}
+                >
+                  <option value="">-- Select a junior trainer --</option>
+                  {juniors.map((junior) => (
+                    <option key={junior.name} value={junior.name}>
+                      {junior.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="date-filter">
+                <label>Filter by Date (optional):</label>
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  disabled={loading || !selectedJunior}
+                />
+                {selectedDate && (
+                  <button
+                    className="btn-clear-date"
+                    onClick={() => setSelectedDate('')}
+                    title="Clear date filter"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
             </div>
 
             {juniors.length === 0 ? (
@@ -454,11 +482,11 @@ function PaymentManagement() {
               </div>
             ) : unpaidActivities.length === 0 ? (
               <div className="empty-state">
-                <p>✅ All activities for {selectedJunior} have been paid!</p>
+                <p>✅ {selectedJunior ? `All activities for ${selectedJunior} have been paid!` : 'Select a junior trainer to view unpaid activities'}</p>
               </div>
             ) : (
               <div className="unpaid-activities">
-                <h3>💰 Unpaid Activities for {selectedJunior}</h3>
+                <h3>💰 Unpaid Activities {selectedDate && `on ${selectedDate}`}</h3>
                 <p className="tab-description">{unpaidActivities.length} unpaid activities</p>
                 
                 <div className="activities-table-container">
@@ -469,30 +497,51 @@ function PaymentManagement() {
                         <th>Activity</th>
                         <th>Start Time</th>
                         <th>End Time</th>
+                        <th>Duration</th>
                         <th>Notes</th>
                         <th>Action</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {unpaidActivities.map((activity, idx) => (
-                        <tr key={idx}>
-                          <td>{activity.Date}</td>
-                          <td>{activity.Activity}</td>
-                          <td>{activity['Start Time']}</td>
-                          <td>{activity['End Time']}</td>
-                          <td>{activity.Note || '-'}</td>
-                          <td className="action-cell">
-                            <button
-                              className="btn-mark-paid"
-                              onClick={() => handleMarkAsPaid(activity)}
-                              disabled={loading}
-                              title="Mark as paid and freeze"
-                            >
-                              💳
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
+                      {unpaidActivities.map((activity, idx) => {
+                        // Calculate duration
+                        const startTime = activity['Start Time'];
+                        const endTime = activity['End Time'];
+                        let duration = '-';
+                        if (startTime && endTime) {
+                          try {
+                            const start = new Date(`2000-01-01T${startTime}`);
+                            const end = new Date(`2000-01-01T${endTime}`);
+                            const diffMs = end - start;
+                            const diffHours = Math.floor(diffMs / 3600000);
+                            const diffMins = Math.floor((diffMs % 3600000) / 60000);
+                            duration = diffHours > 0 ? `${diffHours}h ${diffMins}m` : `${diffMins}m`;
+                          } catch (e) {
+                            // Fallback if time parsing fails
+                          }
+                        }
+                        
+                        return (
+                          <tr key={idx}>
+                            <td>{activity.Date}</td>
+                            <td>{activity.Activity}</td>
+                            <td>{startTime}</td>
+                            <td>{endTime}</td>
+                            <td className="duration-cell">{duration}</td>
+                            <td>{activity.Note || '-'}</td>
+                            <td className="action-cell">
+                              <button
+                                className="btn-mark-paid"
+                                onClick={() => handleMarkAsPaid(activity)}
+                                disabled={loading}
+                                title="Mark as paid and freeze"
+                              >
+                                💳
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
