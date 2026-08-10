@@ -301,6 +301,17 @@ function TimeReportStatus({ trainerType = 'Assistant Trainer' }) {
                 return null; // Skip trainers with no activities
               }
               
+              // Calculate total hours for this trainer
+              let totalHours = 0;
+              sortedDates.forEach(date => {
+                trainerActivities[date].forEach(activity => {
+                  const duration = calculateDuration(activity['Start Time'], activity['End Time']);
+                  if (duration !== '-') {
+                    totalHours += parseFloat(duration);
+                  }
+                });
+              });
+              
               return (
                 <div key={trainerName} className="trainer-activities-section">
                   <h4 className="trainer-section-title">👤 {trainerName}</h4>
@@ -317,19 +328,26 @@ function TimeReportStatus({ trainerType = 'Assistant Trainer' }) {
                       </tr>
                     </thead>
                     <tbody>
-                      {sortedDates.map(date => (
-                        trainerActivities[date].map((activity, idx) => (
-                          <tr key={`${date}-${idx}`}>
-                            <td className="day-column">{getDayName(date)}</td>
-                            <td className="date-column">{date}</td>
-                            <td className="activity-column">{activity['Activity'] || '-'}</td>
-                            <td className="time-column">{activity['Start Time'] || '-'}</td>
-                            <td className="time-column">{activity['End Time'] || '-'}</td>
-                            <td className="duration-column">{calculateDuration(activity['Start Time'], activity['End Time'])}</td>
-                            <td className="note-column">{activity['Note'] || '-'}</td>
-                          </tr>
-                        ))
+                      {sortedDates.map((date, dateIdx) => (
+                        <React.Fragment key={date}>
+                          {trainerActivities[date].map((activity, actIdx) => (
+                            <tr key={`${date}-${actIdx}`} className={`activity-row ${dateIdx % 2 === 0 ? 'even-date' : 'odd-date'}`}>
+                              <td className="day-column">{getDayName(date)}</td>
+                              <td className="date-column">{date}</td>
+                              <td className="activity-column">{activity['Activity'] || '-'}</td>
+                              <td className="time-column">{activity['Start Time'] || '-'}</td>
+                              <td className="time-column">{activity['End Time'] || '-'}</td>
+                              <td className="duration-column">{calculateDuration(activity['Start Time'], activity['End Time'])}</td>
+                              <td className="note-column">{activity['Note'] || '-'}</td>
+                            </tr>
+                          ))}
+                        </React.Fragment>
                       ))}
+                      <tr className="total-row">
+                        <td colSpan="5" className="total-label">Total Hours:</td>
+                        <td className="total-hours">{totalHours.toFixed(1)}h</td>
+                        <td></td>
+                      </tr>
                     </tbody>
                   </table>
                 </div>

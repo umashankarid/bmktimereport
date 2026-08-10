@@ -467,6 +467,7 @@
   width: 100%;
   border-collapse: collapse;
   background: white;
+  border: 2px solid #e0e0e0;
 }
 
 .detailed-activities-table thead {
@@ -478,24 +479,66 @@
   text-align: left;
   font-weight: 600;
   color: #333;
-  border-bottom: 2px solid #e0e0e0;
+  border-bottom: 2px solid #667eea;
   font-size: 0.9rem;
   white-space: nowrap;
+  border-right: 1px solid #e0e0e0;
+}
+
+.detailed-activities-table th:last-child {
+  border-right: none;
 }
 
 .detailed-activities-table td {
   padding: 0.75rem 1rem;
-  border-bottom: 1px solid #e0e0e0;
   color: #666;
   font-size: 0.9rem;
+  border-right: 1px solid #e0e0e0;
 }
 
-.detailed-activities-table tbody tr:hover {
-  background: #f9f9f9;
+.detailed-activities-table td:last-child {
+  border-right: none;
 }
 
-.detailed-activities-table tbody tr:last-child td {
-  border-bottom: none;
+.detailed-activities-table tbody tr {
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.detailed-activities-table tbody tr.even-date {
+  background-color: #ffffff;
+}
+
+.detailed-activities-table tbody tr.odd-date {
+  background-color: #f0f4ff;
+}
+
+.detailed-activities-table tbody tr.even-date:hover {
+  background-color: #f9f9f9;
+}
+
+.detailed-activities-table tbody tr.odd-date:hover {
+  background-color: #e8f0ff;
+}
+
+.detailed-activities-table tbody tr.total-row {
+  background-color: #f5f7ff;
+  font-weight: 600;
+  border-top: 2px solid #667eea;
+  border-bottom: 2px solid #667eea;
+}
+
+.total-label {
+  text-align: right;
+  color: #333;
+  font-weight: 600;
+  padding-right: 1rem;
+}
+
+.total-hours {
+  text-align: center;
+  color: #667eea;
+  font-weight: 700;
+  font-size: 1rem;
 }
 
 .day-column {
