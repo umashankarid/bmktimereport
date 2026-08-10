@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import '../styles/AdminDashboard.css';
 import ActivityHistoryView from '../components/ActivityHistoryView';
 import ActivitySummaryTable from '../components/ActivitySummaryTable';
+import QRCodePrinter from '../components/QRCodePrinter';
 import ManageTrainers from '../components/ManageTrainers';
 import ManageTournaments from '../components/ManageTournaments';
 import TimeReportStatus from '../components/TimeReportStatus';
@@ -200,6 +201,12 @@ function AdminDashboard({ onLogout }) {
           🏸 Manage Tournaments
         </button>
         <button
+          className={`tab-btn ${activeTab === 'qrcodes' ? 'active' : ''}`}
+          onClick={() => setActiveTab('qrcodes')}
+        >
+          📱 QR Codes
+        </button>
+        <button
           className={`tab-btn ${activeTab === 'config' ? 'active' : ''}`}
           onClick={() => setActiveTab('config')}
         >
@@ -213,6 +220,9 @@ function AdminDashboard({ onLogout }) {
         )}
         {activeTab === 'trainers' && (
           <ManageTrainers />
+        )}
+        {activeTab === 'qrcodes' && (
+          <QRCodePrinter />
         )}
         {activeTab === 'config' && (
           <div className="config-section">

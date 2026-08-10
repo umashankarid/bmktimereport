@@ -1,0 +1,226 @@
+/* QR Code Printer Styles */
+.qr-code-printer-container {
+  background: white;
+  border-radius: 8px;
+  padding: 2rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.qr-printer-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.qr-printer-header h2 {
+  margin: 0 0 0.5rem 0;
+  color: #333;
+  font-size: 1.8rem;
+}
+
+.qr-printer-header p {
+  color: #666;
+  font-size: 1rem;
+  margin: 0;
+}
+
+.btn-print-page {
+  background: #667eea;
+  color: white;
+  border: none;
+  padding: 0.85rem 2rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 1rem;
+  margin: 0 auto 2rem;
+  display: block;
+  transition: all 0.3s ease;
+}
+
+.btn-print-page:hover {
+  background: #5568d3;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.btn-print-page:active {
+  transform: translateY(0);
+}
+
+.qr-codes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
+  margin-bottom: 2rem;
+  page-break-inside: avoid;
+}
+
+.qr-code-card {
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 2rem;
+  text-align: center;
+  background: #f9f9f9;
+  transition: all 0.3s ease;
+  page-break-inside: avoid;
+}
+
+.qr-code-card:hover {
+  border-color: #667eea;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+}
+
+.qr-code-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 1.5rem;
+}
+
+.qr-code-wrapper {
+  background: white;
+  padding: 1rem;
+  border-radius: 8px;
+  display: inline-block;
+  margin-bottom: 1rem;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+.qr-code-wrapper canvas {
+  display: block;
+  margin: 0 auto;
+}
+
+.qr-code-url {
+  background: #f0f0f0;
+  padding: 0.75rem;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+  font-family: 'Courier New', monospace;
+  word-break: break-all;
+}
+
+.qr-code-url small {
+  color: #666;
+  font-size: 0.8rem;
+}
+
+.qr-code-instructions {
+  color: #667eea;
+  font-weight: 600;
+  font-size: 0.95rem;
+  margin-top: 1rem;
+}
+
+.print-instructions {
+  background: #f5f7ff;
+  border: 1px solid #667eea;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-top: 2rem;
+}
+
+.print-instructions h3 {
+  margin: 0 0 1rem 0;
+  color: #333;
+  font-size: 1.1rem;
+}
+
+.print-instructions ul {
+  margin: 0;
+  padding-left: 1.5rem;
+  color: #666;
+  line-height: 1.8;
+}
+
+.print-instructions li {
+  margin-bottom: 0.5rem;
+}
+
+/* Print Styles */
+@media print {
+  body {
+    background: white;
+  }
+
+  .qr-code-printer-container {
+    box-shadow: none;
+    padding: 0;
+  }
+
+  .qr-printer-header {
+    margin-bottom: 1.5rem;
+    page-break-after: avoid;
+  }
+
+  .btn-print-page {
+    display: none;
+  }
+
+  .qr-codes-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .qr-code-card {
+    border: 1px solid #333;
+    background: white;
+    padding: 1.5rem;
+    page-break-inside: avoid;
+  }
+
+  .qr-code-title {
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+  }
+
+  .qr-code-wrapper {
+    padding: 0.5rem;
+    box-shadow: none;
+    border: 1px solid #ccc;
+  }
+
+  .print-instructions {
+    display: none;
+  }
+}
+
+/* Tablet */
+@media (max-width: 768px) {
+  .qr-codes-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .qr-code-card {
+    padding: 1.5rem;
+  }
+
+  .qr-code-wrapper {
+    padding: 0.75rem;
+  }
+
+  @media print {
+    .qr-codes-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .qr-code-card {
+      padding: 1rem;
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .qr-code-printer-container {
+    padding: 1rem;
+  }
+
+  .qr-code-title {
+    font-size: 1.1rem;
+  }
+
+  .qr-code-wrapper {
+    padding: 0.5rem;
+  }
+}
