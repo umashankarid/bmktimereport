@@ -12,9 +12,12 @@ logger = logging.getLogger(__name__)
 
 SECRET_KEY = os.getenv('SECRET_KEY', 'dev-secret-key')
 
-# Demo admin credentials (in production, use database)
+# Demo admin credentials - default users (in production, use database)
+# These are fallback credentials. If user changes password, it gets stored in the Login sheet
 ADMIN_CREDENTIALS = {
-    'admin': 'password123'  # Username: admin, Password: password123
+    'admin': {'password': 'password123', 'type': 'Admin'},
+    'andi': {'password': 'komet123', 'type': 'Admin'},
+    'sugi': {'password': 'komet123', 'type': 'Admin'}
 }
 
 def generate_token(admin_data):
@@ -124,16 +127,20 @@ def register_auth_routes(app, sheets_manager):
                         logger.warning(f"⚠️  No password hash for user: {user_name}")
             
             # If not found in sheet, try hardcoded admin credentials (fallback)
-            if username in ADMIN_CREDENTIALS and ADMIN_CREDENTIALS[username] == password:
-                admin_data = {'username': username, 'type': 'admin'}
-                token = generate_token(admin_data)
-                logger.warning(f"✅ Fallback admin login: {username}")
-                
-                return jsonify({
-                    'success': True,
-                    'token': token,
-                    'admin': admin_data
-                }), 200
+            if username in ADMIN_CREDENTIALS:
+                cred = ADMIN_CREDENTIALS[username]
+                if cred['password'] == password:
+                    admin_data = {'username': username, 'type': cred['type']}
+                    token = generate_token(admin_data)
+                    logger.warning(f"✅ Fallback login for {cred['type']}: {username}")
+                    
+                    return jsonify({
+                        'success': True,
+                        'token': token,
+                        'admin': admin_data
+                    }), 200
+                else:
+                    logger.warning(f"❌ Invalid password for fallback user: {username}")
             
             logger.warning(f"❌ Login failed for username: {username}")
             return jsonify({
@@ -204,16 +211,48 @@ def register_auth_routes(app, sheets_manager):
                                 'message': 'Current password is incorrect'
                             }), 401
                     else:
+                        # User exists in sheet but no password hash yet
+                        # This shouldn't happen, but treat as error
                         return jsonify({
                             'success': False,
                             'message': 'User password not configured'
                         }), 400
             
+            # If user not found in sheet, check fallback credentials
             if not user_row:
-                return jsonify({
-                    'success': False,
-                    'message': 'User not found'
-                }), 404
+                if username in ADMIN_CREDENTIALS:
+                    cred = ADMIN_CREDENTIALS[username]
+                    if cred['password'] == old_password:
+                        # User is using fallback credentials
+                        # Need to add them to the sheet first
+                        from datetime import datetime
+                        
+                        created_date = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                        new_row = [
+                            username,      # Trainer Name
+                            '',            # Email
+                            '',            # Phone
+                            cred['type'],  # Trainer Type (Admin)
+                            '',            # Photo
+                            '',            # Password Hash (will be set below)
+                            '',            # Salt (will be set below)
+                            created_date   # Created Date
+                        ]
+                        
+                        login_sheet.append_row(new_row)
+                        # Get the new row number (should be len + 2 for header + 1)
+                        user_row = len(all_users) + 2
+                        logger.warning(f"✅ Created sheet entry for user: {username}")
+                    else:
+                        return jsonify({
+                            'success': False,
+                            'message': 'Current password is incorrect'
+                        }), 401
+                else:
+                    return jsonify({
+                        'success': False,
+                        'message': 'User not found'
+                    }), 404
             
             # Hash new password
             new_hash, new_salt = TrainerAuthManager.hash_password(new_password)
