@@ -3,7 +3,7 @@ from flask_cors import CORS
 from config import Config
 from sheets import get_sheets_manager
 from cache import get_data_cache
-from auth import register_auth_routes
+from auth import register_auth_routes, verify_token
 import os
 import sys
 
@@ -1124,7 +1124,7 @@ def create_app():
 
     # Get all volunteers (for admin management)
     @app.route('/api/volunteers/list', methods=['GET'])
-    @require_admin
+    @verify_token
     def get_all_volunteers():
         """Get list of all unique volunteers"""
         try:
@@ -1150,7 +1150,7 @@ def create_app():
 
     # Update volunteer
     @app.route('/api/volunteers/update', methods=['POST'])
-    @require_admin
+    @verify_token
     def update_volunteer():
         """Update volunteer details"""
         try:
@@ -1195,7 +1195,7 @@ def create_app():
 
     # Remove volunteer
     @app.route('/api/volunteers/remove', methods=['POST'])
-    @require_admin
+    @verify_token
     def remove_volunteer():
         """Remove volunteer from registrations"""
         try:
