@@ -1,5 +1,6 @@
 import os
 import json
+import os
 from datetime import datetime, timedelta
 from functools import wraps
 from flask import request, jsonify
@@ -59,7 +60,7 @@ def register_auth_routes(app, sheets_manager):
 
     @app.route('/api/auth/login', methods=['POST'])
     def login():
-        """Admin login endpoint with fixed credentials"""
+        """Admin and trainer login endpoint"""
         try:
             data = request.get_json()
             
@@ -78,27 +79,161 @@ def register_auth_routes(app, sheets_manager):
                     'message': 'Username and password required'
                 }), 400
 
-            # Verify admin credentials (fixed in backend)
-            if username not in ADMIN_CREDENTIALS or ADMIN_CREDENTIALS[username] != password:
+            # First try admin login from Login sheet
+            try:
+                from trainer_auth import TrainerAuthManager
+            except ImportError:
+                from backend.trainer_auth import TrainerAuthManager
+            
+            login_sheet = TrainerAuthManager.get_login_sheet()
+            all_users = login_sheet.get_all_records()
+            
+            # Look for user in Login sheet
+            for user in all_users:
+                user_name = user.get('Trainer Name', '').strip()
+                if user_name.lower() == username.lower():
+                    user_type = user.get('Trainer Type', 'Assistant Trainer')
+                    stored_hash = user.get('Password Hash', '')
+                    salt = user.get('Salt', '')
+                    
+                    # Verify password
+                    if stored_hash and salt:
+                        if TrainerAuthManager.verify_password(stored_hash, password, salt):
+                            # Generate token
+                            user_data = {
+                                'username': user_name,
+                                'type': user_type,
+                                'email': user.get('Email', '')
+                            }
+                            token = generate_token(user_data)
+                            
+                            logger.warning(f"✅ Successful login for {user_type}: {user_name}")
+                            
+                            return jsonify({
+                                'success': True,
+                                'token': token,
+                                'admin': user_data
+                            }), 200
+                        else:
+                            logger.warning(f"❌ Invalid password for user: {user_name}")
+                            return jsonify({
+                                'success': False,
+                                'message': 'Invalid username or password'
+                            }), 401
+                    else:
+                        logger.warning(f"⚠️  No password hash for user: {user_name}")
+            
+            # If not found in sheet, try hardcoded admin credentials (fallback)
+            if username in ADMIN_CREDENTIALS and ADMIN_CREDENTIALS[username] == password:
+                admin_data = {'username': username, 'type': 'admin'}
+                token = generate_token(admin_data)
+                logger.warning(f"✅ Fallback admin login: {username}")
+                
                 return jsonify({
-                    'success': False,
-                    'message': 'Invalid username or password'
-                }), 401
-
-            # Generate token
-            admin_data = {'username': username, 'type': 'admin'}
-            token = generate_token(admin_data)
-
+                    'success': True,
+                    'token': token,
+                    'admin': admin_data
+                }), 200
+            
+            logger.warning(f"❌ Login failed for username: {username}")
             return jsonify({
-                'success': True,
-                'token': token,
-                'admin': admin_data
-            }), 200
+                'success': False,
+                'message': 'Invalid username or password'
+            }), 401
 
         except Exception as e:
+            logger.error(f"❌ Login error: {str(e)}", exc_info=True)
             return jsonify({
                 'success': False,
                 'message': f'Login error: {str(e)}'
+            }), 500
+
+    @app.route('/api/auth/change-password', methods=['POST'])
+    @verify_token
+    def change_password():
+        """Change password for admin or trainer"""
+        try:
+            data = request.get_json()
+            
+            if not data:
+                return jsonify({
+                    'success': False,
+                    'message': 'No data provided'
+                }), 400
+            
+            username = request.admin.get('username')
+            old_password = data.get('old_password', '').strip()
+            new_password = data.get('new_password', '').strip()
+            
+            if not old_password or not new_password:
+                return jsonify({
+                    'success': False,
+                    'message': 'Old and new passwords required'
+                }), 400
+            
+            if len(new_password) < 6:
+                return jsonify({
+                    'success': False,
+                    'message': 'New password must be at least 6 characters'
+                }), 400
+            
+            # Get trainer auth manager
+            try:
+                from trainer_auth import TrainerAuthManager
+            except ImportError:
+                from backend.trainer_auth import TrainerAuthManager
+            
+            login_sheet = TrainerAuthManager.get_login_sheet()
+            all_users = login_sheet.get_all_records()
+            
+            # Find user and verify old password
+            user_row = None
+            for idx, user in enumerate(all_users, start=2):
+                if user.get('Trainer Name', '').strip().lower() == username.lower():
+                    stored_hash = user.get('Password Hash', '')
+                    salt = user.get('Salt', '')
+                    
+                    # Verify old password
+                    if stored_hash and salt:
+                        if TrainerAuthManager.verify_password(stored_hash, old_password, salt):
+                            user_row = idx
+                            break
+                        else:
+                            return jsonify({
+                                'success': False,
+                                'message': 'Current password is incorrect'
+                            }), 401
+                    else:
+                        return jsonify({
+                            'success': False,
+                            'message': 'User password not configured'
+                        }), 400
+            
+            if not user_row:
+                return jsonify({
+                    'success': False,
+                    'message': 'User not found'
+                }), 404
+            
+            # Hash new password
+            new_hash, new_salt = TrainerAuthManager.hash_password(new_password)
+            
+            # Update password hash and salt in sheet
+            login_sheet.update_cell(user_row, login_sheet.find('Password Hash').col, new_hash)
+            login_sheet.update_cell(user_row, login_sheet.find('Salt').col, new_salt)
+            
+            logger.warning(f"✅ Password changed for user: {username}")
+            
+            return jsonify({
+                'success': True,
+                'message': 'Password changed successfully'
+            }), 200
+            
+        except Exception as e:
+            logger.error(f"❌ Error changing password: {str(e)}", exc_info=True)
+            return jsonify({
+                'success': False,
+                'message': f'Error changing password: {str(e)}'
             }), 500
 
     @app.route('/api/auth/setup-sheets', methods=['POST'])

@@ -56,6 +56,17 @@ function AdminDashboard({ onLogout }) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [timeReportTrainerType, setTimeReportTrainerType] = useState('Assistant Trainer');
 
+  // Change password state
+  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
+  const [changePasswordForm, setChangePasswordForm] = useState({
+    oldPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [changePasswordLoading, setChangePasswordLoading] = useState(false);
+  const [changePasswordMessage, setChangePasswordMessage] = useState('');
+  const [changePasswordMessageType, setChangePasswordMessageType] = useState('');
+
   // Fetch trainers on mount
   React.useEffect(() => {
     fetchTrainers();
@@ -94,6 +105,65 @@ function AdminDashboard({ onLogout }) {
       await new Promise(resolve => setTimeout(resolve, 500));
     } finally {
       setIsRefreshing(false);
+    }
+  };
+
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    setChangePasswordMessage('');
+    setChangePasswordMessageType('');
+
+    if (!changePasswordForm.oldPassword || !changePasswordForm.newPassword || !changePasswordForm.confirmPassword) {
+      setChangePasswordMessage('All fields are required');
+      setChangePasswordMessageType('error');
+      return;
+    }
+
+    if (changePasswordForm.newPassword !== changePasswordForm.confirmPassword) {
+      setChangePasswordMessage('New passwords do not match');
+      setChangePasswordMessageType('error');
+      return;
+    }
+
+    if (changePasswordForm.newPassword.length < 6) {
+      setChangePasswordMessage('New password must be at least 6 characters');
+      setChangePasswordMessageType('error');
+      return;
+    }
+
+    try {
+      setChangePasswordLoading(true);
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          old_password: changePasswordForm.oldPassword,
+          new_password: changePasswordForm.newPassword
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setChangePasswordMessage('✅ Password changed successfully');
+        setChangePasswordMessageType('success');
+        setChangePasswordForm({ oldPassword: '', newPassword: '', confirmPassword: '' });
+        setTimeout(() => {
+          setShowChangePasswordModal(false);
+        }, 1500);
+      } else {
+        setChangePasswordMessage(`❌ ${result.message}`);
+        setChangePasswordMessageType('error');
+      }
+    } catch (err) {
+      setChangePasswordMessage(`Error: ${err.message}`);
+      setChangePasswordMessageType('error');
+    } finally {
+      setChangePasswordLoading(false);
     }
   };
 
@@ -167,10 +237,89 @@ function AdminDashboard({ onLogout }) {
           <h1>⚙️ Admin Dashboard</h1>
           <p>Manage badminton activity logger</p>
         </div>
-        <button className="logout-btn" onClick={onLogout}>
-          Logout
-        </button>
+        <div className="admin-header-actions">
+          <button className="change-password-btn" onClick={() => setShowChangePasswordModal(true)}>
+            🔐 Change Password
+          </button>
+          <button className="logout-btn" onClick={onLogout}>
+            Logout
+          </button>
+        </div>
       </div>
+
+      {/* Change Password Modal */}
+      {showChangePasswordModal && (
+        <div className="modal-overlay" onClick={() => setShowChangePasswordModal(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>🔐 Change Password</h2>
+              <button className="close-btn" onClick={() => setShowChangePasswordModal(false)}>×</button>
+            </div>
+
+            {changePasswordMessage && (
+              <div className={`alert alert-${changePasswordMessageType}`}>
+                <span>{changePasswordMessage}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleChangePassword} className="change-password-form">
+              <div className="form-group">
+                <label>Current Password</label>
+                <input
+                  type="password"
+                  value={changePasswordForm.oldPassword}
+                  onChange={(e) => setChangePasswordForm({...changePasswordForm, oldPassword: e.target.value})}
+                  placeholder="Enter your current password"
+                  disabled={changePasswordLoading}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label>New Password</label>
+                <input
+                  type="password"
+                  value={changePasswordForm.newPassword}
+                  onChange={(e) => setChangePasswordForm({...changePasswordForm, newPassword: e.target.value})}
+                  placeholder="Enter new password (minimum 6 characters)"
+                  disabled={changePasswordLoading}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Confirm New Password</label>
+                <input
+                  type="password"
+                  value={changePasswordForm.confirmPassword}
+                  onChange={(e) => setChangePasswordForm({...changePasswordForm, confirmPassword: e.target.value})}
+                  placeholder="Confirm new password"
+                  disabled={changePasswordLoading}
+                  required
+                />
+              </div>
+
+              <div className="modal-actions">
+                <button
+                  type="submit"
+                  className="btn-change-password"
+                  disabled={changePasswordLoading}
+                >
+                  {changePasswordLoading ? 'Changing...' : 'Change Password'}
+                </button>
+                <button
+                  type="button"
+                  className="btn-cancel"
+                  onClick={() => setShowChangePasswordModal(false)}
+                  disabled={changePasswordLoading}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       <div className="admin-tabs">
         <button
