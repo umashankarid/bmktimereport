@@ -1536,28 +1536,37 @@ def create_app():
             cache = get_data_cache()
             sheets = get_sheets_manager()
             
-            # Clear all cache
-            with cache.lock:
-                cache.data = {}
-            
-            # Reload all data from sheets
+            # Reload all data from sheets first (before clearing cache)
             activities = sheets.get_all_activities(limit=500)
             trainers = sheets.get_trainers_details()
             freezes = sheets.get_all_freezes()
             
-            # Repopulate cache
+            # Only clear and repopulate cache after successfully loading all data
             with cache.lock:
-                if activities['success']:
+                # Clear old data
+                cache.data = {}
+                
+                # Repopulate with new data
+                if activities['success'] and activities.get('data'):
                     cache.data['activities'] = activities['data']
                     logger.warning(f"✅ Reloaded {len(activities['data'])} activities from sheets")
+                else:
+                    logger.error(f"❌ Failed to load activities: {activities.get('message', 'Unknown error')}")
+                    cache.data['activities'] = []  # Set empty array to avoid errors
                 
-                if trainers['success']:
+                if trainers['success'] and trainers.get('data'):
                     cache.data['trainers'] = trainers['data']
                     logger.warning(f"✅ Reloaded {len(trainers['data'])} trainers from sheets")
+                else:
+                    logger.error(f"❌ Failed to load trainers: {trainers.get('message', 'Unknown error')}")
+                    cache.data['trainers'] = []  # Set empty array to avoid errors
                 
-                if freezes['success']:
+                if freezes['success'] and freezes.get('data'):
                     cache.data['freezes'] = freezes['data']
                     logger.warning(f"✅ Reloaded {len(freezes['data'])} freezes from sheets")
+                else:
+                    logger.error(f"⚠️  No freezes or failed to load: {freezes.get('message', 'Unknown error')}")
+                    cache.data['freezes'] = []  # Set empty array to avoid errors
             
             return jsonify({
                 'success': True,
