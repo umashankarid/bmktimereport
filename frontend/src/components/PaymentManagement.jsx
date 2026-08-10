@@ -280,7 +280,7 @@ function PaymentManagement() {
           className={`tab-btn ${activeTab === 'assistants' ? 'active' : ''}`}
           onClick={() => setActiveTab('assistants')}
         >
-          👔 Assistant Trainers (Fixed Salary)
+          👔 Assistant Trainers
         </button>
         <button
           className={`tab-btn ${activeTab === 'juniors' ? 'active' : ''}`}
@@ -294,8 +294,8 @@ function PaymentManagement() {
       {activeTab === 'assistants' && (
         <div className="tab-content">
           <div className="add-freeze-section">
-            <h3>📅 Mark Fixed Salary Period</h3>
-            <p className="tab-description">Lock entire months or date ranges after time report review</p>
+            <h3>📅 Freeze Period for Settlement</h3>
+            <p className="tab-description">Lock date ranges after settlement approval</p>
             
             <div className="form-grid">
               <div className="form-group">
