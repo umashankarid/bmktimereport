@@ -1,8 +1,7 @@
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from config import Config
-from sheets import get_sheets_manager
-from cache import get_data_cache
+from database import get_db_manager
 from auth import register_auth_routes, verify_token
 import os
 import sys
@@ -53,25 +52,14 @@ def create_app():
         logger.warning(f"📤 RESPONSE: {response.status_code}")
         return response
     
-    # Initialize Google Sheets on startup
-    logger.warning(f"\n🔧 Initializing Google Sheets...")
-    sheets_manager = get_sheets_manager()
-    logger.warning(f"✅ Google Sheets initialized")
+    # Initialize database
+    logger.warning(f"\n🔧 Initializing SQLite database...")
+    db = get_db_manager()
+    logger.warning(f"✅ Database initialized")
     
-    # Initialize data cache and load initial data
-    logger.warning(f"\n💾 Initializing data cache...")
-    cache = get_data_cache()
-    try:
-        cache.load_initial_data(sheets_manager)
-        logger.warning(f"✅ Data cache initialized and loaded")
-        logger.warning(f"ℹ️  Cache will stay in sync via write operations (no background polling)")
-    except Exception as e:
-        logger.warning(f"⚠️  Error initializing cache: {e}")
-        logger.warning(f"⚠️  Continuing without cache - will use direct sheet access with fallback")
-    
-    # Register authentication routes
+    # Register authentication routes (pass db as sheets_manager since it has compatible interface)
     logger.warning(f"\n📝 Registering auth routes...")
-    register_auth_routes(app, sheets_manager)
+    register_auth_routes(app, db)
     logger.warning(f"✅ Auth routes registered")
     
     # Health check
@@ -101,50 +89,16 @@ def create_app():
     # Log activity
     @app.route('/api/activities', methods=['POST'])
     def log_activity():
-        """Log a new badminton activity to sheets and cache"""
+        """Log a new badminton activity to database"""
         try:
             data = request.get_json()
             
             if not data:
                 return jsonify({'error': 'No data provided'}), 400
             
-            # Write to sheets first
-            sheets = get_sheets_manager()
-            result = sheets.add_activity(data)
-            
-            # If successful, also update cache with sheet-style keys
-            if result['success']:
-                try:
-                    cache = get_data_cache()
-                    # Convert snake_case keys to sheet-style keys for cache consistency
-                    # Handle both single and multi-activity submissions
-                    activities_to_cache = []
-                    if 'activities' in data and isinstance(data['activities'], list):
-                        for act in data['activities']:
-                            activities_to_cache.append({
-                                'Trainer Name': data.get('trainer_name', ''),
-                                'Date': data.get('date', ''),
-                                'Activity': act.get('activity', ''),
-                                'Start Time': act.get('start_time', ''),
-                                'End Time': act.get('end_time', ''),
-                                'Note': data.get('note', ''),
-                                'Paid': ''
-                            })
-                    else:
-                        activities_to_cache.append({
-                            'Trainer Name': data.get('trainer_name', ''),
-                            'Date': data.get('date', ''),
-                            'Activity': data.get('activity', ''),
-                            'Start Time': data.get('start_time', ''),
-                            'End Time': data.get('end_time', ''),
-                            'Note': data.get('note', ''),
-                            'Paid': ''
-                        })
-                    for activity_cache_entry in activities_to_cache:
-                        cache.add_activity(activity_cache_entry)
-                    logger.info(f"✅ {len(activities_to_cache)} activity/activities added to cache")
-                except Exception as e:
-                    logger.warning(f"⚠️  Could not update cache: {e}")
+            # Write to database
+            db = get_db_manager()
+            result = db.add_activity(data)
             
             status_code = 201 if result['success'] else 400
             return jsonify(result), status_code
@@ -166,24 +120,14 @@ def create_app():
             if not data:
                 return jsonify({'error': 'No data provided'}), 400
             
-            sheets = get_sheets_manager()
-            result = sheets.delete_activity_by_details(
+            db = get_db_manager()
+            result = db.delete_activity_by_details(
                 trainer_name=data.get('trainer_name'),
                 date=data.get('date'),
                 activity=data.get('activity'),
                 start_time=data.get('start_time'),
                 end_time=data.get('end_time')
             )
-            
-            # Invalidate cache if delete was successful
-            if result['success']:
-                try:
-                    cache = get_data_cache()
-                    with cache.lock:
-                        cache.data['activities'] = []
-                    logger.info("✅ Cache invalidated after activity deletion")
-                except Exception as e:
-                    logger.warning(f"⚠️  Could not invalidate cache: {e}")
             
             status_code = 200 if result['success'] else 400
             return jsonify(result), status_code
@@ -207,22 +151,12 @@ def create_app():
             if not data:
                 return jsonify({'error': 'No data provided'}), 400
             
-            sheets = get_sheets_manager()
-            result = sheets.delete_activities_by_filter(
+            db = get_db_manager()
+            result = db.delete_activities_by_filter(
                 trainer=data.get('trainer'),
                 activity_type=data.get('activity_type'),
                 month=data.get('month')
             )
-            
-            # Invalidate cache if delete was successful
-            if result['success']:
-                try:
-                    cache = get_data_cache()
-                    with cache.lock:
-                        cache.data['activities'] = []
-                    logger.info("✅ Cache invalidated after activities deletion")
-                except Exception as e:
-                    logger.warning(f"⚠️  Could not invalidate cache: {e}")
             
             status_code = 200 if result['success'] else 400
             return jsonify(result), status_code
@@ -258,21 +192,12 @@ def create_app():
                     'message': 'Trainer name, date, and activity are required'
                 }), 400
             
-            sheets = get_sheets_manager()
+            sheets = get_db_manager()
             
             # Update the activity's paid status
             result = sheets.update_activity_paid(trainer_name, activity_date, activity_type, paid_status)
             
             if result['success']:
-                # Invalidate cache
-                try:
-                    cache = get_data_cache()
-                    with cache.lock:
-                        cache.data['activities'] = []
-                    logger.info("✅ Cache invalidated after marking activity as paid")
-                except Exception as e:
-                    logger.warning(f"⚠️  Could not invalidate cache: {e}")
-                
                 # If marking as paid, automatically freeze the date
                 if paid_status:
                     freeze_result = sheets.add_freeze('Date Range', activity_date + ' to ' + activity_date, 
@@ -302,36 +227,27 @@ def create_app():
     # Get all activities
     @app.route('/api/activities', methods=['GET'])
     def get_activities():
-        """Retrieve all logged activities from cache, optionally filtered by trainer"""
+        """Retrieve all logged activities, optionally filtered by trainer"""
         try:
             limit = request.args.get('limit', 100, type=int)
             trainer = request.args.get('trainer', None)  # Optional trainer filter
-            cache = get_data_cache()
-            all_activities = cache.get_activities()
             
-            # Fallback to sheets if cache is empty
-            if not all_activities:
-                logger.warning("⚠️  Cache empty, fetching from sheets...")
-                sheets = get_sheets_manager()
-                result = sheets.get_all_activities(limit=limit)
-                if result['success']:
-                    all_activities = result['data']
-                    # Update cache for next time
-                    with cache.lock:
-                        cache.data['activities'] = all_activities
+            db = get_db_manager()
+            result = db.get_all_activities(limit=limit)
+            
+            if not result['success']:
+                return jsonify(result), 400
+            
+            all_activities = result['data']
             
             # Filter by trainer if specified
             if trainer:
                 trainer_lower = trainer.strip().lower()
-                all_activities = [a for a in all_activities if (a.get('Trainer Name') or a.get('trainer_name', '')).strip().lower() == trainer_lower]
-            
-            # Apply limit
-            activities = all_activities[:limit]
+                all_activities = [a for a in all_activities if a.get('Trainer Name', '').strip().lower() == trainer_lower]
             
             return jsonify({
                 'success': True,
-                'data': activities,
-                'from_cache': len(all_activities) > 0
+                'data': all_activities[:limit]
             }), 200
         except Exception as e:
             error_msg = str(e)
@@ -344,26 +260,14 @@ def create_app():
     # Get trainers list
     @app.route('/api/trainers', methods=['GET'])
     def get_trainers():
-        """Get list of all trainers from cache"""
+        """Get list of all trainers"""
         try:
-            cache = get_data_cache()
-            trainers = cache.get_trainers()
-            
-            # Fallback to sheets if cache is empty
-            if not trainers:
-                logger.warning("⚠️  Cache empty, fetching from sheets...")
-                sheets = get_sheets_manager()
-                result = sheets.get_trainers_details()
-                if result['success']:
-                    trainers = result['data']
-                    # Update cache for next time
-                    with cache.lock:
-                        cache.data['trainers'] = trainers
+            db = get_db_manager()
+            result = db.get_trainers_details()
             
             return jsonify({
                 'success': True,
-                'data': trainers,
-                'from_cache': len(trainers) > 0
+                'data': result['data'] if result['success'] else []
             }), 200
         except Exception as e:
             return jsonify({
@@ -376,19 +280,9 @@ def create_app():
     def get_staff_trainers():
         """Get list of trainers excluding volunteers (Assistant Trainers and Juniors only)"""
         try:
-            cache = get_data_cache()
-            trainers = cache.get_trainers()
-            
-            # Fallback to sheets if cache is empty
-            if not trainers:
-                logger.warning("⚠️  Cache empty, fetching from sheets...")
-                sheets = get_sheets_manager()
-                result = sheets.get_trainers_details()
-                if result['success']:
-                    trainers = result['data']
-                    # Update cache for next time
-                    with cache.lock:
-                        cache.data['trainers'] = trainers
+            db = get_db_manager()
+            result = db.get_trainers_details()
+            trainers = result['data'] if result['success'] else []
             
             # Filter out volunteers - keep only Assistant Trainer and Junior (supports both 'Junior' and 'Junior Trainer')
             staff_trainers = [t for t in trainers if t.get('trainer_type', 'Assistant Trainer') in ['Assistant Trainer', 'Junior', 'Junior Trainer']]
@@ -408,26 +302,14 @@ def create_app():
     # Get trainer details with email and phone
     @app.route('/api/trainers/details/all', methods=['GET'])
     def get_trainers_details():
-        """Get list of all trainers with their details from cache"""
+        """Get list of all trainers with their details"""
         try:
-            cache = get_data_cache()
-            trainers = cache.get_trainers()
-            
-            # Fallback to sheets if cache is empty
-            if not trainers:
-                logger.warning("⚠️  Cache empty, fetching from sheets...")
-                sheets = get_sheets_manager()
-                result = sheets.get_trainers_details()
-                if result['success']:
-                    trainers = result['data']
-                    # Update cache for next time
-                    with cache.lock:
-                        cache.data['trainers'] = trainers
+            db = get_db_manager()
+            result = db.get_trainers_details()
             
             return jsonify({
                 'success': True,
-                'data': trainers,
-                'from_cache': len(trainers) > 0
+                'data': result['data'] if result['success'] else []
             }), 200
         except Exception as e:
             return jsonify({
@@ -441,7 +323,7 @@ def create_app():
         """Update trainer information (email, phone)"""
         try:
             data = request.get_json()
-            sheets = get_sheets_manager()
+            sheets = get_db_manager()
             
             new_name = data.get('new_name', trainer_name)
             email = data.get('email', '')
@@ -460,19 +342,8 @@ def create_app():
     def delete_trainer(trainer_name):
         """Delete a trainer and all their activities"""
         try:
-            sheets = get_sheets_manager()
-            result = sheets.delete_trainer(trainer_name)
-            
-            # Invalidate cache if delete was successful
-            if result['success']:
-                try:
-                    cache = get_data_cache()
-                    with cache.lock:
-                        cache.data['trainers'] = []
-                        cache.data['activities'] = []
-                    logger.info("✅ Cache invalidated after trainer deletion")
-                except Exception as e:
-                    logger.warning(f"⚠️  Could not invalidate cache: {e}")
+            db = get_db_manager()
+            result = db.delete_trainer(trainer_name)
             
             return jsonify(result), 200 if result['success'] else 400
         except Exception as e:
@@ -486,7 +357,7 @@ def create_app():
     def get_activity_list():
         """Get list of all available activities"""
         try:
-            sheets = get_sheets_manager()
+            sheets = get_db_manager()
             result = sheets.get_activity_list()
             
             return jsonify(result), 200 if result['success'] else 400
@@ -507,46 +378,25 @@ def create_app():
             
             print(f"📊 get_activity_summary called with: trainer={trainer_filter}, month={month_filter}, trainer_type={trainer_type_filter}")
             
-            # Get activities from cache first
-            cache = get_data_cache()
-            activities = cache.get_activities()
-            
-            # Fallback to sheets if cache is empty
-            if not activities:
-                logger.warning("⚠️  Cache empty, fetching from sheets...")
-                sheets = get_sheets_manager()
-                result = sheets.get_all_activities()
-                if result['success']:
-                    activities = result['data']
-                    # Update cache for next time
-                    with cache.lock:
-                        cache.data['activities'] = activities
-                else:
-                    return jsonify(result), 400
+            # Get activities from database
+            db = get_db_manager()
+            result = db.get_all_activities(limit=10000)
+            if not result['success']:
+                return jsonify(result), 400
+            activities = result['data']
             
             print(f"📊 Total activities: {len(activities)}")
             
             # If trainer_type filter is set, get trainers of that type and filter activities
             if trainer_type_filter:
                 try:
-                    # Get trainers from cache first
-                    trainers = cache.get_trainers()
-                    
-                    # Fallback to sheets if cache is empty
-                    if not trainers:
-                        logger.warning("⚠️  Cache empty, fetching trainers from sheets...")
-                        sheets = get_sheets_manager()
-                        trainers_result = sheets.get_trainers_details()
-                        if trainers_result['success']:
-                            trainers = trainers_result['data']
-                            # Update cache
-                            with cache.lock:
-                                cache.data['trainers'] = trainers
+                    trainers_result = db.get_trainers_details()
+                    trainers = trainers_result['data'] if trainers_result['success'] else []
                     
                     if trainers:
                         trainers_of_type = [t['name'].strip().lower() for t in trainers if t.get('trainer_type') == trainer_type_filter]
                         print(f"📊 Filtering by trainer type '{trainer_type_filter}': found {len(trainers_of_type)} trainers - {trainers_of_type}")
-                        activities = [a for a in activities if (a.get('Trainer Name') or a.get('trainer_name', '')).strip().lower() in trainers_of_type]
+                        activities = [a for a in activities if a.get('Trainer Name', '').strip().lower() in trainers_of_type]
                         print(f"📊 After type filter: {len(activities)} activities")
                     else:
                         print(f"⚠️  Could not get trainers")
@@ -558,7 +408,7 @@ def create_app():
             # Apply trainer filter
             if trainer_filter:
                 trainer_filter_lower = trainer_filter.strip().lower()
-                activities = [a for a in activities if (a.get('Trainer Name') or a.get('trainer_name', '')).strip().lower() == trainer_filter_lower]
+                activities = [a for a in activities if a.get('Trainer Name', '').strip().lower() == trainer_filter_lower]
             
             if month_filter:
                 filtered = []
@@ -625,33 +475,23 @@ def create_app():
             end_date = request.args.get('end_date', None)
             limit = request.args.get('limit', 500, type=int)
             
-            # Get activities from cache first
-            cache = get_data_cache()
-            all_activities = cache.get_activities()
-            
-            # Fallback to sheets if cache is empty
-            if not all_activities:
-                logger.warning("⚠️  Cache empty, fetching from sheets...")
-                sheets = get_sheets_manager()
-                result = sheets.get_all_activities(limit=limit)
-                if result['success']:
-                    all_activities = result['data']
-                    # Update cache for next time
-                    with cache.lock:
-                        cache.data['activities'] = all_activities
-                else:
-                    return jsonify({
-                        'success': False,
-                        'data': [],
-                        'message': 'Failed to retrieve activities'
-                    }), 400
+            # Get activities from database
+            db = get_db_manager()
+            result = db.get_all_activities(limit=limit)
+            if not result['success']:
+                return jsonify({
+                    'success': False,
+                    'data': [],
+                    'message': 'Failed to retrieve activities'
+                }), 400
+            all_activities = result['data']
             
             # Filter activities
             filtered = []
             for activity in all_activities:
                 # Filter by trainer
                 if trainer_name:
-                    activity_trainer = (activity.get('Trainer Name') or activity.get('trainer_name', '')).strip().lower()
+                    activity_trainer = activity.get('Trainer Name', '').strip().lower()
                     if activity_trainer != trainer_name.strip().lower():
                         continue
                 
@@ -691,7 +531,7 @@ def create_app():
         """Generate activity summary by trainer"""
         try:
             from reports import ReportsManager
-            sheets = get_sheets_manager()
+            sheets = get_db_manager()
             reports = ReportsManager(sheets)
             trainer_filter = request.args.get('trainer')
             date_filter = request.args.get('date')
@@ -716,7 +556,7 @@ def create_app():
         """Generate activity types distribution report"""
         try:
             from reports import ReportsManager
-            sheets = get_sheets_manager()
+            sheets = get_db_manager()
             reports = ReportsManager(sheets)
             trainer_filter = request.args.get('trainer')
             month_filter = request.args.get('month')
@@ -743,7 +583,7 @@ def create_app():
         """Generate training hours report"""
         try:
             from reports import ReportsManager
-            sheets = get_sheets_manager()
+            sheets = get_db_manager()
             reports = ReportsManager(sheets)
             trainer_filter = request.args.get('trainer')
             month_filter = request.args.get('month')
@@ -770,7 +610,7 @@ def create_app():
         """Generate monthly activity trends report"""
         try:
             from reports import ReportsManager
-            sheets = get_sheets_manager()
+            sheets = get_db_manager()
             reports = ReportsManager(sheets)
             trainer_filter = request.args.get('trainer')
             month_filter = request.args.get('month')
@@ -797,7 +637,7 @@ def create_app():
         """Export activities to CSV"""
         try:
             from reports import ReportsManager
-            sheets = get_sheets_manager()
+            sheets = get_db_manager()
             reports = ReportsManager(sheets)
             result = reports.export_to_csv()
             
@@ -828,7 +668,7 @@ def create_app():
                 from datetime import datetime
                 month = datetime.now().strftime('%Y-%m')
             
-            sheets = get_sheets_manager()
+            sheets = get_db_manager()
             result = sheets.get_time_report_status(month, trainer_type=trainer_type)
             return jsonify(result), 200 if result['success'] else 400
         except Exception as e:
@@ -842,7 +682,7 @@ def create_app():
     def get_activities_by_date(trainer_name, date):
         """Get all activities for a trainer on a specific date"""
         try:
-            sheets = get_sheets_manager()
+            sheets = get_db_manager()
             result = sheets.get_activities_by_trainer_and_date(trainer_name, date)
             
             return jsonify(result), 200 if result['success'] else 400
@@ -865,7 +705,7 @@ def create_app():
                     'message': 'No data provided'
                 }), 400
             
-            sheets = get_sheets_manager()
+            sheets = get_db_manager()
             result = sheets.update_activity(
                 trainer_name=trainer_name,
                 date=date,
@@ -889,7 +729,7 @@ def create_app():
     def delete_activity(trainer_name, date, activity_name):
         """Delete an existing activity"""
         try:
-            sheets = get_sheets_manager()
+            sheets = get_db_manager()
             result = sheets.delete_activity(
                 trainer_name=trainer_name,
                 date=date,
@@ -906,26 +746,15 @@ def create_app():
     # Get tournaments
     @app.route('/api/tournaments', methods=['GET'])
     def get_tournaments():
-        """Get list of all tournaments from cache"""
+        """Get list of all tournaments"""
         try:
-            cache = get_data_cache()
-            tournaments = cache.get_tournaments()
-            
-            # Fallback to sheets if cache is empty
-            if not tournaments:
-                logger.warning("⚠️  Cache empty, fetching from sheets...")
-                sheets = get_sheets_manager()
-                result = sheets.get_tournaments()
-                if result['success']:
-                    tournaments = result['data']
-                    # Update cache for next time
-                    with cache.lock:
-                        cache.data['tournaments'] = tournaments
+            db = get_db_manager()
+            result = db.get_tournaments()
+            tournaments = result['data'] if result['success'] else []
             
             return jsonify({
                 'success': True,
-                'data': tournaments,
-                'from_cache': len(tournaments) > 0
+                'data': tournaments
             }), 200
         except Exception as e:
             return jsonify({
@@ -938,7 +767,7 @@ def create_app():
     def get_tournaments_with_volunteers():
         """Get list of tournaments with volunteer registration info"""
         try:
-            sheets = get_sheets_manager()
+            sheets = get_db_manager()
             result = sheets.get_tournaments()
             
             if not result['success']:
@@ -978,7 +807,7 @@ def create_app():
             logger.warning("="*70)
             
             # First, repair the tournaments sheet if needed
-            sheets = get_sheets_manager()
+            sheets = get_db_manager()
             logger.warning("\n0️⃣  VERIFYING SHEET STRUCTURE...")
             sheets.repair_tournaments_sheet()
             
@@ -993,7 +822,7 @@ def create_app():
                 logger.warning(f"\n✅ Processing {len(result['imported'])} tournaments...")
                 
                 # Add tournaments to sheets
-                sheets = get_sheets_manager()
+                sheets = get_db_manager()
                 added_count = 0
                 skipped_count = 0
                 errors = []
@@ -1022,14 +851,7 @@ def create_app():
                         errors.append(error_msg)
                         logger.warning(f"       ❌ {error_msg}")
                 
-                # Invalidate cache
-                try:
-                    cache = get_data_cache()
-                    with cache.lock:
-                        cache.data['tournaments'] = []
-                    logger.warning(f"\n✅ Cache invalidated")
-                except Exception as e:
-                    logger.warning(f"⚠️  Could not invalidate cache: {e}")
+                # No cache to invalidate - DB is always current
                 
                 logger.warning("\n" + "="*70)
                 logger.warning(f"🎉 IMPORT COMPLETE:")
@@ -1071,7 +893,7 @@ def create_app():
     def repair_tournaments_sheet():
         """Repair the tournaments sheet structure"""
         try:
-            sheets = get_sheets_manager()
+            sheets = get_db_manager()
             success = sheets.repair_tournaments_sheet()
             
             if success:
@@ -1113,18 +935,8 @@ def create_app():
                     'message': 'Tournament name and date are required'
                 }), 400
             
-            sheets = get_sheets_manager()
+            sheets = get_db_manager()
             result = sheets.add_tournament(data)
-            
-            # If successful, update cache
-            if result['success']:
-                try:
-                    cache = get_data_cache()
-                    with cache.lock:
-                        cache.data['tournaments'] = []  # Invalidate cache
-                    logger.info("✅ Tournament added to cache")
-                except Exception as e:
-                    logger.warning(f"⚠️  Could not update cache: {e}")
             
             return jsonify(result), 201 if result['success'] else 400
         except Exception as e:
@@ -1156,27 +968,9 @@ def create_app():
                     'message': 'Volunteer name and tournament name required'
                 }), 400
             
-            # Write to sheets
-            sheets = get_sheets_manager()
-            result = sheets.register_volunteer(volunteer_name, tournament_name, comments)
-            
-            # If successful, also update cache
-            if result['success']:
-                try:
-                    from datetime import datetime
-                    cache = get_data_cache()
-                    registration = {
-                        'Volunteer Name': volunteer_name,
-                        'Tournament Name': tournament_name,
-                        'Registration Date': datetime.now().strftime('%Y-%m-%d'),
-                        'Status': 'Registered',
-                        'Comments': comments
-                    }
-                    cache.add_volunteer_registration(registration)
-                    logger.info(f"✅ Volunteer registration added to cache")
-                except Exception as e:
-                    logger.warning(f"⚠️  Could not update cache: {e}")
-            
+            # Write to database
+            db = get_db_manager()
+            result = db.register_volunteer(volunteer_name, tournament_name, comments)
             
             return jsonify(result), 200 if result['success'] else 400
         except Exception as e:
@@ -1207,19 +1001,9 @@ def create_app():
                     'message': 'Volunteer name and tournament name required'
                 }), 400
             
-            # Remove from sheets
-            sheets = get_sheets_manager()
-            result = sheets.unregister_volunteer(volunteer_name, tournament_name)
-            
-            # If successful, invalidate cache
-            if result['success']:
-                try:
-                    cache = get_data_cache()
-                    with cache.lock:
-                        cache.data['volunteer_registrations'] = []
-                    logger.info(f"✅ Volunteer unregistration completed, cache invalidated")
-                except Exception as e:
-                    logger.warning(f"⚠️  Could not update cache: {e}")
+            # Remove from database
+            db = get_db_manager()
+            result = db.unregister_volunteer(volunteer_name, tournament_name)
             
             return jsonify(result), 200 if result['success'] else 400
         except Exception as e:
@@ -1231,21 +1015,14 @@ def create_app():
     # Get volunteer registrations
     @app.route('/api/tournaments/registrations/<volunteer_name>', methods=['GET'])
     def get_volunteer_registrations(volunteer_name):
-        """Get all tournament registrations for a volunteer from cache"""
+        """Get all tournament registrations for a volunteer"""
         try:
-            cache = get_data_cache()
-            all_registrations = cache.get_volunteer_registrations()
-            
-            # Filter by volunteer name
-            volunteer_registrations = [
-                reg for reg in all_registrations 
-                if reg.get('Volunteer Name', '').strip() == volunteer_name
-            ]
+            db = get_db_manager()
+            result = db.get_volunteer_registrations(volunteer_name)
             
             return jsonify({
                 'success': True,
-                'data': volunteer_registrations,
-                'from_cache': True
+                'data': result['data'] if result['success'] else []
             }), 200
         except Exception as e:
             return jsonify({
@@ -1260,7 +1037,7 @@ def create_app():
         """Get list of all unique volunteers"""
         try:
             logger.warning("📝 GET /api/volunteers/list - Fetching all volunteers")
-            sheets = get_sheets_manager()
+            sheets = get_db_manager()
             
             if not sheets.authenticated:
                 logger.error("❌ Google Sheets not authenticated")
@@ -1305,7 +1082,7 @@ def create_app():
         """Get list of registered volunteers for dropdown selection"""
         try:
             logger.warning("📝 GET /api/volunteers/available - Fetching available volunteers for dropdown")
-            sheets = get_sheets_manager()
+            sheets = get_db_manager()
             
             if not sheets.authenticated:
                 logger.error("❌ Google Sheets not authenticated")
@@ -1366,7 +1143,7 @@ def create_app():
                     'message': 'Volunteer name cannot be empty'
                 }), 400
             
-            sheets = get_sheets_manager()
+            sheets = get_db_manager()
             result = sheets.update_volunteer(old_name, new_name, email, phone)
             
             if result['success']:
@@ -1408,7 +1185,7 @@ def create_app():
                     'message': 'Volunteer name is required'
                 }), 400
             
-            sheets = get_sheets_manager()
+            sheets = get_db_manager()
             result = sheets.remove_volunteer(volunteer_name)
             
             if result['success']:
@@ -1435,7 +1212,7 @@ def create_app():
         """Get all frozen dates and months"""
         try:
             logger.warning("📝 GET /api/freeze/dates - Fetching frozen dates")
-            sheets = get_sheets_manager()
+            sheets = get_db_manager()
             result = sheets.get_frozen_dates()
             
             if result['success']:
@@ -1480,7 +1257,7 @@ def create_app():
             if freeze_type not in ['Date Range', 'Month']:
                 return jsonify({'success': False, 'message': 'Invalid freeze type'}), 400
             
-            sheets = get_sheets_manager()
+            sheets = get_db_manager()
             result = sheets.add_freeze(freeze_type, date_or_month, reason, 'admin')
             
             if result['success']:
@@ -1516,7 +1293,7 @@ def create_app():
             if not freeze_type or not date_or_month:
                 return jsonify({'success': False, 'message': 'Freeze type and date/month required'}), 400
             
-            sheets = get_sheets_manager()
+            sheets = get_db_manager()
             result = sheets.remove_freeze(freeze_type, date_or_month)
             
             if result['success']:
@@ -1539,7 +1316,7 @@ def create_app():
     def check_if_frozen(date):
         """Check if a date is frozen"""
         try:
-            sheets = get_sheets_manager()
+            sheets = get_db_manager()
             is_frozen = sheets.is_date_frozen(date)
             return jsonify({
                 'success': True,
@@ -1553,68 +1330,36 @@ def create_app():
                 'message': str(e)
             }), 500
 
-    # ==================== CACHE MANAGEMENT ====================
+    # ==================== DATA MANAGEMENT ====================
     
     @app.route('/api/cache/refresh', methods=['POST'])
     @verify_token
     def refresh_cache():
-        """Force refresh all cached data from sheets"""
+        """Return database stats (no cache to refresh with SQLite)"""
         try:
-            logger.warning("🔄 CACHE REFRESH REQUESTED")
+            logger.warning("🔄 DATA REFRESH REQUESTED (no-op with SQLite - data is always fresh)")
             
-            cache = get_data_cache()
-            sheets = get_sheets_manager()
+            db = get_db_manager()
             
-            # First, invalidate sheets manager's internal cache
-            sheets._invalidate_cache()
-            logger.warning("✅ Invalidated sheets internal cache")
-            
-            # Reload all data from sheets (will fetch fresh from Google Sheets)
-            activities = sheets.get_all_activities(limit=500)
-            trainers = sheets.get_trainers_details()
-            freezes = sheets.get_all_freezes()
-            
-            # Only clear and repopulate cache after successfully loading all data
-            with cache.lock:
-                # Clear old data
-                cache.data = {}
-                
-                # Repopulate with new data
-                if activities['success'] and activities.get('data'):
-                    cache.data['activities'] = activities['data']
-                    logger.warning(f"✅ Reloaded {len(activities['data'])} activities from sheets")
-                else:
-                    logger.error(f"❌ Failed to load activities: {activities.get('message', 'Unknown error')}")
-                    cache.data['activities'] = []  # Set empty array to avoid errors
-                
-                if trainers['success'] and trainers.get('data'):
-                    cache.data['trainers'] = trainers['data']
-                    logger.warning(f"✅ Reloaded {len(trainers['data'])} trainers from sheets")
-                else:
-                    logger.error(f"❌ Failed to load trainers: {trainers.get('message', 'Unknown error')}")
-                    cache.data['trainers'] = []  # Set empty array to avoid errors
-                
-                if freezes['success'] and freezes.get('data'):
-                    cache.data['freezes'] = freezes['data']
-                    logger.warning(f"✅ Reloaded {len(freezes['data'])} freezes from sheets")
-                else:
-                    logger.error(f"⚠️  No freezes or failed to load: {freezes.get('message', 'Unknown error')}")
-                    cache.data['freezes'] = []  # Set empty array to avoid errors
+            # Just get counts to confirm DB is healthy
+            activities = db.get_all_activities(limit=1)
+            trainers = db.get_trainers_details()
+            freezes = db.get_all_freezes()
             
             return jsonify({
                 'success': True,
-                'message': 'Cache refreshed successfully',
+                'message': 'Database is live - no cache needed with SQLite',
                 'data': {
-                    'activities_count': len(activities.get('data', [])),
+                    'activities_count': activities.get('total', 0),
                     'trainers_count': len(trainers.get('data', [])),
                     'freezes_count': len(freezes.get('data', []))
                 }
             }), 200
         except Exception as e:
-            logger.error(f"❌ Error refreshing cache: {str(e)}", exc_info=True)
+            logger.error(f"❌ Error checking database: {str(e)}", exc_info=True)
             return jsonify({
                 'success': False,
-                'message': f'Error refreshing cache: {str(e)}'
+                'message': f'Error checking database: {str(e)}'
             }), 500
     
     # Error handlers

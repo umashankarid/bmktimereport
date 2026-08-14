@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from functools import wraps
 from flask import request, jsonify
 import jwt
-from sheets import reset_sheets_manager
+from database import reset_db_manager
 import logging
 
 logger = logging.getLogger(__name__)
@@ -208,59 +208,56 @@ def register_auth_routes(app, sheets_manager):
             except ImportError:
                 from backend.trainer_auth import TrainerAuthManager
             
-            login_sheet = TrainerAuthManager.get_login_sheet()
-            all_users = login_sheet.get_all_records()
+            # First check if user exists in database
+            from database import get_db_manager
+            db = get_db_manager()
+            conn = db._get_connection()
+            cursor = conn.execute(
+                "SELECT password_hash, salt FROM trainers WHERE LOWER(name) = LOWER(?)",
+                (username.strip(),)
+            )
+            row = cursor.fetchone()
+            conn.close()
             
-            # Find user and verify old password
-            user_row = None
-            for idx, user in enumerate(all_users, start=2):
-                if user.get('Trainer Name', '').strip().lower() == username.lower():
-                    stored_hash = user.get('Password Hash', '')
-                    salt = user.get('Salt', '')
-                    
-                    # Verify old password
-                    if stored_hash and salt:
-                        if TrainerAuthManager.verify_password(stored_hash, old_password, salt):
-                            user_row = idx
-                            break
-                        else:
-                            return jsonify({
-                                'success': False,
-                                'message': 'Current password is incorrect'
-                            }), 401
-                    else:
-                        # User exists in sheet but no password hash yet
-                        # This shouldn't happen, but treat as error
-                        return jsonify({
-                            'success': False,
-                            'message': 'User password not configured'
-                        }), 400
-            
-            # If user not found in sheet, check fallback credentials
-            if not user_row:
+            if row and row[0]:
+                # User exists in DB with password - use TrainerAuthManager
+                result = TrainerAuthManager.change_password(username, old_password, new_password)
+                if result['success']:
+                    return jsonify(result), 200
+                else:
+                    return jsonify(result), 401
+            else:
+                # User might be using fallback credentials - check and create DB entry
                 if username in ADMIN_CREDENTIALS:
                     cred = ADMIN_CREDENTIALS[username]
                     if cred['password'] == old_password:
-                        # User is using fallback credentials
-                        # Need to add them to the sheet first
-                        from datetime import datetime
+                        # Create the user in DB with the new password
+                        new_hash, new_salt = TrainerAuthManager.hash_password(new_password)
+                        conn = db._get_connection()
+                        # Check if user already exists (might exist without password)
+                        cursor = conn.execute(
+                            "SELECT id FROM trainers WHERE LOWER(name) = LOWER(?)",
+                            (username.strip(),)
+                        )
+                        existing = cursor.fetchone()
+                        if existing:
+                            conn.execute(
+                                "UPDATE trainers SET password_hash = ?, salt = ? WHERE LOWER(name) = LOWER(?)",
+                                (new_hash, new_salt, username.strip())
+                            )
+                        else:
+                            conn.execute("""
+                                INSERT INTO trainers (name, email, phone, trainer_type, password_hash, salt, created_date)
+                                VALUES (?, '', '', 'Admin', ?, ?, ?)
+                            """, (username.strip(), new_hash, new_salt, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+                        conn.commit()
+                        conn.close()
                         
-                        created_date = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                        new_row = [
-                            username,      # Trainer Name
-                            '',            # Email
-                            '',            # Phone
-                            cred['type'],  # Trainer Type (Admin)
-                            '',            # Photo
-                            '',            # Password Hash (will be set below)
-                            '',            # Salt (will be set below)
-                            created_date   # Created Date
-                        ]
-                        
-                        login_sheet.append_row(new_row)
-                        # Get the new row number (should be len + 2 for header + 1)
-                        user_row = len(all_users) + 2
-                        logger.warning(f"✅ Created sheet entry for user: {username}")
+                        logger.warning(f"✅ Password changed for fallback user: {username}")
+                        return jsonify({
+                            'success': True,
+                            'message': 'Password changed successfully'
+                        }), 200
                     else:
                         return jsonify({
                             'success': False,
@@ -271,20 +268,6 @@ def register_auth_routes(app, sheets_manager):
                         'success': False,
                         'message': 'User not found'
                     }), 404
-            
-            # Hash new password
-            new_hash, new_salt = TrainerAuthManager.hash_password(new_password)
-            
-            # Update password hash and salt in sheet
-            login_sheet.update_cell(user_row, login_sheet.find('Password Hash').col, new_hash)
-            login_sheet.update_cell(user_row, login_sheet.find('Salt').col, new_salt)
-            
-            logger.warning(f"✅ Password changed for user: {username}")
-            
-            return jsonify({
-                'success': True,
-                'message': 'Password changed successfully'
-            }), 200
             
         except Exception as e:
             logger.error(f"❌ Error changing password: {str(e)}", exc_info=True)
@@ -313,10 +296,10 @@ def register_auth_routes(app, sheets_manager):
             except ImportError:
                 from backend.trainer_auth import TrainerAuthManager
             
-            from datetime import datetime
+            from database import get_db_manager
             
-            login_sheet = TrainerAuthManager.get_login_sheet()
-            all_users = login_sheet.get_all_records()
+            db = get_db_manager()
+            conn = db._get_connection()
             
             # Admin users to create
             admin_users = [
@@ -335,37 +318,31 @@ def register_auth_routes(app, sheets_manager):
                 pwd_hash, salt = TrainerAuthManager.hash_password(password)
                 
                 # Check if user already exists
-                user_exists = False
-                user_row = None
-                for idx, user in enumerate(all_users, start=2):
-                    if user.get('Trainer Name', '').strip().lower() == trainer_name.lower():
-                        user_exists = True
-                        user_row = idx
-                        break
+                cursor = conn.execute(
+                    "SELECT id FROM trainers WHERE LOWER(name) = LOWER(?)",
+                    (trainer_name,)
+                )
+                existing = cursor.fetchone()
                 
-                if user_exists and user_row:
+                if existing:
                     # Update existing user
-                    login_sheet.update_cell(user_row, login_sheet.find('Password Hash').col, pwd_hash)
-                    login_sheet.update_cell(user_row, login_sheet.find('Salt').col, salt)
+                    conn.execute(
+                        "UPDATE trainers SET password_hash = ?, salt = ?, trainer_type = 'Admin' WHERE id = ?",
+                        (pwd_hash, salt, existing[0])
+                    )
                     updated_count += 1
                     logger.warning(f"✅ Updated admin user: {trainer_name}")
                 else:
-                    # Create new admin user row
-                    created_date = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                    new_row = [
-                        trainer_name,      # Trainer Name
-                        '',                # Email
-                        '',                # Phone
-                        'Admin',           # Trainer Type
-                        '',                # Photo
-                        pwd_hash,          # Password Hash
-                        salt,              # Salt
-                        created_date       # Created Date
-                    ]
-                    
-                    login_sheet.append_row(new_row)
+                    # Create new admin user
+                    conn.execute("""
+                        INSERT INTO trainers (name, email, phone, trainer_type, password_hash, salt, created_date)
+                        VALUES (?, '', '', 'Admin', ?, ?, ?)
+                    """, (trainer_name, pwd_hash, salt, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
                     created_count += 1
                     logger.warning(f"✅ Created admin user: {trainer_name}")
+            
+            conn.commit()
+            conn.close()
             
             return jsonify({
                 'success': True,
@@ -436,8 +413,8 @@ def register_auth_routes(app, sheets_manager):
                 os.environ['GOOGLE_SHEET_ID'] = sheet_id
                 os.environ['GOOGLE_CREDENTIALS_PATH'] = credentials_path
 
-                # Reinitialize sheets manager with new credentials
-                reset_sheets_manager()
+                # Reinitialize (no-op for SQLite but kept for compatibility)
+                reset_db_manager()
 
                 return jsonify({
                     'success': True,

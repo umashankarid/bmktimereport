@@ -1,55 +1,17 @@
-"""Trainer authentication using Google Sheets"""
+"""Trainer authentication using SQLite database"""
 import hashlib
 import secrets
-import time
-from sheets import get_sheets_manager
-import gspread
 import logging
+from database import get_db_manager
 
 # Use Python logging instead of print for proper output capture
 logger = logging.getLogger(__name__)
 
-def with_retry(func, max_retries=3, initial_wait=1):
-    """Decorator to retry a function with exponential backoff on rate limit errors"""
-    def wrapper(*args, **kwargs):
-        wait_time = initial_wait
-        last_error = None
-        
-        for attempt in range(max_retries):
-            try:
-                return func(*args, **kwargs)
-            except Exception as e:
-                error_str = str(e)
-                last_error = e
-                
-                # Check if it's a rate limit error
-                if '429' in error_str or 'RESOURCE_EXHAUSTED' in error_str or 'Quota exceeded' in error_str:
-                    if attempt < max_retries - 1:
-                        logger.warning(f"⏱️  Rate limit hit (attempt {attempt+1}/{max_retries}), waiting {wait_time}s before retry...")
-                        time.sleep(wait_time)
-                        wait_time *= 2  # Exponential backoff
-                        continue
-                elif '403' in error_str or 'Forbidden' in error_str:
-                    # Don't retry auth errors
-                    raise
-                elif attempt < max_retries - 1:
-                    # Retry other errors too, but with shorter wait
-                    logger.warning(f"⚠️  Error on attempt {attempt+1}/{max_retries}: {type(e).__name__}, retrying in {wait_time}s...")
-                    time.sleep(wait_time)
-                    wait_time *= 1.5
-                    continue
-                
-                raise
-        
-        # If all retries exhausted, raise last error
-        raise last_error
-    
-    return wrapper
 
 class TrainerAuthManager:
-    """Manages trainer authentication with Google Sheets"""
+    """Manages trainer authentication with SQLite database"""
     
-    LOGIN_SHEET_NAME = 'Login'
+    LOGIN_SHEET_NAME = 'Login'  # Kept for compatibility
     HEADERS = ['Trainer Name', 'Email', 'Phone', 'Trainer Type', 'Photo', 'Password Hash', 'Salt', 'Created Date']
     
     @staticmethod
@@ -76,180 +38,56 @@ class TrainerAuthManager:
     
     @staticmethod
     def get_login_sheet():
-        """Get or create Login sheet - with robust error handling and retry logic"""
-        # Use retry wrapper to handle rate limits
-        @with_retry
-        def _get_sheet_with_retry():
-            return TrainerAuthManager._get_login_sheet_internal()
-        
-        return _get_sheet_with_retry()
-    
-    @staticmethod
-    def _get_login_sheet_internal():
-        """Internal implementation of get_login_sheet"""
-        try:
-            sheets_manager = get_sheets_manager()
-            
-            if not sheets_manager.authenticated or sheets_manager.demo_mode:
-                raise RuntimeError("Google Sheets not configured")
-            
-            from config import Config
-            import os
-            import time
-            
-            sheet_id = os.getenv('GOOGLE_SHEET_ID')
-            
-            logger.warning(f"\n🔍 Attempting to get Login sheet for ID: {sheet_id}")
-            spreadsheet = sheets_manager.client.open_by_key(sheet_id)
-            
-            # Get all existing worksheets first
-            logger.warning(f"📋 Fetching all worksheets...")
-            all_worksheets = spreadsheet.worksheets()
-            worksheet_names = [ws.title for ws in all_worksheets]
-            logger.warning(f"📋 Existing worksheets: {worksheet_names}")
-            
-            # Check if Login sheet exists
-            if TrainerAuthManager.LOGIN_SHEET_NAME in worksheet_names:
-                logger.warning(f"✅ Login sheet exists, checking if it needs repair...")
-                login_sheet = spreadsheet.worksheet(TrainerAuthManager.LOGIN_SHEET_NAME)
-                
-                # Check if headers are correct
-                headers = login_sheet.row_values(1)
-                logger.warning(f"   Current headers: {headers}")
-                
-                # If headers don't match expected, rebuild the sheet
-                if headers != TrainerAuthManager.HEADERS:
-                    logger.warning(f"❌ Headers corrupted! Expected: {TrainerAuthManager.HEADERS}")
-                    logger.warning(f"   Deleting and recreating Login sheet...")
-                    spreadsheet.del_worksheet(login_sheet)
-                    
-                    # Recreate it
-                    login_sheet = spreadsheet.add_worksheet(
-                        title=TrainerAuthManager.LOGIN_SHEET_NAME,
-                        rows=1000,
-                        cols=4
-                    )
-                    logger.warning(f"✅ New Login sheet created")
-                    
-                    # Add headers
-                    logger.warning(f"📝 Adding headers...")
-                    login_sheet.append_row(TrainerAuthManager.HEADERS)
-                    logger.warning(f"✅ Headers added: {TrainerAuthManager.HEADERS}")
-                else:
-                    logger.warning(f"✅ Headers are correct")
-                
-                logger.warning(f"✅ Login sheet retrieved successfully")
-                return login_sheet
-            
-            # If Login sheet doesn't exist, create it
-            logger.warning(f"⚠️  Login sheet doesn't exist, creating new one...")
-            try:
-                login_sheet = spreadsheet.add_worksheet(
-                    title=TrainerAuthManager.LOGIN_SHEET_NAME,
-                    rows=1000,
-                    cols=4
-                )
-                logger.warning(f"✅ Login sheet created")
-                
-                # Add headers
-                logger.warning(f"📝 Adding headers...")
-                login_sheet.append_row(TrainerAuthManager.HEADERS)
-                logger.warning(f"✅ Headers added: {TrainerAuthManager.HEADERS}")
-                
-                return login_sheet
-            except Exception as create_error:
-                error_msg = str(create_error)
-                logger.error(f"❌ Error creating sheet: {error_msg}")
-                
-                # If it's a "sheet already exists" error, retry fetching
-                if "already exists" in error_msg or "ALREADY_EXISTS" in error_msg:
-                    logger.warning(f"📍 Sheet exists but wasn't in list, retrying fetch...")
-                    time.sleep(1)  # Wait a moment
-                    
-                    # Refresh worksheet list
-                    all_worksheets = spreadsheet.worksheets()
-                    worksheet_names = [ws.title for ws in all_worksheets]
-                    logger.warning(f"📋 Updated worksheets: {worksheet_names}")
-                    
-                    if TrainerAuthManager.LOGIN_SHEET_NAME in worksheet_names:
-                        login_sheet = spreadsheet.worksheet(TrainerAuthManager.LOGIN_SHEET_NAME)
-                        logger.warning(f"✅ Login sheet retrieved on retry")
-                        return login_sheet
-                
-                raise create_error
-            
-        except Exception as e:
-            logger.error(f"❌ Error in _get_login_sheet_internal: {type(e).__name__}: {e}")
-            import traceback
-            traceback.print_exc()
-            raise
+        """Compatibility method - returns the db manager itself for code that expects a sheet-like object"""
+        # Return a wrapper that mimics the sheet interface for auth.py compatibility
+        return _LoginSheetCompat()
     
     @staticmethod
     def register_trainer(trainer_name, password, email='', phone='', photo_base64=None, trainer_type='Assistant Trainer'):
         """Register a new trainer"""
-        @with_retry
-        def _do_register():
-            return TrainerAuthManager._register_trainer_internal(trainer_name, password, email, phone, photo_base64, trainer_type)
-        
-        return _do_register()
-    
-    @staticmethod
-    def _register_trainer_internal(trainer_name, password, email='', phone='', photo_base64=None, trainer_type='Assistant Trainer'):
-        """Internal implementation of register_trainer"""
         try:
-            print(f"\n{'='*60}")
-            print(f"📝 REGISTERING TRAINER: {trainer_name}")
-            print(f"{'='*60}")
+            logger.warning(f"\n{'='*60}")
+            logger.warning(f"📝 REGISTERING TRAINER: {trainer_name}")
+            logger.warning(f"{'='*60}")
             
             # Validate input
             if not trainer_name or not password:
-                print(f"❌ Missing fields")
                 return {
                     'success': False,
                     'message': 'Trainer name and password are required'
                 }
             
             if len(password) < 6:
-                print(f"❌ Password too short")
                 return {
                     'success': False,
                     'message': 'Password must be at least 6 characters'
                 }
             
-            # Get login sheet
-            print(f"🔗 Getting login sheet...")
-            login_sheet = TrainerAuthManager.get_login_sheet()
-            print(f"✅ Got login sheet")
+            db = get_db_manager()
+            conn = db._get_connection()
             
             # Check if trainer already exists
-            print(f"🔍 Checking for existing trainer: {trainer_name}")
-            try:
-                all_trainers = login_sheet.get_all_records()
-                print(f"📋 Found {len(all_trainers)} existing trainers")
-                
-                for trainer in all_trainers:
-                    existing_name = trainer.get('Trainer Name', '').lower()
-                    print(f"  - Checking against: {existing_name}")
-                    if existing_name == trainer_name.lower():
-                        print(f"❌ Trainer already exists: {trainer_name}")
-                        return {
-                            'success': False,
-                            'message': 'Trainer name already registered'
-                        }
-            except Exception as check_error:
-                print(f"⚠️  Error checking existing trainers: {check_error}")
-                # Continue anyway - better to allow duplicate than fail
+            cursor = conn.execute(
+                "SELECT name FROM trainers WHERE LOWER(name) = LOWER(?)",
+                (trainer_name.strip(),)
+            )
+            if cursor.fetchone():
+                conn.close()
+                return {
+                    'success': False,
+                    'message': 'Trainer name already registered'
+                }
             
             # Hash password
-            print(f"🔐 Hashing password...")
             pwd_hash, salt = TrainerAuthManager.hash_password(password)
-            print(f"✅ Password hashed")
             
-            # Add to sheet
-            print(f"📝 Preparing row data...")
+            # Add to database
             from datetime import datetime
-            row = [
-                trainer_name,
+            conn.execute("""
+                INSERT INTO trainers (name, email, phone, trainer_type, photo, password_hash, salt, created_date)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                trainer_name.strip(),
                 email,
                 phone,
                 trainer_type,
@@ -257,27 +95,21 @@ class TrainerAuthManager:
                 pwd_hash,
                 salt,
                 datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            ]
-            print(f"📝 Row data: {row[0]}, {row[1]}, {row[2]}, {row[3]}, {'[photo base64]' if photo_base64 else '[no photo]'}, [hash], [salt], {row[7]}")
+            ))
+            conn.commit()
+            conn.close()
             
-            print(f"📤 Appending to sheet...")
-            login_sheet.append_row(row)
-            print(f"✅ Appended to sheet")
-            
-            print(f"✅ TRAINER REGISTERED SUCCESSFULLY: {trainer_name}")
-            print(f"{'='*60}\n")
+            logger.warning(f"✅ TRAINER REGISTERED SUCCESSFULLY: {trainer_name}")
             return {
                 'success': True,
                 'message': 'Registration successful'
             }
             
         except Exception as e:
-            error_type = type(e).__name__
             error_msg = str(e)
-            print(f"❌ ERROR in register_trainer ({error_type}): {error_msg}")
+            logger.error(f"❌ ERROR in register_trainer: {error_msg}")
             import traceback
             traceback.print_exc()
-            print(f"{'='*60}\n")
             return {
                 'success': False,
                 'message': f'Registration failed: {error_msg}'
@@ -286,117 +118,65 @@ class TrainerAuthManager:
     @staticmethod
     def login_trainer(trainer_name, password):
         """Authenticate trainer with name and password"""
-        @with_retry
-        def _do_login():
-            return TrainerAuthManager._login_trainer_internal(trainer_name, password)
-        
-        return _do_login()
-    
-    @staticmethod
-    def _login_trainer_internal(trainer_name, password):
-        """Internal implementation of login_trainer"""
         try:
             logger.warning(f"\n{'='*60}")
             logger.warning(f"🔐 LOGIN ATTEMPT: {trainer_name}")
             logger.warning(f"{'='*60}")
             
-            # Get login sheet
-            logger.warning(f"🔗 Getting login sheet...")
-            login_sheet = TrainerAuthManager.get_login_sheet()
-            logger.warning(f"✅ Got login sheet")
+            db = get_db_manager()
+            conn = db._get_connection()
             
-            # Find trainer by name
-            logger.warning(f"📋 Fetching all trainers...")
-            try:
-                logger.warning(f"   Calling get_all_records()...")
-                all_trainers = login_sheet.get_all_records()
-                logger.warning(f"✅ get_all_records() returned successfully")
-                logger.warning(f"📋 Total trainers in sheet: {len(all_trainers)}")
-                logger.warning(f"📋 Raw trainer records:")
-                for idx, record in enumerate(all_trainers):
-                    logger.warning(f"     [{idx}] {record}")
-            except Exception as record_error:
-                logger.error(f"❌ ERROR getting records: {type(record_error).__name__}: {record_error}")
-                import traceback
-                traceback.print_exc()
-                raise
+            # Find trainer by name (case-insensitive)
+            cursor = conn.execute(
+                "SELECT name, email, phone, trainer_type, password_hash, salt FROM trainers WHERE LOWER(name) = LOWER(?)",
+                (trainer_name.strip(),)
+            )
+            row = cursor.fetchone()
+            conn.close()
             
-            trainer = None
-            for idx, t in enumerate(all_trainers):
-                stored_name = t.get('Trainer Name', '')
-                stored_name_lower = stored_name.lower()
-                input_name_lower = trainer_name.lower()
-                
-                logger.warning(f"  [{idx}] Stored: '{stored_name}' (lower: '{stored_name_lower}')")
-                logger.warning(f"       Input:  '{trainer_name}' (lower: '{input_name_lower}')")
-                logger.warning(f"       Match: {stored_name_lower == input_name_lower}")
-                
-                if stored_name_lower == input_name_lower:
-                    trainer = t
-                    logger.warning(f"  ✅ MATCH FOUND at index {idx}")
-                    break
-            
-            if not trainer:
+            if not row:
                 logger.warning(f"❌ Trainer not found: {trainer_name}")
-                logger.warning(f"   Available trainers: {[t.get('Trainer Name', '?') for t in all_trainers]}")
                 return {
                     'success': False,
                     'message': 'Trainer name or password incorrect'
                 }
             
-            logger.warning(f"\n🔐 VERIFYING PASSWORD")
-            # Verify password
-            stored_hash = trainer.get('Password Hash')
-            salt = trainer.get('Salt')
-            
-            logger.warning(f"  Stored Hash (first 20 chars): {stored_hash[:20] if stored_hash else 'NONE'}...")
-            logger.warning(f"  Salt (first 20 chars): {salt[:20] if salt else 'NONE'}...")
-            logger.warning(f"  Input password length: {len(password)}")
+            stored_name, email, phone, trainer_type, stored_hash, salt = row
             
             if not stored_hash or not salt:
-                logger.warning(f"❌ Missing hash or salt in sheet")
+                logger.warning(f"❌ Missing hash or salt for trainer: {trainer_name}")
                 return {
                     'success': False,
                     'message': 'Trainer account incomplete'
                 }
             
-            # Verify
+            # Verify password
             is_valid = TrainerAuthManager.verify_password(stored_hash, password, salt)
-            logger.warning(f"  Password verification result: {is_valid}")
             
             if not is_valid:
                 logger.warning(f"❌ Invalid password for: {trainer_name}")
-                logger.warning(f"   Recalculating hash to debug...")
-                recalc_hash, _ = TrainerAuthManager.hash_password(password, salt)
-                logger.warning(f"   Recalculated (first 20): {recalc_hash[:20]}...")
-                logger.warning(f"   Stored (first 20):       {stored_hash[:20]}...")
-                logger.warning(f"   Match: {recalc_hash == stored_hash}")
-                
                 return {
                     'success': False,
                     'message': 'Trainer name or password incorrect'
                 }
             
             logger.warning(f"✅ Trainer authenticated: {trainer_name}")
-            logger.warning(f"{'='*60}\n")
             return {
                 'success': True,
                 'message': 'Login successful',
                 'trainer': {
-                    'name': trainer.get('Trainer Name'),
-                    'email': trainer.get('Email', ''),
-                    'phone': trainer.get('Phone', ''),
-                    'trainer_type': trainer.get('Trainer Type', 'Assistant Trainer')
+                    'name': stored_name,
+                    'email': email or '',
+                    'phone': phone or '',
+                    'trainer_type': trainer_type or 'Assistant Trainer'
                 }
             }
             
         except Exception as e:
-            error_type = type(e).__name__
             error_msg = str(e)
-            logger.error(f"❌ Login error ({error_type}): {error_msg}")
+            logger.error(f"❌ Login error: {error_msg}")
             import traceback
             traceback.print_exc()
-            logger.error(f"{'='*60}\n")
             return {
                 'success': False,
                 'message': f'Login failed: {error_msg}'
@@ -404,31 +184,54 @@ class TrainerAuthManager:
 
     @staticmethod
     def update_trainer_info(old_name, new_name, email='', phone=''):
-        """Update trainer information in Login sheet"""
+        """Update trainer information in database"""
         try:
-            login_sheet = TrainerAuthManager.get_login_sheet()
-            all_trainers = login_sheet.get_all_records()
+            db = get_db_manager()
+            conn = db._get_connection()
             
-            # Find trainer row
-            for idx, trainer in enumerate(all_trainers):
-                if trainer.get('Trainer Name', '').lower() == old_name.lower():
-                    row_idx = idx + 2  # +1 for header, +1 for 1-indexed
-                    
-                    # Update the cells
-                    login_sheet.update_cell(row_idx, 1, new_name)  # Column A: Trainer Name
-                    if email:
-                        login_sheet.update_cell(row_idx, 2, email)  # Column B: Email
-                    if phone:
-                        login_sheet.update_cell(row_idx, 3, phone)  # Column C: Phone
-                    
-                    return {
-                        'success': True,
-                        'message': f'Updated trainer {old_name} to {new_name}'
-                    }
+            # Find the trainer
+            cursor = conn.execute(
+                "SELECT id FROM trainers WHERE LOWER(name) = LOWER(?)",
+                (old_name.strip(),)
+            )
+            row = cursor.fetchone()
+            
+            if not row:
+                conn.close()
+                return {
+                    'success': False,
+                    'message': f'Trainer {old_name} not found'
+                }
+            
+            trainer_id = row[0]
+            
+            # Build update query
+            updates = ["name = ?"]
+            params = [new_name.strip()]
+            
+            if email:
+                updates.append("email = ?")
+                params.append(email)
+            if phone:
+                updates.append("phone = ?")
+                params.append(phone)
+            
+            params.append(trainer_id)
+            conn.execute(f"UPDATE trainers SET {', '.join(updates)} WHERE id = ?", params)
+            
+            # Also update activities if name changed
+            if old_name.strip().lower() != new_name.strip().lower():
+                conn.execute(
+                    "UPDATE activities SET trainer_name = ? WHERE LOWER(trainer_name) = LOWER(?)",
+                    (new_name.strip(), old_name.strip())
+                )
+            
+            conn.commit()
+            conn.close()
             
             return {
-                'success': False,
-                'message': f'Trainer {old_name} not found'
+                'success': True,
+                'message': f'Updated trainer {old_name} to {new_name}'
             }
         
         except Exception as e:
@@ -439,25 +242,31 @@ class TrainerAuthManager:
 
     @staticmethod
     def delete_trainer(trainer_name):
-        """Delete trainer from Login sheet"""
+        """Delete trainer from database"""
         try:
-            login_sheet = TrainerAuthManager.get_login_sheet()
-            all_trainers = login_sheet.get_all_records()
+            db = get_db_manager()
+            conn = db._get_connection()
             
-            # Find trainer row
-            for idx, trainer in enumerate(all_trainers):
-                if trainer.get('Trainer Name', '').lower() == trainer_name.lower():
-                    row_idx = idx + 2  # +1 for header, +1 for 1-indexed
-                    login_sheet.delete_row(row_idx)
-                    
-                    return {
-                        'success': True,
-                        'message': f'Deleted trainer {trainer_name}'
-                    }
+            cursor = conn.execute(
+                "SELECT id FROM trainers WHERE LOWER(name) = LOWER(?)",
+                (trainer_name.strip(),)
+            )
+            row = cursor.fetchone()
+            
+            if not row:
+                conn.close()
+                return {
+                    'success': False,
+                    'message': f'Trainer {trainer_name} not found'
+                }
+            
+            conn.execute("DELETE FROM trainers WHERE LOWER(name) = LOWER(?)", (trainer_name.strip(),))
+            conn.commit()
+            conn.close()
             
             return {
-                'success': False,
-                'message': f'Trainer {trainer_name} not found'
+                'success': True,
+                'message': f'Deleted trainer {trainer_name}'
             }
         
         except Exception as e:
@@ -465,3 +274,118 @@ class TrainerAuthManager:
                 'success': False,
                 'message': f'Error deleting trainer: {str(e)}'
             }
+
+    @staticmethod
+    def change_password(trainer_name, old_password, new_password):
+        """Change trainer's password"""
+        try:
+            db = get_db_manager()
+            conn = db._get_connection()
+            
+            # Get current hash and salt
+            cursor = conn.execute(
+                "SELECT password_hash, salt FROM trainers WHERE LOWER(name) = LOWER(?)",
+                (trainer_name.strip(),)
+            )
+            row = cursor.fetchone()
+            
+            if not row:
+                conn.close()
+                return {
+                    'success': False,
+                    'message': 'Trainer not found'
+                }
+            
+            stored_hash, salt = row
+            
+            # Verify old password
+            if not TrainerAuthManager.verify_password(stored_hash, old_password, salt):
+                conn.close()
+                return {
+                    'success': False,
+                    'message': 'Current password is incorrect'
+                }
+            
+            # Hash new password
+            new_hash, new_salt = TrainerAuthManager.hash_password(new_password)
+            
+            # Update in database
+            conn.execute(
+                "UPDATE trainers SET password_hash = ?, salt = ? WHERE LOWER(name) = LOWER(?)",
+                (new_hash, new_salt, trainer_name.strip())
+            )
+            conn.commit()
+            conn.close()
+            
+            return {
+                'success': True,
+                'message': 'Password changed successfully'
+            }
+        
+        except Exception as e:
+            return {
+                'success': False,
+                'message': f'Error changing password: {str(e)}'
+            }
+
+
+class _LoginSheetCompat:
+    """Compatibility wrapper that mimics gspread worksheet interface for auth.py"""
+    
+    def get_all_records(self):
+        """Return all trainers as list of dicts (mimics sheet.get_all_records())"""
+        db = get_db_manager()
+        conn = db._get_connection()
+        cursor = conn.execute(
+            "SELECT name, email, phone, trainer_type, photo, password_hash, salt, created_date FROM trainers"
+        )
+        
+        records = []
+        for row in cursor.fetchall():
+            records.append({
+                'Trainer Name': row[0],
+                'Email': row[1] or '',
+                'Phone': row[2] or '',
+                'Trainer Type': row[3] or 'Assistant Trainer',
+                'Photo': row[4] or '',
+                'Password Hash': row[5] or '',
+                'Salt': row[6] or '',
+                'Created Date': row[7] or ''
+            })
+        conn.close()
+        return records
+    
+    def append_row(self, row):
+        """Add a trainer row (mimics sheet.append_row())"""
+        db = get_db_manager()
+        conn = db._get_connection()
+        
+        # Row format matches HEADERS: [Trainer Name, Email, Phone, Trainer Type, Photo, Password Hash, Salt, Created Date]
+        conn.execute("""
+            INSERT OR REPLACE INTO trainers (name, email, phone, trainer_type, photo, password_hash, salt, created_date)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            row[0] if len(row) > 0 else '',  # Trainer Name
+            row[1] if len(row) > 1 else '',  # Email
+            row[2] if len(row) > 2 else '',  # Phone
+            row[3] if len(row) > 3 else 'Assistant Trainer',  # Trainer Type
+            row[4] if len(row) > 4 else '',  # Photo
+            row[5] if len(row) > 5 else '',  # Password Hash
+            row[6] if len(row) > 6 else '',  # Salt
+            row[7] if len(row) > 7 else ''   # Created Date
+        ))
+        conn.commit()
+        conn.close()
+    
+    def row_values(self, row_num):
+        """Get header row (only called with row_num=1)"""
+        return TrainerAuthManager.HEADERS
+    
+    def update_cell(self, row, col, value):
+        """Update a cell - used for updating trainer info"""
+        # This is called by legacy code - we handle it through update_trainer_info instead
+        pass
+    
+    def delete_row(self, row_idx):
+        """Delete a row by index - not used with DB"""
+        pass
