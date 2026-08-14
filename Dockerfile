@@ -9,7 +9,8 @@ RUN npm install
 COPY frontend/src ./src
 COPY frontend/public ./public
 
-# Build frontend
+# Build frontend with relative API URL (same origin)
+ENV REACT_APP_API_URL=/api
 RUN npm run build
 
 # Backend stage
@@ -26,6 +27,7 @@ RUN apt-get update && apt-get install -y \
 # Install Python dependencies
 COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir gunicorn python-dotenv
 
 # Copy backend code
 COPY backend/ .
@@ -33,8 +35,11 @@ COPY backend/ .
 # Copy built frontend from frontend-build stage
 COPY --from=frontend-build /app/frontend/build ./static
 
-# Create directories
-RUN mkdir -p /app/config
+# Copy the baseline database (will be overridden by volume mount if exists)
+COPY backend/activities.db ./activities.db
+
+# Create data directory for persistent storage
+RUN mkdir -p /app/data
 
 # Expose port
 EXPOSE 5000
