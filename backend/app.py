@@ -112,12 +112,37 @@ def create_app():
             sheets = get_sheets_manager()
             result = sheets.add_activity(data)
             
-            # If successful, also update cache
+            # If successful, also update cache with sheet-style keys
             if result['success']:
                 try:
                     cache = get_data_cache()
-                    cache.add_activity(data)
-                    logger.info(f"✅ Activity added to cache")
+                    # Convert snake_case keys to sheet-style keys for cache consistency
+                    # Handle both single and multi-activity submissions
+                    activities_to_cache = []
+                    if 'activities' in data and isinstance(data['activities'], list):
+                        for act in data['activities']:
+                            activities_to_cache.append({
+                                'Trainer Name': data.get('trainer_name', ''),
+                                'Date': data.get('date', ''),
+                                'Activity': act.get('activity', ''),
+                                'Start Time': act.get('start_time', ''),
+                                'End Time': act.get('end_time', ''),
+                                'Note': data.get('note', ''),
+                                'Paid': ''
+                            })
+                    else:
+                        activities_to_cache.append({
+                            'Trainer Name': data.get('trainer_name', ''),
+                            'Date': data.get('date', ''),
+                            'Activity': data.get('activity', ''),
+                            'Start Time': data.get('start_time', ''),
+                            'End Time': data.get('end_time', ''),
+                            'Note': data.get('note', ''),
+                            'Paid': ''
+                        })
+                    for activity_cache_entry in activities_to_cache:
+                        cache.add_activity(activity_cache_entry)
+                    logger.info(f"✅ {len(activities_to_cache)} activity/activities added to cache")
                 except Exception as e:
                     logger.warning(f"⚠️  Could not update cache: {e}")
             
@@ -297,7 +322,8 @@ def create_app():
             
             # Filter by trainer if specified
             if trainer:
-                all_activities = [a for a in all_activities if a.get('Trainer Name') == trainer]
+                trainer_lower = trainer.strip().lower()
+                all_activities = [a for a in all_activities if (a.get('Trainer Name') or a.get('trainer_name', '')).strip().lower() == trainer_lower]
             
             # Apply limit
             activities = all_activities[:limit]
@@ -518,9 +544,9 @@ def create_app():
                                 cache.data['trainers'] = trainers
                     
                     if trainers:
-                        trainers_of_type = [t['name'] for t in trainers if t.get('trainer_type') == trainer_type_filter]
+                        trainers_of_type = [t['name'].strip().lower() for t in trainers if t.get('trainer_type') == trainer_type_filter]
                         print(f"📊 Filtering by trainer type '{trainer_type_filter}': found {len(trainers_of_type)} trainers - {trainers_of_type}")
-                        activities = [a for a in activities if a.get('Trainer Name', '') in trainers_of_type]
+                        activities = [a for a in activities if (a.get('Trainer Name') or a.get('trainer_name', '')).strip().lower() in trainers_of_type]
                         print(f"📊 After type filter: {len(activities)} activities")
                     else:
                         print(f"⚠️  Could not get trainers")
@@ -531,7 +557,8 @@ def create_app():
             
             # Apply trainer filter
             if trainer_filter:
-                activities = [a for a in activities if a.get('Trainer Name', '').lower() == trainer_filter.lower()]
+                trainer_filter_lower = trainer_filter.strip().lower()
+                activities = [a for a in activities if (a.get('Trainer Name') or a.get('trainer_name', '')).strip().lower() == trainer_filter_lower]
             
             if month_filter:
                 filtered = []
@@ -623,8 +650,10 @@ def create_app():
             filtered = []
             for activity in all_activities:
                 # Filter by trainer
-                if trainer_name and activity.get('Trainer Name', '').lower() != trainer_name.lower():
-                    continue
+                if trainer_name:
+                    activity_trainer = (activity.get('Trainer Name') or activity.get('trainer_name', '')).strip().lower()
+                    if activity_trainer != trainer_name.strip().lower():
+                        continue
                 
                 # Filter by activity type
                 if activity_type and activity.get('Activity', '').lower() != activity_type.lower():
