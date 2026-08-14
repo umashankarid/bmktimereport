@@ -24,7 +24,6 @@ def migrate():
 
     # Import sheets manager (uses existing credentials)
     from sheets import get_sheets_manager
-    from trainer_auth import TrainerAuthManager
 
     sheets = get_sheets_manager()
     if not sheets.authenticated:
@@ -53,7 +52,10 @@ def migrate():
     print("\n" + "-" * 40)
     print("👥 Migrating trainers from Login sheet...")
     try:
-        login_sheet = TrainerAuthManager.get_login_sheet()
+        # Access Login sheet directly via gspread (not through trainer_auth which now uses SQLite)
+        sheet_id = os.environ.get('GOOGLE_SHEET_ID')
+        spreadsheet = sheets.client.open_by_key(sheet_id)
+        login_sheet = spreadsheet.worksheet('Login')
         all_trainers = login_sheet.get_all_records()
         print(f"   Found {len(all_trainers)} trainers")
 
