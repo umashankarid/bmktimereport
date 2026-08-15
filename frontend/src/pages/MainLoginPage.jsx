@@ -244,7 +244,10 @@ function MainLoginPage({ onAdminLogin, onTrainerLogin }) {
       <div className="main-login-card">
         <div className="login-header">
           <h1>🏸 BMK KOMET ACTIVITIES</h1>
-          <p>{isRegistering ? 'Create your account' : 'Login to your account'}</p>
+          <p>{isRegistering ? 'Create your account' : 'Login'}</p>
+          {!isRegistering && (
+            <p className="login-hint">Use the same login credentials as your Badminton Sweden account to access tournaments and manage your registrations.</p>
+          )}
         </div>
 
         {error && (
