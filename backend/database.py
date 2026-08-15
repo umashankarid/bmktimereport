@@ -152,6 +152,24 @@ class DatabaseManager:
                     ON volunteer_registrations(tournament_name);
                 CREATE INDEX IF NOT EXISTS idx_freezes_type_month
                     ON freezes(freeze_type, date_month);
+
+                CREATE TABLE IF NOT EXISTS bills (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    trainer_name TEXT NOT NULL,
+                    bill_name TEXT NOT NULL,
+                    description TEXT DEFAULT '',
+                    amount REAL NOT NULL,
+                    payment_date TEXT NOT NULL,
+                    file_data BLOB,
+                    file_name TEXT DEFAULT '',
+                    file_type TEXT DEFAULT '',
+                    created_date TEXT DEFAULT ''
+                );
+
+                CREATE INDEX IF NOT EXISTS idx_bills_trainer
+                    ON bills(trainer_name COLLATE NOCASE);
+                CREATE INDEX IF NOT EXISTS idx_bills_payment_date
+                    ON bills(payment_date);
             """)
             conn.commit()
         finally:
@@ -1862,3 +1880,208 @@ class DatabaseManager:
                 'data': {},
                 'message': f'Error retrieving time report status: {str(e)}'
             }
+
+    # ==================== BILL MANAGEMENT ====================
+
+    def add_bill(self, trainer_name, bill_name, description, amount, payment_date, file_data=None, file_name='', file_type=''):
+        """Add a new bill/reimbursement request.
+
+        Args:
+            trainer_name (str): Name of the trainer submitting the bill.
+            bill_name (str): Title/name of the bill.
+            description (str): Description of the expense.
+            amount (float): Amount in SEK.
+            payment_date (str): Date of payment (YYYY-MM-DD).
+            file_data (bytes, optional): Binary file data (PDF/image).
+            file_name (str): Original filename.
+            file_type (str): MIME type of the file.
+
+        Returns:
+            dict: {'success': bool, 'message': str}
+        """
+        try:
+            if not trainer_name or not bill_name or not amount or not payment_date:
+                return {
+                    'success': False,
+                    'message': 'Trainer name, bill name, amount, and payment date are required'
+                }
+
+            from datetime import datetime
+            created_date = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+            conn = self._get_connection()
+            try:
+                conn.execute("""
+                    INSERT INTO bills (trainer_name, bill_name, description, amount, payment_date, file_data, file_name, file_type, created_date)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    trainer_name.strip(),
+                    bill_name.strip(),
+                    description.strip() if description else '',
+                    float(amount),
+                    payment_date,
+                    file_data,
+                    file_name,
+                    file_type,
+                    created_date
+                ))
+                conn.commit()
+            finally:
+                conn.close()
+
+            return {
+                'success': True,
+                'message': 'Bill submitted successfully'
+            }
+
+        except Exception as e:
+            logger.error(f"Error adding bill: {e}")
+            return {
+                'success': False,
+                'message': f'Error submitting bill: {str(e)}'
+            }
+
+    def get_bills(self, trainer_name=None, month=None):
+        """Get bills with optional filters.
+
+        Args:
+            trainer_name (str, optional): Filter by trainer name.
+            month (str, optional): Filter by month (YYYY-MM).
+
+        Returns:
+            dict: {'success': bool, 'data': [...], 'count': int}
+        """
+        try:
+            conn = self._get_connection()
+            try:
+                query = "SELECT id, trainer_name, bill_name, description, amount, payment_date, file_name, file_type, created_date FROM bills"
+                params = []
+                conditions = []
+
+                if trainer_name:
+                    conditions.append("LOWER(trainer_name) = LOWER(?)")
+                    params.append(trainer_name.strip())
+
+                if month:
+                    conditions.append("payment_date LIKE ?")
+                    params.append(f"{month}%")
+
+                if conditions:
+                    query += " WHERE " + " AND ".join(conditions)
+
+                query += " ORDER BY payment_date DESC, created_date DESC"
+
+                cursor = conn.execute(query, params)
+                rows = cursor.fetchall()
+            finally:
+                conn.close()
+
+            bills = []
+            for row in rows:
+                bills.append({
+                    'id': row['id'],
+                    'trainer_name': row['trainer_name'],
+                    'bill_name': row['bill_name'],
+                    'description': row['description'],
+                    'amount': row['amount'],
+                    'payment_date': row['payment_date'],
+                    'file_name': row['file_name'],
+                    'file_type': row['file_type'],
+                    'created_date': row['created_date'],
+                    'has_file': bool(row['file_name'])
+                })
+
+            return {
+                'success': True,
+                'data': bills,
+                'count': len(bills)
+            }
+
+        except Exception as e:
+            logger.error(f"Error getting bills: {e}")
+            return {
+                'success': False,
+                'data': [],
+                'message': f'Error retrieving bills: {str(e)}'
+            }
+
+    def get_bill_file(self, bill_id):
+        """Get the file data for a specific bill.
+
+        Args:
+            bill_id (int): The bill ID.
+
+        Returns:
+            dict: {'success': bool, 'data': bytes, 'file_name': str, 'file_type': str}
+        """
+        try:
+            conn = self._get_connection()
+            try:
+                cursor = conn.execute(
+                    "SELECT file_data, file_name, file_type FROM bills WHERE id = ?",
+                    (bill_id,)
+                )
+                row = cursor.fetchone()
+            finally:
+                conn.close()
+
+            if not row:
+                return {
+                    'success': False,
+                    'message': 'Bill not found'
+                }
+
+            if not row['file_data']:
+                return {
+                    'success': False,
+                    'message': 'No file attached to this bill'
+                }
+
+            return {
+                'success': True,
+                'data': row['file_data'],
+                'file_name': row['file_name'],
+                'file_type': row['file_type']
+            }
+
+        except Exception as e:
+            logger.error(f"Error getting bill file: {e}")
+            return {
+                'success': False,
+                'message': f'Error retrieving file: {str(e)}'
+            }
+
+    def delete_bill(self, bill_id, trainer_name=None):
+        """Delete a bill. If trainer_name is provided, only delete if it belongs to that trainer.
+
+        Args:
+            bill_id (int): The bill ID to delete.
+            trainer_name (str, optional): If provided, verify ownership.
+
+        Returns:
+            dict: {'success': bool, 'message': str}
+        """
+        try:
+            conn = self._get_connection()
+            try:
+                if trainer_name:
+                    cursor = conn.execute(
+                        "DELETE FROM bills WHERE id = ? AND LOWER(trainer_name) = LOWER(?)",
+                        (bill_id, trainer_name.strip())
+                    )
+                else:
+                    cursor = conn.execute("DELETE FROM bills WHERE id = ?", (bill_id,))
+
+                conn.commit()
+                deleted = cursor.rowcount
+            finally:
+                conn.close()
+
+            if deleted:
+                return {'success': True, 'message': 'Bill deleted'}
+            else:
+                return {'success': False, 'message': 'Bill not found or access denied'}
+
+        except Exception as e:
+            logger.error(f"Error deleting bill: {e}")
+            return {'success': False, 'message': f'Error deleting bill: {str(e)}'}

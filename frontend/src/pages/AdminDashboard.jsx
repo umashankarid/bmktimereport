@@ -9,6 +9,7 @@ import ManageTournaments from '../components/ManageTournaments';
 import ManageVolunteers from '../components/ManageVolunteers';
 import PaymentManagement from '../components/PaymentManagement';
 import TimeReportStatus from '../components/TimeReportStatus';
+import BillManagement from '../components/BillManagement';
 
 function AdminDashboard({ onLogout }) {
   const navigate = useNavigate();
@@ -397,6 +398,12 @@ function AdminDashboard({ onLogout }) {
           💳 Payment Management
         </button>
         <button
+          className={`tab-btn ${activeTab === 'bills' ? 'active' : ''}`}
+          onClick={() => setActiveTab('bills')}
+        >
+          💰 Bill Management
+        </button>
+        <button
           className={`tab-btn ${activeTab === 'qrcodes' ? 'active' : ''}`}
           onClick={() => setActiveTab('qrcodes')}
         >
@@ -419,6 +426,9 @@ function AdminDashboard({ onLogout }) {
         )}
         {activeTab === 'freeze' && (
           <PaymentManagement />
+        )}
+        {activeTab === 'bills' && (
+          <BillManagement />
         )}
         {activeTab === 'trainers' && (
           <ManageTrainers />

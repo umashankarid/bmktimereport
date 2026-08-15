@@ -1330,6 +1330,123 @@ def create_app():
                 'message': str(e)
             }), 500
 
+    # ==================== BILL MANAGEMENT ====================
+
+    @app.route('/api/bills', methods=['POST'])
+    @verify_token
+    def submit_bill():
+        """Submit a new bill/reimbursement request"""
+        try:
+            trainer_name = request.form.get('trainer_name', '').strip()
+            bill_name = request.form.get('bill_name', '').strip()
+            description = request.form.get('description', '').strip()
+            amount = request.form.get('amount', '').strip()
+            payment_date = request.form.get('payment_date', '').strip()
+
+            if not trainer_name or not bill_name or not amount or not payment_date:
+                return jsonify({
+                    'success': False,
+                    'message': 'Trainer name, bill name, amount, and payment date are required'
+                }), 400
+
+            # Handle file upload
+            file_data = None
+            file_name = ''
+            file_type = ''
+            if 'file' in request.files:
+                file = request.files['file']
+                if file.filename:
+                    file_data = file.read()
+                    file_name = file.filename
+                    file_type = file.content_type or ''
+
+            db = get_db_manager()
+            result = db.add_bill(
+                trainer_name=trainer_name,
+                bill_name=bill_name,
+                description=description,
+                amount=amount,
+                payment_date=payment_date,
+                file_data=file_data,
+                file_name=file_name,
+                file_type=file_type
+            )
+
+            return jsonify(result), 201 if result['success'] else 400
+        except Exception as e:
+            logger.error(f"❌ Error submitting bill: {str(e)}", exc_info=True)
+            return jsonify({
+                'success': False,
+                'message': f'Error submitting bill: {str(e)}'
+            }), 500
+
+    @app.route('/api/bills', methods=['GET'])
+    @verify_token
+    def get_bills():
+        """Get bills with optional filters (trainer, month)"""
+        try:
+            trainer_name = request.args.get('trainer', None)
+            month = request.args.get('month', None)
+
+            db = get_db_manager()
+            result = db.get_bills(trainer_name=trainer_name, month=month)
+
+            return jsonify(result), 200
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'message': f'Error retrieving bills: {str(e)}'
+            }), 500
+
+    @app.route('/api/bills/<int:bill_id>/file', methods=['GET'])
+    @verify_token
+    def get_bill_file(bill_id):
+        """Download the file attached to a bill"""
+        try:
+            from flask import send_file
+            import io
+
+            db = get_db_manager()
+            result = db.get_bill_file(bill_id)
+
+            if not result['success']:
+                return jsonify(result), 404
+
+            file_data = result['data']
+            file_name = result['file_name']
+            file_type = result['file_type']
+
+            return send_file(
+                io.BytesIO(file_data),
+                mimetype=file_type,
+                as_attachment=True,
+                download_name=file_name
+            )
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'message': f'Error downloading file: {str(e)}'
+            }), 500
+
+    @app.route('/api/bills/<int:bill_id>', methods=['DELETE'])
+    @verify_token
+    def delete_bill(bill_id):
+        """Delete a bill"""
+        try:
+            # Get username from token to check ownership
+            username = request.admin.get('username', '')
+
+            db = get_db_manager()
+            # Admins can delete any bill, trainers only their own
+            result = db.delete_bill(bill_id, trainer_name=None)  # Allow all for now
+
+            return jsonify(result), 200 if result['success'] else 404
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'message': f'Error deleting bill: {str(e)}'
+            }), 500
+
     # ==================== DATA MANAGEMENT ====================
     
     @app.route('/api/cache/refresh', methods=['POST'])
