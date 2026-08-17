@@ -142,7 +142,7 @@ function TrainerDashboard({ onLogout, error, setError, onActivitySubmit, trainer
         )}
 
         {activeTab === 'responsibilities' && (
-          <Responsibilities />
+          <Responsibilities currentTrainer={currentTrainer} />
         )}
 
         {activeTab === 'bills' && (

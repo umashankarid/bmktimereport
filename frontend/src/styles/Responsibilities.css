@@ -103,3 +103,82 @@
     font-size: 2rem;
   }
 }
+
+/* Tournament Responsibilities */
+.tournament-responsibilities {
+  margin: 2.5rem 0;
+  background: #fffbf0;
+  border: 1px solid #f0e0b0;
+  border-radius: 8px;
+  padding: 1.5rem 2rem;
+}
+
+.tournament-responsibilities h3 {
+  color: #333;
+  margin: 0 0 0.5rem 0;
+  font-size: 1.3rem;
+}
+
+.tournament-intro {
+  color: #666;
+  font-size: 0.95rem;
+  margin-bottom: 1.5rem;
+  line-height: 1.5;
+}
+
+.tournament-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.tournament-phase {
+  background: white;
+  border-radius: 8px;
+  padding: 1.25rem 1.5rem;
+  border: 1px solid #e8e8e8;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+}
+
+.phase-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.phase-header h4 {
+  margin: 0;
+  font-size: 1.05rem;
+  color: #333;
+}
+
+.phase-icon {
+  font-size: 1.5rem;
+}
+
+.tournament-phase ul {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.tournament-phase li {
+  color: #555;
+  margin-bottom: 8px;
+  line-height: 1.4;
+  font-size: 0.95rem;
+}
+
+.tournament-phase li:last-child {
+  margin-bottom: 0;
+}
+
+@media (max-width: 768px) {
+  .tournament-responsibilities {
+    padding: 1.25rem;
+  }
+
+  .tournament-phase {
+    padding: 1rem;
+  }
+}
