@@ -61,10 +61,12 @@ function Responsibilities({ currentTrainer }) {
                 <h4>Before Tournament Day</h4>
               </div>
               <ul>
+                <li>Assist with loading and transporting tournament materials to and from the venue</li>
                 <li>Help set up and fix the courts (nets, lines, posts)</li>
                 <li>Set up the match help desk (scoring sheets, schedules, pens)</li>
                 <li>Set up speakers and audio equipment</li>
                 <li>Arrange tables and chairs for players, officials, and spectators</li>
+                <li>Help organize medals, trophies, and prize materials</li>
                 <li>Verify all equipment is in working condition</li>
               </ul>
             </div>
