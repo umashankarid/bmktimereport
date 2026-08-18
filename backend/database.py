@@ -170,6 +170,19 @@ class DatabaseManager:
                     ON bills(trainer_name COLLATE NOCASE);
                 CREATE INDEX IF NOT EXISTS idx_bills_payment_date
                     ON bills(payment_date);
+
+                CREATE TABLE IF NOT EXISTS password_vault (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    item_name TEXT NOT NULL,
+                    item_type TEXT DEFAULT 'other',
+                    username TEXT DEFAULT '',
+                    password_encrypted TEXT NOT NULL,
+                    url TEXT DEFAULT '',
+                    notes TEXT DEFAULT '',
+                    created_by TEXT DEFAULT 'admin',
+                    created_date TEXT DEFAULT '',
+                    updated_date TEXT DEFAULT ''
+                );
             """)
             conn.commit()
         finally:
@@ -2085,3 +2098,235 @@ class DatabaseManager:
         except Exception as e:
             logger.error(f"Error deleting bill: {e}")
             return {'success': False, 'message': f'Error deleting bill: {str(e)}'}
+
+    # ==================== PASSWORD VAULT ====================
+
+    def _get_vault_key(self):
+        """Derive a Fernet encryption key from SECRET_KEY env variable."""
+        import base64
+        import hashlib
+        secret = os.environ.get('SECRET_KEY', 'dev-secret-key')
+        # Derive a 32-byte key from SECRET_KEY using SHA256
+        key = hashlib.sha256(secret.encode()).digest()
+        return base64.urlsafe_b64encode(key)
+
+    def _encrypt_password(self, password):
+        """Encrypt a password string."""
+        from cryptography.fernet import Fernet
+        f = Fernet(self._get_vault_key())
+        return f.encrypt(password.encode()).decode()
+
+    def _decrypt_password(self, encrypted):
+        """Decrypt an encrypted password string."""
+        from cryptography.fernet import Fernet
+        f = Fernet(self._get_vault_key())
+        return f.decrypt(encrypted.encode()).decode()
+
+    def add_vault_item(self, item_name, item_type, username, password, url='', notes='', created_by='admin'):
+        """Add a new item to the password vault.
+
+        Args:
+            item_name (str): Name of the item (e.g., 'Tournament Laptop', 'Scoring App')
+            item_type (str): Type - 'laptop', 'website', 'app', 'wifi', 'other'
+            username (str): Username/login for the item
+            password (str): Password (will be encrypted)
+            url (str): URL or location info
+            notes (str): Additional notes
+            created_by (str): Who added this entry
+
+        Returns:
+            dict: {'success': bool, 'message': str}
+        """
+        try:
+            if not item_name or not password:
+                return {'success': False, 'message': 'Item name and password are required'}
+
+            from datetime import datetime
+            now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+            encrypted_pw = self._encrypt_password(password)
+
+            conn = self._get_connection()
+            try:
+                conn.execute("""
+                    INSERT INTO password_vault (item_name, item_type, username, password_encrypted, url, notes, created_by, created_date, updated_date)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    item_name.strip(),
+                    item_type.strip() if item_type else 'other',
+                    username.strip() if username else '',
+                    encrypted_pw,
+                    url.strip() if url else '',
+                    notes.strip() if notes else '',
+                    created_by,
+                    now,
+                    now
+                ))
+                conn.commit()
+            finally:
+                conn.close()
+
+            return {'success': True, 'message': 'Item saved to vault'}
+
+        except Exception as e:
+            logger.error(f"Error adding vault item: {e}")
+            return {'success': False, 'message': f'Error saving item: {str(e)}'}
+
+    def get_vault_items(self, decrypt=False):
+        """Get all items from the password vault.
+
+        Args:
+            decrypt (bool): If True, include decrypted passwords.
+
+        Returns:
+            dict: {'success': bool, 'data': [...]}
+        """
+        try:
+            conn = self._get_connection()
+            try:
+                cursor = conn.execute(
+                    "SELECT id, item_name, item_type, username, password_encrypted, url, notes, created_by, created_date, updated_date "
+                    "FROM password_vault ORDER BY item_name"
+                )
+                rows = cursor.fetchall()
+            finally:
+                conn.close()
+
+            items = []
+            for row in rows:
+                item = {
+                    'id': row['id'],
+                    'item_name': row['item_name'],
+                    'item_type': row['item_type'],
+                    'username': row['username'],
+                    'url': row['url'],
+                    'notes': row['notes'],
+                    'created_by': row['created_by'],
+                    'created_date': row['created_date'],
+                    'updated_date': row['updated_date']
+                }
+                if decrypt:
+                    try:
+                        item['password'] = self._decrypt_password(row['password_encrypted'])
+                    except Exception:
+                        item['password'] = '[decryption error]'
+                else:
+                    item['password'] = '••••••••'
+                items.append(item)
+
+            return {'success': True, 'data': items}
+
+        except Exception as e:
+            logger.error(f"Error getting vault items: {e}")
+            return {'success': False, 'data': [], 'message': str(e)}
+
+    def get_vault_item_password(self, item_id):
+        """Get the decrypted password for a specific vault item.
+
+        Args:
+            item_id (int): The vault item ID.
+
+        Returns:
+            dict: {'success': bool, 'password': str}
+        """
+        try:
+            conn = self._get_connection()
+            try:
+                cursor = conn.execute(
+                    "SELECT password_encrypted FROM password_vault WHERE id = ?",
+                    (item_id,)
+                )
+                row = cursor.fetchone()
+            finally:
+                conn.close()
+
+            if not row:
+                return {'success': False, 'message': 'Item not found'}
+
+            password = self._decrypt_password(row['password_encrypted'])
+            return {'success': True, 'password': password}
+
+        except Exception as e:
+            logger.error(f"Error decrypting vault password: {e}")
+            return {'success': False, 'message': 'Error decrypting password'}
+
+    def update_vault_item(self, item_id, item_name=None, item_type=None, username=None, password=None, url=None, notes=None):
+        """Update a vault item.
+
+        Args:
+            item_id (int): The vault item ID.
+            Other args: Fields to update (None = don't update).
+
+        Returns:
+            dict: {'success': bool, 'message': str}
+        """
+        try:
+            from datetime import datetime
+
+            conn = self._get_connection()
+            try:
+                updates = []
+                params = []
+
+                if item_name is not None:
+                    updates.append("item_name = ?")
+                    params.append(item_name.strip())
+                if item_type is not None:
+                    updates.append("item_type = ?")
+                    params.append(item_type.strip())
+                if username is not None:
+                    updates.append("username = ?")
+                    params.append(username.strip())
+                if password is not None:
+                    updates.append("password_encrypted = ?")
+                    params.append(self._encrypt_password(password))
+                if url is not None:
+                    updates.append("url = ?")
+                    params.append(url.strip())
+                if notes is not None:
+                    updates.append("notes = ?")
+                    params.append(notes.strip())
+
+                if not updates:
+                    return {'success': False, 'message': 'No fields to update'}
+
+                updates.append("updated_date = ?")
+                params.append(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+                params.append(item_id)
+
+                conn.execute(f"UPDATE password_vault SET {', '.join(updates)} WHERE id = ?", params)
+                conn.commit()
+            finally:
+                conn.close()
+
+            return {'success': True, 'message': 'Item updated'}
+
+        except Exception as e:
+            logger.error(f"Error updating vault item: {e}")
+            return {'success': False, 'message': f'Error updating item: {str(e)}'}
+
+    def delete_vault_item(self, item_id):
+        """Delete a vault item.
+
+        Args:
+            item_id (int): The vault item ID.
+
+        Returns:
+            dict: {'success': bool, 'message': str}
+        """
+        try:
+            conn = self._get_connection()
+            try:
+                cursor = conn.execute("DELETE FROM password_vault WHERE id = ?", (item_id,))
+                conn.commit()
+                deleted = cursor.rowcount
+            finally:
+                conn.close()
+
+            if deleted:
+                return {'success': True, 'message': 'Item deleted from vault'}
+            return {'success': False, 'message': 'Item not found'}
+
+        except Exception as e:
+            logger.error(f"Error deleting vault item: {e}")
+            return {'success': False, 'message': f'Error deleting item: {str(e)}'}

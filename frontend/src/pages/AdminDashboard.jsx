@@ -10,6 +10,7 @@ import ManageVolunteers from '../components/ManageVolunteers';
 import PaymentManagement from '../components/PaymentManagement';
 import TimeReportStatus from '../components/TimeReportStatus';
 import BillManagement from '../components/BillManagement';
+import PasswordVault from '../components/PasswordVault';
 
 function AdminDashboard({ onLogout }) {
   const navigate = useNavigate();
@@ -404,6 +405,12 @@ function AdminDashboard({ onLogout }) {
           💰 Bill Management
         </button>
         <button
+          className={`tab-btn ${activeTab === 'vault' ? 'active' : ''}`}
+          onClick={() => setActiveTab('vault')}
+        >
+          🔐 Password Vault
+        </button>
+        <button
           className={`tab-btn ${activeTab === 'qrcodes' ? 'active' : ''}`}
           onClick={() => setActiveTab('qrcodes')}
         >
@@ -429,6 +436,9 @@ function AdminDashboard({ onLogout }) {
         )}
         {activeTab === 'bills' && (
           <BillManagement />
+        )}
+        {activeTab === 'vault' && (
+          <PasswordVault />
         )}
         {activeTab === 'trainers' && (
           <ManageTrainers />

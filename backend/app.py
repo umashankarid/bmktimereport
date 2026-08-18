@@ -1447,6 +1447,88 @@ def create_app():
                 'message': f'Error deleting bill: {str(e)}'
             }), 500
 
+    # ==================== PASSWORD VAULT ====================
+
+    @app.route('/api/vault', methods=['GET'])
+    @verify_token
+    def get_vault_items():
+        """Get all password vault items (passwords hidden)"""
+        try:
+            db = get_db_manager()
+            result = db.get_vault_items(decrypt=False)
+            return jsonify(result), 200
+        except Exception as e:
+            return jsonify({'success': False, 'message': str(e)}), 500
+
+    @app.route('/api/vault/<int:item_id>/password', methods=['GET'])
+    @verify_token
+    def get_vault_password(item_id):
+        """Get the decrypted password for a specific vault item"""
+        try:
+            db = get_db_manager()
+            result = db.get_vault_item_password(item_id)
+            return jsonify(result), 200 if result['success'] else 404
+        except Exception as e:
+            return jsonify({'success': False, 'message': str(e)}), 500
+
+    @app.route('/api/vault', methods=['POST'])
+    @verify_token
+    def add_vault_item():
+        """Add a new item to the password vault"""
+        try:
+            data = request.get_json()
+            if not data:
+                return jsonify({'success': False, 'message': 'No data provided'}), 400
+
+            username_from_token = request.admin.get('username', 'admin')
+            db = get_db_manager()
+            result = db.add_vault_item(
+                item_name=data.get('item_name', ''),
+                item_type=data.get('item_type', 'other'),
+                username=data.get('username', ''),
+                password=data.get('password', ''),
+                url=data.get('url', ''),
+                notes=data.get('notes', ''),
+                created_by=username_from_token
+            )
+            return jsonify(result), 201 if result['success'] else 400
+        except Exception as e:
+            return jsonify({'success': False, 'message': str(e)}), 500
+
+    @app.route('/api/vault/<int:item_id>', methods=['PUT'])
+    @verify_token
+    def update_vault_item(item_id):
+        """Update a vault item"""
+        try:
+            data = request.get_json()
+            if not data:
+                return jsonify({'success': False, 'message': 'No data provided'}), 400
+
+            db = get_db_manager()
+            result = db.update_vault_item(
+                item_id=item_id,
+                item_name=data.get('item_name'),
+                item_type=data.get('item_type'),
+                username=data.get('username'),
+                password=data.get('password'),
+                url=data.get('url'),
+                notes=data.get('notes')
+            )
+            return jsonify(result), 200 if result['success'] else 400
+        except Exception as e:
+            return jsonify({'success': False, 'message': str(e)}), 500
+
+    @app.route('/api/vault/<int:item_id>', methods=['DELETE'])
+    @verify_token
+    def delete_vault_item(item_id):
+        """Delete a vault item"""
+        try:
+            db = get_db_manager()
+            result = db.delete_vault_item(item_id)
+            return jsonify(result), 200 if result['success'] else 404
+        except Exception as e:
+            return jsonify({'success': False, 'message': str(e)}), 500
+
     # ==================== DATA MANAGEMENT ====================
     
     @app.route('/api/cache/refresh', methods=['POST'])
