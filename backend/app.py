@@ -1330,6 +1330,109 @@ def create_app():
                 'message': str(e)
             }), 500
 
+    # ==================== PASSWORD RESET ====================
+
+    @app.route('/api/auth/forgot-password', methods=['POST'])
+    def forgot_password():
+        """Request a password reset link via email"""
+        try:
+            data = request.get_json()
+            if not data:
+                return jsonify({'success': False, 'message': 'No data provided'}), 400
+
+            email = data.get('email', '').strip()
+            if not email:
+                return jsonify({'success': False, 'message': 'Email is required'}), 400
+
+            db = get_db_manager()
+            result = db.create_reset_token(email)
+
+            if not result['success']:
+                # Still return success to not reveal if email exists
+                return jsonify({'success': True, 'message': 'If the email is registered, a reset link will be sent'}), 200
+
+            # If token was created (email found), send the email
+            if 'token' in result:
+                from email_service import send_reset_email
+                base_url = os.environ.get('APP_URL', request.host_url.rstrip('/'))
+                email_result = send_reset_email(
+                    to_email=result['email'],
+                    trainer_name=result['trainer_name'],
+                    reset_token=result['token'],
+                    base_url=base_url
+                )
+                logger.warning(f"🔗 Reset requested for {result['trainer_name']} ({result['email']})")
+
+                # In dev/no-SMTP mode, include the link in response for testing
+                if email_result.get('reset_link'):
+                    return jsonify({
+                        'success': True,
+                        'message': 'If the email is registered, a reset link will be sent',
+                        'dev_reset_link': email_result['reset_link']
+                    }), 200
+
+            return jsonify({
+                'success': True,
+                'message': 'If the email is registered, a reset link will be sent'
+            }), 200
+
+        except Exception as e:
+            logger.error(f"❌ Error in forgot-password: {str(e)}", exc_info=True)
+            return jsonify({
+                'success': False,
+                'message': 'An error occurred. Please try again.'
+            }), 500
+
+    @app.route('/api/auth/validate-reset-token', methods=['POST'])
+    def validate_reset_token():
+        """Validate a reset token (check if still valid before showing form)"""
+        try:
+            data = request.get_json()
+            token = data.get('token', '') if data else ''
+
+            if not token:
+                return jsonify({'success': False, 'message': 'Token is required'}), 400
+
+            db = get_db_manager()
+            result = db.validate_reset_token(token)
+
+            return jsonify(result), 200 if result['success'] else 400
+
+        except Exception as e:
+            return jsonify({'success': False, 'message': 'Invalid reset link'}), 400
+
+    @app.route('/api/auth/reset-password', methods=['POST'])
+    def reset_password():
+        """Use a reset token to set a new password"""
+        try:
+            data = request.get_json()
+            if not data:
+                return jsonify({'success': False, 'message': 'No data provided'}), 400
+
+            token = data.get('token', '').strip()
+            new_password = data.get('new_password', '').strip()
+
+            if not token or not new_password:
+                return jsonify({'success': False, 'message': 'Token and new password are required'}), 400
+
+            if len(new_password) < 6:
+                return jsonify({'success': False, 'message': 'Password must be at least 6 characters'}), 400
+
+            db = get_db_manager()
+            result = db.use_reset_token(token, new_password)
+
+            if result['success']:
+                logger.warning(f"✅ Password reset successful via token")
+
+            return jsonify(result), 200 if result['success'] else 400
+
+        except Exception as e:
+            logger.error(f"❌ Error in reset-password: {str(e)}", exc_info=True)
+            return jsonify({
+                'success': False,
+                'message': 'An error occurred. Please try again.'
+            }), 500
+
     # ==================== BILL MANAGEMENT ====================
 
     @app.route('/api/bills', methods=['POST'])

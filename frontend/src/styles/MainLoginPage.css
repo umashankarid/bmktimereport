@@ -344,3 +344,106 @@
     font-size: 12px;
   }
 }
+
+/* Forgot Password Link */
+.forgot-password-link {
+  text-align: center;
+  margin-top: 12px;
+}
+
+.forgot-password-link a {
+  color: #4a90d9;
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.forgot-password-link a:hover {
+  text-decoration: underline;
+}
+
+/* Forgot Password Modal */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.forgot-password-modal {
+  background: white;
+  border-radius: 12px;
+  padding: 30px;
+  width: 100%;
+  max-width: 420px;
+  margin: 20px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+.forgot-password-modal .modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.forgot-password-modal .modal-header h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.forgot-password-modal .close-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #888;
+}
+
+.forgot-password-modal .modal-description {
+  color: #666;
+  font-size: 14px;
+  margin-bottom: 20px;
+  line-height: 1.4;
+}
+
+.forgot-password-modal .modal-footer {
+  text-align: center;
+  margin-top: 16px;
+}
+
+.btn-text {
+  background: none;
+  border: none;
+  color: #4a90d9;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.btn-text:hover {
+  text-decoration: underline;
+}
+
+/* Reset Password Page */
+.reset-info {
+  color: #555;
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+
+.reset-loading,
+.reset-success,
+.reset-invalid {
+  text-align: center;
+  padding: 20px;
+}
+
+.reset-success .btn,
+.reset-invalid .btn {
+  margin-top: 16px;
+}

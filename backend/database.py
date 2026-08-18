@@ -183,6 +183,19 @@ class DatabaseManager:
                     created_date TEXT DEFAULT '',
                     updated_date TEXT DEFAULT ''
                 );
+
+                CREATE TABLE IF NOT EXISTS password_reset_tokens (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    email TEXT NOT NULL,
+                    token TEXT NOT NULL UNIQUE,
+                    trainer_name TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    expires_at TEXT NOT NULL,
+                    used INTEGER DEFAULT 0
+                );
+
+                CREATE INDEX IF NOT EXISTS idx_reset_token
+                    ON password_reset_tokens(token);
             """)
             conn.commit()
         finally:
@@ -2098,6 +2111,169 @@ class DatabaseManager:
         except Exception as e:
             logger.error(f"Error deleting bill: {e}")
             return {'success': False, 'message': f'Error deleting bill: {str(e)}'}
+
+    # ==================== PASSWORD RESET ====================
+
+    def create_reset_token(self, email):
+        """Create a one-time password reset token for a user by email.
+
+        Args:
+            email (str): The user's email address.
+
+        Returns:
+            dict: {'success': bool, 'token': str, 'trainer_name': str} or error
+        """
+        try:
+            import secrets
+            from datetime import datetime, timedelta
+
+            if not email:
+                return {'success': False, 'message': 'Email is required'}
+
+            # Find trainer by email
+            conn = self._get_connection()
+            try:
+                cursor = conn.execute(
+                    "SELECT name, email FROM trainers WHERE LOWER(email) = LOWER(?)",
+                    (email.strip(),)
+                )
+                row = cursor.fetchone()
+            finally:
+                conn.close()
+
+            if not row:
+                # Don't reveal whether email exists
+                return {'success': True, 'message': 'If the email is registered, a reset link will be sent'}
+
+            trainer_name = row['name']
+
+            # Generate token
+            token = secrets.token_urlsafe(32)
+            now = datetime.now()
+            expires = now + timedelta(hours=1)  # Token valid for 1 hour
+
+            # Invalidate any existing tokens for this email
+            conn = self._get_connection()
+            try:
+                conn.execute(
+                    "UPDATE password_reset_tokens SET used = 1 WHERE LOWER(email) = LOWER(?) AND used = 0",
+                    (email.strip(),)
+                )
+                conn.execute("""
+                    INSERT INTO password_reset_tokens (email, token, trainer_name, created_at, expires_at, used)
+                    VALUES (?, ?, ?, ?, ?, 0)
+                """, (
+                    email.strip(),
+                    token,
+                    trainer_name,
+                    now.strftime('%Y-%m-%d %H:%M:%S'),
+                    expires.strftime('%Y-%m-%d %H:%M:%S')
+                ))
+                conn.commit()
+            finally:
+                conn.close()
+
+            return {
+                'success': True,
+                'token': token,
+                'trainer_name': trainer_name,
+                'email': email.strip()
+            }
+
+        except Exception as e:
+            logger.error(f"Error creating reset token: {e}")
+            return {'success': False, 'message': f'Error: {str(e)}'}
+
+    def validate_reset_token(self, token):
+        """Validate a password reset token.
+
+        Args:
+            token (str): The reset token.
+
+        Returns:
+            dict: {'success': bool, 'trainer_name': str, 'email': str} or error
+        """
+        try:
+            from datetime import datetime
+
+            conn = self._get_connection()
+            try:
+                cursor = conn.execute(
+                    "SELECT email, trainer_name, expires_at, used FROM password_reset_tokens WHERE token = ?",
+                    (token,)
+                )
+                row = cursor.fetchone()
+            finally:
+                conn.close()
+
+            if not row:
+                return {'success': False, 'message': 'Invalid or expired reset link'}
+
+            if row['used']:
+                return {'success': False, 'message': 'This reset link has already been used'}
+
+            expires_at = datetime.strptime(row['expires_at'], '%Y-%m-%d %H:%M:%S')
+            if datetime.now() > expires_at:
+                return {'success': False, 'message': 'This reset link has expired'}
+
+            return {
+                'success': True,
+                'trainer_name': row['trainer_name'],
+                'email': row['email']
+            }
+
+        except Exception as e:
+            logger.error(f"Error validating reset token: {e}")
+            return {'success': False, 'message': 'Invalid reset link'}
+
+    def use_reset_token(self, token, new_password):
+        """Use a reset token to set a new password.
+
+        Args:
+            token (str): The reset token.
+            new_password (str): The new password.
+
+        Returns:
+            dict: {'success': bool, 'message': str}
+        """
+        try:
+            from datetime import datetime
+            from trainer_auth import TrainerAuthManager
+
+            # Validate token first
+            validation = self.validate_reset_token(token)
+            if not validation['success']:
+                return validation
+
+            trainer_name = validation['trainer_name']
+
+            # Hash new password
+            pwd_hash, salt = TrainerAuthManager.hash_password(new_password)
+
+            # Update password in trainers table
+            conn = self._get_connection()
+            try:
+                conn.execute(
+                    "UPDATE trainers SET password_hash = ?, salt = ? WHERE LOWER(name) = LOWER(?)",
+                    (pwd_hash, salt, trainer_name)
+                )
+                # Mark token as used
+                conn.execute(
+                    "UPDATE password_reset_tokens SET used = 1 WHERE token = ?",
+                    (token,)
+                )
+                conn.commit()
+            finally:
+                conn.close()
+
+            return {
+                'success': True,
+                'message': 'Password has been reset successfully'
+            }
+
+        except Exception as e:
+            logger.error(f"Error resetting password: {e}")
+            return {'success': False, 'message': f'Error resetting password: {str(e)}'}
 
     # ==================== PASSWORD VAULT ====================
 

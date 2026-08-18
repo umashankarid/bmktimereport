@@ -7,6 +7,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import ReportsPage from './pages/ReportsPage';
 import VolunteerDashboard from './pages/VolunteerDashboard';
 import TrainerDashboard from './pages/TrainerDashboard';
+import ResetPassword from './pages/ResetPassword';
 import ActivityForm from './components/ActivityForm';
 import ActivityHistoryView from './components/ActivityHistoryView';
 import Responsibilities from './components/Responsibilities';
@@ -244,6 +245,7 @@ function AppContent() {
   return (
     <Routes>
       <Route path="/login" element={<MainLoginPage onAdminLogin={handleAdminLogin} onTrainerLogin={handleTrainerLogin} />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/admin/*" element={<AdminDashboard onLogout={handleLogout} />} />
       <Route path="/trainer" element={<TrainerDashboard onLogout={handleLogout} error={error} setError={setError} onActivitySubmit={handleActivitySubmit} trainers={trainers} currentTrainer={admin} />} />
       <Route path="/volunteer" element={<VolunteerDashboard volunteer={admin} onLogout={handleLogout} />} />

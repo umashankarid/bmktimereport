@@ -29,6 +29,43 @@ function MainLoginPage({ onAdminLogin, onTrainerLogin }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  
+  // Forgot password
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotMessage, setForgotMessage] = useState('');
+  const [forgotMessageType, setForgotMessageType] = useState('');
+
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    setForgotMessage('');
+
+    if (!forgotEmail) {
+      setForgotMessage('Please enter your email address');
+      setForgotMessageType('error');
+      return;
+    }
+
+    try {
+      setForgotLoading(true);
+      const response = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: forgotEmail })
+      });
+      const result = await response.json();
+
+      setForgotMessage('If the email is registered, a reset link has been sent to your inbox.');
+      setForgotMessageType('success');
+      setForgotEmail('');
+    } catch (err) {
+      setForgotMessage('An error occurred. Please try again.');
+      setForgotMessageType('error');
+    } finally {
+      setForgotLoading(false);
+    }
+  };
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -294,6 +331,12 @@ function MainLoginPage({ onAdminLogin, onTrainerLogin }) {
               {loading ? 'Logging in...' : 'Login'}
             </button>
 
+            <div className="forgot-password-link">
+              <a href="/reset-password" onClick={(e) => { e.preventDefault(); setShowForgotPassword(true); }}>
+                Forgot Password?
+              </a>
+            </div>
+
             <div className="form-toggle">
               <p>Don't have an account? <button type="button" className="link-btn" onClick={() => { setIsRegistering(true); setError(''); setRegistrationType('trainer'); }}>Register</button></p>
             </div>
@@ -546,6 +589,50 @@ function MainLoginPage({ onAdminLogin, onTrainerLogin }) {
           <p>Secure badminton activity logging system</p>
         </div>
       </div>
+
+      {/* Forgot Password Modal */}
+      {showForgotPassword && (
+        <div className="modal-overlay" onClick={() => setShowForgotPassword(false)}>
+          <div className="modal forgot-password-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>🔑 Reset Password</h2>
+              <button className="close-btn" onClick={() => setShowForgotPassword(false)}>×</button>
+            </div>
+            <p className="modal-description">
+              Enter your registered email address and we'll send you a link to reset your password.
+            </p>
+
+            {forgotMessage && (
+              <div className={`alert alert-${forgotMessageType}`}>
+                <span>{forgotMessage}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleForgotPassword}>
+              <div className="form-group">
+                <label>Email Address</label>
+                <input
+                  type="email"
+                  value={forgotEmail}
+                  onChange={(e) => setForgotEmail(e.target.value)}
+                  placeholder="Enter your registered email"
+                  disabled={forgotLoading}
+                  required
+                />
+              </div>
+              <button type="submit" className="btn btn-primary" disabled={forgotLoading}>
+                {forgotLoading ? 'Sending...' : 'Send Reset Link'}
+              </button>
+            </form>
+
+            <div className="modal-footer">
+              <button className="btn-text" onClick={() => setShowForgotPassword(false)}>
+                ← Back to Login
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
