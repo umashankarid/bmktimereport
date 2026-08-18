@@ -33,32 +33,101 @@ function MainLoginPage({ onAdminLogin, onTrainerLogin }) {
   // Forgot password
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotPhone, setForgotPhone] = useState('');
   const [forgotLoading, setForgotLoading] = useState(false);
   const [forgotMessage, setForgotMessage] = useState('');
   const [forgotMessageType, setForgotMessageType] = useState('');
+  const [resetToken, setResetToken] = useState('');
+  const [resetTrainerName, setResetTrainerName] = useState('');
+  const [showResetForm, setShowResetForm] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
 
   const handleForgotPassword = async (e) => {
     e.preventDefault();
     setForgotMessage('');
 
-    if (!forgotEmail) {
-      setForgotMessage('Please enter your email address');
+    if (!forgotEmail || !forgotPhone) {
+      setForgotMessage('Please enter both email and phone number');
       setForgotMessageType('error');
       return;
     }
 
     try {
       setForgotLoading(true);
-      const response = await fetch('/api/auth/forgot-password', {
+      const response = await fetch('/api/auth/verify-identity', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: forgotEmail })
+        body: JSON.stringify({ email: forgotEmail, phone: forgotPhone })
       });
       const result = await response.json();
 
-      setForgotMessage('If the email is registered, a reset link has been sent to your inbox.');
-      setForgotMessageType('success');
-      setForgotEmail('');
+      if (result.success) {
+        setResetToken(result.token);
+        setResetTrainerName(result.trainer_name);
+        setShowResetForm(true);
+        setForgotMessage('');
+      } else {
+        setForgotMessage(result.message || 'Email and phone number do not match any account');
+        setForgotMessageType('error');
+      }
+    } catch (err) {
+      setForgotMessage('An error occurred. Please try again.');
+      setForgotMessageType('error');
+    } finally {
+      setForgotLoading(false);
+    }
+  };
+
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    setForgotMessage('');
+
+    if (!newPassword || !confirmNewPassword) {
+      setForgotMessage('Both fields are required');
+      setForgotMessageType('error');
+      return;
+    }
+
+    if (newPassword !== confirmNewPassword) {
+      setForgotMessage('Passwords do not match');
+      setForgotMessageType('error');
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      setForgotMessage('Password must be at least 6 characters');
+      setForgotMessageType('error');
+      return;
+    }
+
+    try {
+      setForgotLoading(true);
+      const response = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: resetToken, new_password: newPassword })
+      });
+      const result = await response.json();
+
+      if (result.success) {
+        setForgotMessage('✅ Password reset successfully! You can now login.');
+        setForgotMessageType('success');
+        setShowResetForm(false);
+        setNewPassword('');
+        setConfirmNewPassword('');
+        // Auto close after 3 seconds
+        setTimeout(() => {
+          setShowForgotPassword(false);
+          setForgotMessage('');
+          setForgotEmail('');
+          setForgotPhone('');
+          setResetToken('');
+        }, 3000);
+      } else {
+        setForgotMessage(result.message || 'Error resetting password');
+        setForgotMessageType('error');
+      }
     } catch (err) {
       setForgotMessage('An error occurred. Please try again.');
       setForgotMessageType('error');
@@ -592,15 +661,12 @@ function MainLoginPage({ onAdminLogin, onTrainerLogin }) {
 
       {/* Forgot Password Modal */}
       {showForgotPassword && (
-        <div className="modal-overlay" onClick={() => setShowForgotPassword(false)}>
+        <div className="modal-overlay" onClick={() => { setShowForgotPassword(false); setShowResetForm(false); setForgotMessage(''); }}>
           <div className="modal forgot-password-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2>🔑 Reset Password</h2>
-              <button className="close-btn" onClick={() => setShowForgotPassword(false)}>×</button>
+              <button className="close-btn" onClick={() => { setShowForgotPassword(false); setShowResetForm(false); setForgotMessage(''); }}>×</button>
             </div>
-            <p className="modal-description">
-              Enter your registered email address and we'll send you a link to reset your password.
-            </p>
 
             {forgotMessage && (
               <div className={`alert alert-${forgotMessageType}`}>
@@ -608,25 +674,78 @@ function MainLoginPage({ onAdminLogin, onTrainerLogin }) {
               </div>
             )}
 
-            <form onSubmit={handleForgotPassword}>
-              <div className="form-group">
-                <label>Email Address</label>
-                <input
-                  type="email"
-                  value={forgotEmail}
-                  onChange={(e) => setForgotEmail(e.target.value)}
-                  placeholder="Enter your registered email"
-                  disabled={forgotLoading}
-                  required
-                />
-              </div>
-              <button type="submit" className="btn btn-primary" disabled={forgotLoading}>
-                {forgotLoading ? 'Sending...' : 'Send Reset Link'}
-              </button>
-            </form>
+            {!showResetForm ? (
+              <>
+                <p className="modal-description">
+                  Enter your registered email and phone number to verify your identity.
+                </p>
+                <form onSubmit={handleForgotPassword}>
+                  <div className="form-group">
+                    <label>Email Address</label>
+                    <input
+                      type="email"
+                      value={forgotEmail}
+                      onChange={(e) => setForgotEmail(e.target.value)}
+                      placeholder="Enter your registered email"
+                      disabled={forgotLoading}
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Phone Number</label>
+                    <input
+                      type="tel"
+                      value={forgotPhone}
+                      onChange={(e) => setForgotPhone(e.target.value)}
+                      placeholder="Enter your registered phone number"
+                      disabled={forgotLoading}
+                      required
+                    />
+                  </div>
+                  <button type="submit" className="btn btn-primary" disabled={forgotLoading}>
+                    {forgotLoading ? 'Verifying...' : 'Verify & Reset'}
+                  </button>
+                </form>
+              </>
+            ) : (
+              <>
+                <p className="modal-description">
+                  Set a new password for <strong>{resetTrainerName}</strong>
+                </p>
+                <form onSubmit={handleResetPassword}>
+                  <div className="form-group">
+                    <label>New Password</label>
+                    <input
+                      type="password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="Enter new password (min 6 characters)"
+                      disabled={forgotLoading}
+                      required
+                      minLength={6}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Confirm New Password</label>
+                    <input
+                      type="password"
+                      value={confirmNewPassword}
+                      onChange={(e) => setConfirmNewPassword(e.target.value)}
+                      placeholder="Re-enter new password"
+                      disabled={forgotLoading}
+                      required
+                      minLength={6}
+                    />
+                  </div>
+                  <button type="submit" className="btn btn-primary" disabled={forgotLoading}>
+                    {forgotLoading ? 'Resetting...' : 'Reset Password'}
+                  </button>
+                </form>
+              </>
+            )}
 
             <div className="modal-footer">
-              <button className="btn-text" onClick={() => setShowForgotPassword(false)}>
+              <button className="btn-text" onClick={() => { setShowForgotPassword(false); setShowResetForm(false); setForgotMessage(''); }}>
                 ← Back to Login
               </button>
             </div>

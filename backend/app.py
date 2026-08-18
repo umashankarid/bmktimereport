@@ -1332,6 +1332,57 @@ def create_app():
 
     # ==================== PASSWORD RESET ====================
 
+    @app.route('/api/auth/verify-identity', methods=['POST'])
+    def verify_identity():
+        """Verify user identity with email + phone, return reset token immediately"""
+        try:
+            data = request.get_json()
+            if not data:
+                return jsonify({'success': False, 'message': 'No data provided'}), 400
+
+            email = data.get('email', '').strip()
+            phone = data.get('phone', '').strip()
+
+            if not email or not phone:
+                return jsonify({'success': False, 'message': 'Email and phone number are required'}), 400
+
+            # Check if email and phone match a trainer
+            db = get_db_manager()
+            conn = db._get_connection()
+            try:
+                cursor = conn.execute(
+                    "SELECT name, email, phone FROM trainers WHERE LOWER(email) = LOWER(?)",
+                    (email,)
+                )
+                row = cursor.fetchone()
+            finally:
+                conn.close()
+
+            if not row:
+                return jsonify({'success': False, 'message': 'Email and phone number do not match any account'}), 400
+
+            # Compare phone numbers (strip spaces, dashes, and leading zeros for comparison)
+            stored_phone = str(row['phone']).replace(' ', '').replace('-', '').strip()
+            input_phone = phone.replace(' ', '').replace('-', '').strip()
+
+            if stored_phone != input_phone:
+                return jsonify({'success': False, 'message': 'Email and phone number do not match any account'}), 400
+
+            # Identity verified - create a reset token
+            result = db.create_reset_token(email)
+            if result.get('token'):
+                return jsonify({
+                    'success': True,
+                    'token': result['token'],
+                    'trainer_name': result['trainer_name']
+                }), 200
+            else:
+                return jsonify({'success': False, 'message': 'Error creating reset token'}), 500
+
+        except Exception as e:
+            logger.error(f"❌ Error in verify-identity: {str(e)}", exc_info=True)
+            return jsonify({'success': False, 'message': 'An error occurred'}), 500
+
     @app.route('/api/auth/forgot-password', methods=['POST'])
     def forgot_password():
         """Request a password reset link via email"""
