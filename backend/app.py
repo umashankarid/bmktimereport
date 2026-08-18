@@ -1351,7 +1351,7 @@ def create_app():
             conn = db._get_connection()
             try:
                 cursor = conn.execute(
-                    "SELECT name, email, phone FROM trainers WHERE LOWER(email) = LOWER(?)",
+                    "SELECT name, email, phone FROM trainers WHERE LOWER(TRIM(email)) = LOWER(?)",
                     (email,)
                 )
                 row = cursor.fetchone()
@@ -1361,11 +1361,18 @@ def create_app():
             if not row:
                 return jsonify({'success': False, 'message': 'Email and phone number do not match any account'}), 400
 
-            # Compare phone numbers (strip spaces, dashes, and leading zeros for comparison)
-            stored_phone = str(row['phone']).replace(' ', '').replace('-', '').strip()
-            input_phone = phone.replace(' ', '').replace('-', '').strip()
+            # Compare phone numbers - normalize both sides
+            # Strip spaces, dashes, trim whitespace, remove leading zeros for comparison
+            stored_phone = str(row['phone']).replace(' ', '').replace('-', '').replace('+', '').strip()
+            input_phone = phone.replace(' ', '').replace('-', '').replace('+', '').strip()
+            
+            # Remove leading zeros for comparison (e.g., 0725939869 vs 725939869)
+            stored_phone_normalized = stored_phone.lstrip('0')
+            input_phone_normalized = input_phone.lstrip('0')
 
-            if stored_phone != input_phone:
+            logger.warning(f"🔍 Phone comparison: stored='{stored_phone}' (norm='{stored_phone_normalized}') vs input='{input_phone}' (norm='{input_phone_normalized}')")
+
+            if stored_phone_normalized != input_phone_normalized:
                 return jsonify({'success': False, 'message': 'Email and phone number do not match any account'}), 400
 
             # Identity verified - create a reset token
