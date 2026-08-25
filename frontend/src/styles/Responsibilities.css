@@ -5,6 +5,49 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
+.responsibilities-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.responsibilities-header h2 {
+  color: #333;
+  margin: 0;
+  font-size: 1.8rem;
+}
+
+.lang-toggle {
+  display: flex;
+  gap: 6px;
+  background: #f0f0f0;
+  border-radius: 8px;
+  padding: 4px;
+}
+
+.lang-btn {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  background: transparent;
+  color: #555;
+  transition: all 0.2s;
+}
+
+.lang-btn.active {
+  background: white;
+  color: #333;
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.lang-btn:hover:not(.active) {
+  background: rgba(255, 255, 255, 0.5);
+}
+
 .responsibilities-container h2 {
   color: #333;
   margin: 0 0 2rem 0;
