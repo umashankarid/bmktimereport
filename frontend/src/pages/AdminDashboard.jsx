@@ -11,6 +11,7 @@ import PaymentManagement from '../components/PaymentManagement';
 import TimeReportStatus from '../components/TimeReportStatus';
 import BillManagement from '../components/BillManagement';
 import PasswordVault from '../components/PasswordVault';
+import Responsibilities from '../components/Responsibilities';
 
 function AdminDashboard({ onLogout }) {
   const navigate = useNavigate();
@@ -351,6 +352,12 @@ function AdminDashboard({ onLogout }) {
         >
           📱 QR Codes
         </button>
+        <button
+          className={`tab-btn ${activeTab === 'responsibilities' ? 'active' : ''}`}
+          onClick={() => setActiveTab('responsibilities')}
+        >
+          📋 Coach Responsibilities
+        </button>
       </div>
 
       <div className="admin-content">
@@ -374,6 +381,9 @@ function AdminDashboard({ onLogout }) {
         )}
         {activeTab === 'qrcodes' && (
           <QRCodePrinter />
+        )}
+        {activeTab === 'responsibilities' && (
+          <Responsibilities currentTrainer={{ trainer_type: 'Assistant Trainer' }} />
         )}
 
 

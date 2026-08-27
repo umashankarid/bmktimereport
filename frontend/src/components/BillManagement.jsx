@@ -34,7 +34,7 @@ function BillManagement() {
 
   const fetchTrainers = async () => {
     try {
-      const token = localStorage.getItem('adminToken');
+      const token = localStorage.getItem('adminToken') || localStorage.getItem('trainerToken');
       const response = await fetch('/api/trainers/details/all', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -50,7 +50,7 @@ function BillManagement() {
   const fetchBills = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('adminToken');
+      const token = localStorage.getItem('adminToken') || localStorage.getItem('trainerToken');
       const params = new URLSearchParams();
       if (filterTrainer) params.append('trainer', filterTrainer);
       if (filterMonth) params.append('month', filterMonth);
@@ -61,6 +61,8 @@ function BillManagement() {
       const result = await response.json();
       if (result.success) {
         setBills(result.data || []);
+      } else {
+        console.error('Failed to fetch bills:', result.message);
       }
     } catch (err) {
       console.error('Error fetching bills:', err);
@@ -81,7 +83,7 @@ function BillManagement() {
 
     try {
       setSubmitting(true);
-      const token = localStorage.getItem('adminToken');
+      const token = localStorage.getItem('adminToken') || localStorage.getItem('trainerToken');
       const adminData = JSON.parse(localStorage.getItem('adminData') || '{}');
 
       const data = new FormData();
@@ -149,7 +151,7 @@ function BillManagement() {
 
   const handleDownload = async (billId, fileName) => {
     try {
-      const token = localStorage.getItem('adminToken');
+      const token = localStorage.getItem('adminToken') || localStorage.getItem('trainerToken');
       const response = await fetch(`/api/bills/${billId}/file`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -170,7 +172,7 @@ function BillManagement() {
   const handleDelete = async (billId) => {
     if (!window.confirm('Are you sure you want to delete this bill?')) return;
     try {
-      const token = localStorage.getItem('adminToken');
+      const token = localStorage.getItem('adminToken') || localStorage.getItem('trainerToken');
       const response = await fetch(`/api/bills/${billId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
