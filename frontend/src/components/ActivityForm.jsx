@@ -55,8 +55,13 @@ function ActivityForm({ onSubmit, trainers, currentTrainer }) {
         // Filter activities based on trainer type
         let filteredActivities = result.data;
         if (currentTrainer?.trainer_type === 'Junior Trainer') {
-          // Junior Trainers only see "Training"
-          filteredActivities = result.data.filter(activity => activity === 'Training');
+          // Junior Trainers see "Training" and "Help Tournament"
+          const allowed = ['Training', 'Help Tournament'];
+          filteredActivities = result.data.filter(activity => allowed.includes(activity));
+          // Ensure "Help Tournament" is available even if not in the master list
+          if (!filteredActivities.includes('Help Tournament')) {
+            filteredActivities.push('Help Tournament');
+          }
         }
         
         setActivities(filteredActivities);
