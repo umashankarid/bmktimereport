@@ -717,6 +717,55 @@ class DatabaseManager:
                 'message': f'Error updating activity: {str(e)}'
             }
 
+    def delete_activity(self, trainer_name, date, activity_name):
+        """Delete all entries for a specific activity on a given date for a trainer.
+
+        Deletes every time slot logged for that activity/date/trainer combination.
+        Uses case-insensitive, trimmed matching on the trainer name to avoid
+        mismatches from whitespace or casing differences.
+
+        Args:
+            trainer_name (str): Trainer name.
+            date (str): Date in YYYY-MM-DD format.
+            activity_name (str): Activity type name.
+
+        Returns:
+            dict: {'success': bool, 'message': str}
+        """
+        try:
+            conn = self._get_connection()
+            try:
+                cursor = conn.execute(
+                    "DELETE FROM activities "
+                    "WHERE TRIM(LOWER(trainer_name)) = TRIM(LOWER(?)) "
+                    "AND TRIM(date) = TRIM(?) "
+                    "AND TRIM(LOWER(activity)) = TRIM(LOWER(?))",
+                    (trainer_name, date, activity_name)
+                )
+                conn.commit()
+                deleted = cursor.rowcount
+            finally:
+                conn.close()
+
+            if deleted > 0:
+                self._invalidate_cache()
+                return {
+                    'success': True,
+                    'message': f'Deleted {deleted} entry/entries for {activity_name}'
+                }
+            else:
+                return {
+                    'success': False,
+                    'message': 'Activity not found'
+                }
+
+        except Exception as e:
+            logger.error(f"❌ Error deleting activity: {e}")
+            return {
+                'success': False,
+                'message': f'Error deleting activity: {str(e)}'
+            }
+
     def delete_activity_by_details(self, trainer_name, date, activity, start_time, end_time):
         """Delete a specific activity by matching all details.
 
