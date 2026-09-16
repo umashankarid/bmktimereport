@@ -11,6 +11,7 @@ import ResetPassword from './pages/ResetPassword';
 import ActivityForm from './components/ActivityForm';
 import ActivityHistoryView from './components/ActivityHistoryView';
 import Responsibilities from './components/Responsibilities';
+import InstallPrompt from './components/InstallPrompt';
 
 const API_URL = process.env.REACT_APP_API_URL || '/api';
 
@@ -258,6 +259,7 @@ function App() {
   return (
     <BrowserRouter>
       <AppContent />
+      <InstallPrompt />
     </BrowserRouter>
   );
 }
