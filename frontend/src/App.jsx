@@ -12,6 +12,7 @@ import ActivityForm from './components/ActivityForm';
 import ActivityHistoryView from './components/ActivityHistoryView';
 import Responsibilities from './components/Responsibilities';
 import InstallPrompt from './components/InstallPrompt';
+import OfflineIndicator from './components/OfflineIndicator';
 
 const API_URL = process.env.REACT_APP_API_URL || '/api';
 
@@ -258,6 +259,7 @@ function AppContent() {
 function App() {
   return (
     <BrowserRouter>
+      <OfflineIndicator />
       <AppContent />
       <InstallPrompt />
     </BrowserRouter>

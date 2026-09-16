@@ -3,16 +3,17 @@
  * Strategy:
  * - Cache static app shell (HTML, CSS, JS, icons) for fast loading and offline shell.
  * - NEVER cache API responses or user data (/api/*) - always go to network.
- * - Network-first for navigation, cache fallback for offline.
+ * - Network-first for navigation, offline.html fallback when no network + no cache.
  */
 
-const CACHE_VERSION = 'komet-logger-v1';
+const CACHE_VERSION = 'komet-logger-v2';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 
 // App shell files to pre-cache
 const PRECACHE_URLS = [
   '/',
   '/index.html',
+  '/offline.html',
   '/manifest.json',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
@@ -56,7 +57,7 @@ self.addEventListener('fetch', (event) => {
     return; // Let the browser handle it normally (network)
   }
 
-  // For navigation requests (page loads), use network-first with cache fallback
+  // For navigation requests (page loads), use network-first with offline fallback
   if (request.mode === 'navigate') {
     event.respondWith(
       fetch(request)
@@ -66,7 +67,10 @@ self.addEventListener('fetch', (event) => {
           caches.open(STATIC_CACHE).then((cache) => cache.put('/index.html', clone).catch(() => {}));
           return response;
         })
-        .catch(() => caches.match('/index.html'))
+        .catch(() =>
+          // Try cached index first, then offline page
+          caches.match('/index.html').then((cached) => cached || caches.match('/offline.html'))
+        )
     );
     return;
   }
@@ -79,11 +83,13 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       caches.match(request).then((cached) => {
         if (cached) return cached;
-        return fetch(request).then((response) => {
-          const clone = response.clone();
-          caches.open(STATIC_CACHE).then((cache) => cache.put(request, clone).catch(() => {}));
-          return response;
-        });
+        return fetch(request)
+          .then((response) => {
+            const clone = response.clone();
+            caches.open(STATIC_CACHE).then((cache) => cache.put(request, clone).catch(() => {}));
+            return response;
+          })
+          .catch(() => cached); // fall back to cache if fetch fails
       })
     );
   }
