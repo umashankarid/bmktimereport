@@ -30,7 +30,11 @@ function AdminDashboard({ onLogout }) {
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState(''); // success, error
   const [selectedTrainer, setSelectedTrainer] = useState('');
-  const [selectedMonth, setSelectedMonth] = useState('');
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    // Default to current month (YYYY-MM) so reports show this month's data
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  });
   const [trainers, setTrainers] = useState([]);
   const [reportTrainerType, setReportTrainerType] = useState('Assistant Trainer');
 
