@@ -119,6 +119,167 @@ def build_trainer_week_summary(db, trainer_name, monday, sunday):
     return summary, round(total_hours, 2)
 
 
+def _build_trainer_table_html(trainer_name, summary, total_hours):
+    """Build just the per-trainer table block (used in both single and consolidated emails)."""
+    rows_html = ""
+    for day in summary:
+        if day['logged']:
+            acts = "<br>".join(
+                f"{a['activity']} ({a['start']}-{a['end']}, {a['hours']}h)"
+                for a in day['activities']
+            )
+            status_color = "#155724"
+            status_bg = "#d4edda"
+            hours_display = f"{day['hours']}h"
+        else:
+            acts = "<em style='color:#999;'>Not logged</em>"
+            status_color = "#721c24"
+            status_bg = "#f8d7da"
+            hours_display = "—"
+
+        rows_html += f"""
+        <tr style="background:{status_bg};">
+            <td style="padding:8px 12px;border-bottom:1px solid #eee;font-weight:600;white-space:nowrap;">
+                {day['day_name']}<br><span style="font-weight:400;color:#888;font-size:12px;">{day['date']}</span>
+            </td>
+            <td style="padding:8px 12px;border-bottom:1px solid #eee;color:{status_color};">{acts}</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:right;font-weight:600;white-space:nowrap;">{hours_display}</td>
+        </tr>"""
+
+    return f"""
+    <div style="margin-bottom:28px;">
+        <h3 style="color:#333;border-bottom:2px solid #667eea;padding-bottom:6px;">{trainer_name}</h3>
+        <table style="width:100%;border-collapse:collapse;font-size:14px;">
+            <thead>
+                <tr style="background:#f5f5f5;">
+                    <th style="padding:10px 12px;text-align:left;border-bottom:2px solid #ddd;">Day</th>
+                    <th style="padding:10px 12px;text-align:left;border-bottom:2px solid #ddd;">Activities</th>
+                    <th style="padding:10px 12px;text-align:right;border-bottom:2px solid #ddd;">Hours</th>
+                </tr>
+            </thead>
+            <tbody>{rows_html}</tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="2" style="padding:12px;text-align:right;font-weight:700;">Total:</td>
+                    <td style="padding:12px;text-align:right;font-weight:700;color:#667eea;">{total_hours}h</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>"""
+
+
+def send_consolidated_report(recipient_email, reference_date=None):
+    """Send ONE email to recipient_email containing the weekly reports of
+    ALL Assistant Trainers (each trainer as a section).
+
+    Args:
+        recipient_email (str): The single email address to receive the report.
+        reference_date (date, optional): Any date within the target week.
+
+    Returns:
+        dict: {'success': bool, 'message': str, 'trainers': int}
+    """
+    cfg = _get_smtp_config()
+    if not cfg['host'] or not cfg['from']:
+        return {'success': False, 'message': 'SMTP host/from not configured'}
+
+    if not recipient_email or not recipient_email.strip():
+        return {'success': False, 'message': 'Recipient email is required'}
+
+    recipient_email = recipient_email.strip()
+    monday, sunday = get_previous_week_range(reference_date)
+
+    db = get_db_manager()
+    trainers_result = db.get_trainers_details()
+    if not trainers_result['success']:
+        return {'success': False, 'message': 'Could not load trainers'}
+
+    assistant_trainers = sorted(
+        [t for t in trainers_result['data'] if t.get('trainer_type') == 'Assistant Trainer'],
+        key=lambda t: t['name'].lower()
+    )
+
+    if not assistant_trainers:
+        return {'success': False, 'message': 'No Assistant Trainers found'}
+
+    # Build a section per trainer
+    sections_html = ""
+    text_lines = [
+        f"Weekly Activity Report - All Assistant Trainers",
+        f"Week: {monday.strftime('%d %b')} - {sunday.strftime('%d %b %Y')}",
+        ""
+    ]
+    grand_total = 0
+    for trainer in assistant_trainers:
+        summary, total_hours = build_trainer_week_summary(db, trainer['name'], monday, sunday)
+        grand_total += total_hours
+        sections_html += _build_trainer_table_html(trainer['name'], summary, total_hours)
+
+        text_lines.append(f"=== {trainer['name']} (total {total_hours}h) ===")
+        for day in summary:
+            if day['logged']:
+                acts = "; ".join(f"{a['activity']} ({a['start']}-{a['end']}, {a['hours']}h)" for a in day['activities'])
+                text_lines.append(f"  {day['day_name']} {day['date']}: {acts}")
+            else:
+                text_lines.append(f"  {day['day_name']} {day['date']}: Not logged")
+        text_lines.append("")
+
+    html = f"""
+<html>
+<body style="font-family:Arial,sans-serif;max-width:680px;margin:0 auto;padding:20px;">
+    <div style="background:#667eea;border-radius:8px 8px 0 0;padding:24px;text-align:center;">
+        <h2 style="color:white;margin:0;">🏸 BMK Komet Activity Logger</h2>
+        <p style="color:#e0e0ff;margin:6px 0 0 0;">Weekly Report — All Assistant Trainers</p>
+        <p style="color:#e0e0ff;margin:4px 0 0 0;font-size:13px;">{monday.strftime('%d %b')} – {sunday.strftime('%d %b %Y')}</p>
+    </div>
+    <div style="border:1px solid #eee;border-top:none;border-radius:0 0 8px 8px;padding:24px;">
+        {sections_html}
+        <p style="text-align:right;font-weight:700;font-size:15px;">Grand total (all trainers): <span style="color:#667eea;">{round(grand_total, 2)}h</span></p>
+    </div>
+    <div style="padding:15px;color:#aaa;font-size:12px;text-align:center;">
+        <p>BMK Komet Activity Logger · Weekly report</p>
+    </div>
+</body>
+</html>
+"""
+    text = "\n".join(text_lines)
+
+    # Send the single consolidated email
+    try:
+        use_ssl = cfg['port'] == 465 or cfg['secure']
+        if use_ssl:
+            server = smtplib.SMTP_SSL(cfg['host'], cfg['port'], timeout=30)
+            server.ehlo()
+        else:
+            server = smtplib.SMTP(cfg['host'], cfg['port'], timeout=30)
+            server.ehlo()
+            if server.has_extn('STARTTLS'):
+                server.starttls()
+                server.ehlo()
+        if cfg['user'] and cfg['password'] and server.has_extn('AUTH'):
+            server.login(cfg['user'], cfg['password'])
+
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = f"Weekly Report - All Assistant Trainers ({monday.strftime('%d %b')} - {sunday.strftime('%d %b')})"
+        msg['From'] = cfg['from']
+        msg['To'] = recipient_email
+        msg.attach(MIMEText(text, 'plain'))
+        msg.attach(MIMEText(html, 'html'))
+
+        server.send_message(msg)
+        server.quit()
+
+        logger.warning(f"✅ Consolidated report sent to {recipient_email} ({len(assistant_trainers)} trainers)")
+        return {
+            'success': True,
+            'message': f'Report for {len(assistant_trainers)} assistant trainer(s) sent to {recipient_email}',
+            'trainers': len(assistant_trainers)
+        }
+    except Exception as e:
+        logger.error(f"❌ Failed to send consolidated report: {e}")
+        return {'success': False, 'message': f'Failed to send: {str(e)}'}
+
+
 def build_email_html(trainer_name, monday, sunday, summary, total_hours):
     """Build the HTML email body for a trainer's weekly report."""
     rows_html = ""

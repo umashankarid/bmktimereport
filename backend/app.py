@@ -1496,37 +1496,30 @@ def create_app():
     @app.route('/api/reports/send-weekly', methods=['POST'])
     @verify_token
     def send_weekly_report_manual():
-        """Manually trigger weekly reports (requires valid login token).
-        Body options:
-          - 'emails': list of specific email addresses to send to (matched to trainers)
-          - 'test_email': single email to send to (legacy)
-          - nothing: sends to all Assistant Trainers
+        """Send ONE consolidated weekly report (all Assistant Trainers) to a
+        single recipient email. Requires a valid login token.
+        Body: { "recipient": "someone@example.com" }
         """
         try:
             data = request.get_json(silent=True) or {}
-            emails = data.get('emails')  # list
-            test_email = data.get('test_email')  # single (legacy)
+            recipient = (data.get('recipient') or data.get('email') or '').strip()
 
-            # Normalize emails input (accept comma/space separated string too)
-            recipient_emails = None
-            if emails:
-                if isinstance(emails, str):
-                    recipient_emails = [e.strip() for e in emails.replace(',', ' ').split() if e.strip()]
-                elif isinstance(emails, list):
-                    recipient_emails = [str(e).strip() for e in emails if str(e).strip()]
+            if not recipient:
+                return jsonify({'success': False, 'message': 'Recipient email is required'}), 400
 
-            from weekly_report import send_weekly_reports
-            result = send_weekly_reports(only_email=test_email, recipient_emails=recipient_emails)
+            from weekly_report import send_consolidated_report
+            result = send_consolidated_report(recipient)
             return jsonify(result), 200 if result.get('success') else 500
         except Exception as e:
-            logger.error(f"❌ Error sending weekly reports: {str(e)}", exc_info=True)
+            logger.error(f"❌ Error sending weekly report: {str(e)}", exc_info=True)
             return jsonify({'success': False, 'message': str(e)}), 500
 
     @app.route('/api/reports/send-weekly-cron', methods=['POST'])
     def send_weekly_report_cron():
-        """Cron-triggered weekly reports. Secured by a secret token in the header
-        (X-Cron-Secret) matching the CRON_SECRET env var. Meant to be called by a
-        scheduler (Coolify scheduled task / external cron) every Sunday night."""
+        """Cron-triggered weekly report. Secured by X-Cron-Secret header matching
+        the CRON_SECRET env var. Sends ONE consolidated report (all Assistant
+        Trainers) to the email in REPORT_RECIPIENT env var. Meant for a scheduler
+        (Coolify scheduled task / cron) every Sunday night."""
         try:
             cron_secret = os.environ.get('CRON_SECRET', '')
             provided = request.headers.get('X-Cron-Secret', '')
@@ -1534,8 +1527,12 @@ def create_app():
             if not cron_secret or provided != cron_secret:
                 return jsonify({'success': False, 'message': 'Unauthorized'}), 401
 
-            from weekly_report import send_weekly_reports
-            result = send_weekly_reports()
+            recipient = os.environ.get('REPORT_RECIPIENT', '').strip()
+            if not recipient:
+                return jsonify({'success': False, 'message': 'REPORT_RECIPIENT env var not set'}), 400
+
+            from weekly_report import send_consolidated_report
+            result = send_consolidated_report(recipient)
             return jsonify(result), 200 if result.get('success') else 500
         except Exception as e:
             logger.error(f"❌ Error in weekly report cron: {str(e)}", exc_info=True)
