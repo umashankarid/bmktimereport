@@ -224,9 +224,14 @@ def send_weekly_reports(reference_date=None, only_email=None, recipient_emails=N
         dict: {'success': bool, 'sent': int, 'skipped': int, 'errors': [...]}
     """
     cfg = _get_smtp_config()
-    if not cfg['host'] or not cfg['user'] or not cfg['password']:
-        logger.error("❌ SMTP not configured for weekly reports")
-        return {'success': False, 'message': 'SMTP not configured', 'sent': 0}
+    # Only the host is strictly required. User/password are optional because
+    # some relays (e.g. relay.hostup.se) use IP-based auth and reject SMTP AUTH.
+    if not cfg['host']:
+        logger.error("❌ SMTP host not configured for weekly reports")
+        return {'success': False, 'message': 'SMTP host not configured', 'sent': 0}
+    if not cfg['from']:
+        logger.error("❌ SMTP_FROM not configured for weekly reports")
+        return {'success': False, 'message': 'SMTP_FROM address not configured', 'sent': 0}
 
     monday, sunday = get_previous_week_range(reference_date)
     logger.warning(f"📧 Generating weekly reports for {monday} to {sunday}")
@@ -265,9 +270,16 @@ def send_weekly_reports(reference_date=None, only_email=None, recipient_emails=N
         errors.append(f"{u}: no trainer found with this email")
 
     try:
-        server = smtplib.SMTP(cfg['host'], cfg['port'])
-        server.starttls()
-        server.login(cfg['user'], cfg['password'])
+        server = smtplib.SMTP(cfg['host'], cfg['port'], timeout=30)
+        server.ehlo()
+        # Use STARTTLS only if the server advertises it
+        if server.has_extn('STARTTLS'):
+            server.starttls()
+            server.ehlo()
+        # Only authenticate if credentials are provided AND the server supports AUTH.
+        # Relays like relay.hostup.se use IP-based auth and don't support SMTP AUTH.
+        if cfg['user'] and cfg['password'] and server.has_extn('AUTH'):
+            server.login(cfg['user'], cfg['password'])
     except Exception as e:
         logger.error(f"❌ SMTP connection failed: {e}")
         return {'success': False, 'message': f'SMTP connection failed: {str(e)}', 'sent': 0}
