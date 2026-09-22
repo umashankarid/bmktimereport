@@ -28,6 +28,8 @@ def _get_smtp_config():
         # Support both SMTP_PASSWORD and SMTP_PASS
         'password': os.environ.get('SMTP_PASSWORD') or os.environ.get('SMTP_PASS', ''),
         'from': os.environ.get('SMTP_FROM') or os.environ.get('SMTP_USER', ''),
+        # SMTP_SECURE=true forces implicit SSL (used with port 465)
+        'secure': str(os.environ.get('SMTP_SECURE', '')).lower() in ('true', '1', 'yes'),
     }
 
 
@@ -270,12 +272,20 @@ def send_weekly_reports(reference_date=None, only_email=None, recipient_emails=N
         errors.append(f"{u}: no trainer found with this email")
 
     try:
-        server = smtplib.SMTP(cfg['host'], cfg['port'], timeout=30)
-        server.ehlo()
-        # Use STARTTLS only if the server advertises it
-        if server.has_extn('STARTTLS'):
-            server.starttls()
+        # Port 465 uses implicit SSL (SMTP_SSL). Port 587 uses STARTTLS.
+        # SMTP_SECURE=true also forces SSL. Otherwise decide by port.
+        use_ssl = cfg['port'] == 465 or cfg['secure']
+
+        if use_ssl:
+            server = smtplib.SMTP_SSL(cfg['host'], cfg['port'], timeout=30)
             server.ehlo()
+        else:
+            server = smtplib.SMTP(cfg['host'], cfg['port'], timeout=30)
+            server.ehlo()
+            if server.has_extn('STARTTLS'):
+                server.starttls()
+                server.ehlo()
+
         # Only authenticate if credentials are provided AND the server supports AUTH.
         # Relays like relay.hostup.se use IP-based auth and don't support SMTP AUTH.
         if cfg['user'] and cfg['password'] and server.has_extn('AUTH'):
