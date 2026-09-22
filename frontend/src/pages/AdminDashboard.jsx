@@ -607,6 +607,11 @@ function AdminDashboard({ onLogout }) {
                   {sendingReport ? 'Sending...' : '📧 Send Report'}
                 </button>
               </div>
+              {message && (
+                <div className={`weekly-report-message ${messageType === 'success' ? 'success' : 'error'}`}>
+                  {message}
+                </div>
+              )}
             </div>
 
             <ActivitySummaryTable 

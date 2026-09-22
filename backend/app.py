@@ -1496,17 +1496,13 @@ def create_app():
     @app.route('/api/reports/send-weekly', methods=['POST'])
     @verify_token
     def send_weekly_report_manual():
-        """Manually trigger weekly reports (admin only).
+        """Manually trigger weekly reports (requires valid login token).
         Body options:
           - 'emails': list of specific email addresses to send to (matched to trainers)
           - 'test_email': single email to send to (legacy)
           - nothing: sends to all Assistant Trainers
         """
         try:
-            user_type = request.admin.get('type', '')
-            if user_type != 'admin' and user_type != 'Admin':
-                return jsonify({'success': False, 'message': 'Admin access required'}), 403
-
             data = request.get_json(silent=True) or {}
             emails = data.get('emails')  # list
             test_email = data.get('test_email')  # single (legacy)
