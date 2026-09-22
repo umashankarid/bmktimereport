@@ -1491,6 +1491,47 @@ def create_app():
                 'message': 'An error occurred. Please try again.'
             }), 500
 
+    # ==================== WEEKLY REPORTS ====================
+
+    @app.route('/api/reports/send-weekly', methods=['POST'])
+    @verify_token
+    def send_weekly_report_manual():
+        """Manually trigger weekly reports (admin only). Optional 'test_email' in body
+        to send only to one address for testing."""
+        try:
+            user_type = request.admin.get('type', '')
+            if user_type != 'admin' and user_type != 'Admin':
+                return jsonify({'success': False, 'message': 'Admin access required'}), 403
+
+            data = request.get_json(silent=True) or {}
+            test_email = data.get('test_email')
+
+            from weekly_report import send_weekly_reports
+            result = send_weekly_reports(only_email=test_email)
+            return jsonify(result), 200 if result.get('success') else 500
+        except Exception as e:
+            logger.error(f"❌ Error sending weekly reports: {str(e)}", exc_info=True)
+            return jsonify({'success': False, 'message': str(e)}), 500
+
+    @app.route('/api/reports/send-weekly-cron', methods=['POST'])
+    def send_weekly_report_cron():
+        """Cron-triggered weekly reports. Secured by a secret token in the header
+        (X-Cron-Secret) matching the CRON_SECRET env var. Meant to be called by a
+        scheduler (Coolify scheduled task / external cron) every Sunday night."""
+        try:
+            cron_secret = os.environ.get('CRON_SECRET', '')
+            provided = request.headers.get('X-Cron-Secret', '')
+
+            if not cron_secret or provided != cron_secret:
+                return jsonify({'success': False, 'message': 'Unauthorized'}), 401
+
+            from weekly_report import send_weekly_reports
+            result = send_weekly_reports()
+            return jsonify(result), 200 if result.get('success') else 500
+        except Exception as e:
+            logger.error(f"❌ Error in weekly report cron: {str(e)}", exc_info=True)
+            return jsonify({'success': False, 'message': str(e)}), 500
+
     # ==================== BILL MANAGEMENT ====================
 
     @app.route('/api/bills', methods=['POST'])
