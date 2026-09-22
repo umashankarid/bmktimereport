@@ -59,6 +59,8 @@ function AdminDashboard({ onLogout }) {
   const [dateFilterMode, setDateFilterMode] = useState('single');
   const [refreshKey, setRefreshKey] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [sendingReport, setSendingReport] = useState(false);
+  const [weeklyReportEmails, setWeeklyReportEmails] = useState('');
   const [timeReportTrainerType, setTimeReportTrainerType] = useState('Assistant Trainer');
 
   // Change password state
@@ -142,6 +144,47 @@ function AdminDashboard({ onLogout }) {
       setMessageType('error');
     } finally {
       setIsRefreshing(false);
+    }
+  };
+
+  const handleSendWeeklyReport = async () => {
+    setMessage('');
+    setSendingReport(true);
+    try {
+      const token = localStorage.getItem('adminToken');
+      // Parse comma/space separated emails; empty = send to all assistant trainers
+      const emails = weeklyReportEmails
+        .split(/[,\s]+/)
+        .map(e => e.trim())
+        .filter(e => e);
+
+      const response = await fetch('/api/reports/send-weekly', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(emails.length > 0 ? { emails } : {})
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        let msg = `✅ Weekly report sent to ${result.sent} recipient(s).`;
+        if (result.errors && result.errors.length > 0) {
+          msg += ` Issues: ${result.errors.join('; ')}`;
+        }
+        setMessage(msg);
+        setMessageType(result.errors && result.errors.length > 0 ? 'error' : 'success');
+      } else {
+        setMessage(`❌ ${result.message || 'Failed to send weekly report'}`);
+        setMessageType('error');
+      }
+    } catch (err) {
+      setMessage('Error sending weekly report: ' + err.message);
+      setMessageType('error');
+    } finally {
+      setSendingReport(false);
     }
   };
 
@@ -539,6 +582,31 @@ function AdminDashboard({ onLogout }) {
               >
                 {isRefreshing ? '⚡ Syncing...' : '⚡ Sync Cache'}
               </button>
+            </div>
+
+            <div className="weekly-report-box">
+              <div className="weekly-report-title">📧 Send Weekly Report</div>
+              <p className="weekly-report-hint">
+                Sends each recipient their previous week's daily activity summary.
+                Leave the field empty to send to all Assistant Trainers.
+              </p>
+              <div className="weekly-report-controls">
+                <input
+                  type="text"
+                  className="weekly-report-input"
+                  placeholder="Email(s), comma-separated (optional)"
+                  value={weeklyReportEmails}
+                  onChange={(e) => setWeeklyReportEmails(e.target.value)}
+                  disabled={sendingReport}
+                />
+                <button
+                  className="btn-send-report"
+                  onClick={handleSendWeeklyReport}
+                  disabled={sendingReport}
+                >
+                  {sendingReport ? 'Sending...' : '📧 Send Report'}
+                </button>
+              </div>
             </div>
 
             <ActivitySummaryTable 

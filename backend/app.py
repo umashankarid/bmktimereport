@@ -1496,18 +1496,31 @@ def create_app():
     @app.route('/api/reports/send-weekly', methods=['POST'])
     @verify_token
     def send_weekly_report_manual():
-        """Manually trigger weekly reports (admin only). Optional 'test_email' in body
-        to send only to one address for testing."""
+        """Manually trigger weekly reports (admin only).
+        Body options:
+          - 'emails': list of specific email addresses to send to (matched to trainers)
+          - 'test_email': single email to send to (legacy)
+          - nothing: sends to all Assistant Trainers
+        """
         try:
             user_type = request.admin.get('type', '')
             if user_type != 'admin' and user_type != 'Admin':
                 return jsonify({'success': False, 'message': 'Admin access required'}), 403
 
             data = request.get_json(silent=True) or {}
-            test_email = data.get('test_email')
+            emails = data.get('emails')  # list
+            test_email = data.get('test_email')  # single (legacy)
+
+            # Normalize emails input (accept comma/space separated string too)
+            recipient_emails = None
+            if emails:
+                if isinstance(emails, str):
+                    recipient_emails = [e.strip() for e in emails.replace(',', ' ').split() if e.strip()]
+                elif isinstance(emails, list):
+                    recipient_emails = [str(e).strip() for e in emails if str(e).strip()]
 
             from weekly_report import send_weekly_reports
-            result = send_weekly_reports(only_email=test_email)
+            result = send_weekly_reports(only_email=test_email, recipient_emails=recipient_emails)
             return jsonify(result), 200 if result.get('success') else 500
         except Exception as e:
             logger.error(f"❌ Error sending weekly reports: {str(e)}", exc_info=True)

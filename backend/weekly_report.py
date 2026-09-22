@@ -208,13 +208,17 @@ def build_email_text(trainer_name, monday, sunday, summary, total_hours):
     return "\n".join(lines)
 
 
-def send_weekly_reports(reference_date=None, only_email=None):
-    """Generate and send weekly reports to all Assistant Trainers.
+def send_weekly_reports(reference_date=None, only_email=None, recipient_emails=None):
+    """Generate and send weekly reports to Assistant Trainers.
 
     Args:
         reference_date (date, optional): Any date within the week to report on.
             Defaults to today (run on Sunday night → reports Mon-Sun of this week).
-        only_email (str, optional): If set, only send to this email (for testing).
+        only_email (str, optional): If set, only send to this email among the
+            Assistant Trainers (for testing a single existing trainer).
+        recipient_emails (list, optional): If set, send reports ONLY to these
+            specific email addresses. Each email is matched to a trainer by email
+            (case-insensitive). Emails not matching any trainer are reported as errors.
 
     Returns:
         dict: {'success': bool, 'sent': int, 'skipped': int, 'errors': [...]}
@@ -232,15 +236,33 @@ def send_weekly_reports(reference_date=None, only_email=None):
     if not trainers_result['success']:
         return {'success': False, 'message': 'Could not load trainers', 'sent': 0}
 
-    # Only Assistant Trainers with an email
-    assistant_trainers = [
-        t for t in trainers_result['data']
-        if t.get('trainer_type') == 'Assistant Trainer' and t.get('email')
-    ]
+    all_trainers = trainers_result['data']
+
+    # Determine the recipients
+    if recipient_emails:
+        # Send only to the specified emails, matched to any trainer by email
+        wanted = {e.strip().lower() for e in recipient_emails if e and e.strip()}
+        assistant_trainers = [
+            t for t in all_trainers
+            if t.get('email') and t['email'].strip().lower() in wanted
+        ]
+        # Track emails that didn't match any trainer
+        matched_emails = {t['email'].strip().lower() for t in assistant_trainers}
+        unmatched = wanted - matched_emails
+    else:
+        # Default: all Assistant Trainers with an email
+        assistant_trainers = [
+            t for t in all_trainers
+            if t.get('trainer_type') == 'Assistant Trainer' and t.get('email')
+        ]
+        unmatched = set()
 
     sent = 0
     skipped = 0
     errors = []
+
+    for u in unmatched:
+        errors.append(f"{u}: no trainer found with this email")
 
     try:
         server = smtplib.SMTP(cfg['host'], cfg['port'])

@@ -667,3 +667,81 @@
   transform: translateY(-2px);
   box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
 }
+
+/* Weekly Report Box */
+.weekly-report-box {
+  background: #f0f7ff;
+  border: 1px solid #b3d4fc;
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin-bottom: 1.5rem;
+}
+
+.weekly-report-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 4px;
+}
+
+.weekly-report-hint {
+  font-size: 13px;
+  color: #666;
+  margin: 0 0 12px 0;
+  line-height: 1.4;
+}
+
+.weekly-report-controls {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.weekly-report-input {
+  flex: 1;
+  min-width: 220px;
+  padding: 10px 12px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.weekly-report-input:focus {
+  outline: none;
+  border-color: #4a90d9;
+  box-shadow: 0 0 0 2px rgba(74, 144, 217, 0.1);
+}
+
+.btn-send-report {
+  padding: 10px 20px;
+  background: #28a745;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btn-send-report:hover {
+  background: #218838;
+}
+
+.btn-send-report:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+@media (max-width: 600px) {
+  .weekly-report-controls {
+    flex-direction: column;
+  }
+  .weekly-report-input {
+    min-width: 0;
+    width: 100%;
+  }
+  .btn-send-report {
+    width: 100%;
+  }
+}
