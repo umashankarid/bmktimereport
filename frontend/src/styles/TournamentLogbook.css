@@ -407,3 +407,57 @@
   color: #555;
   cursor: pointer;
 }
+
+/* Player categories */
+.tlb-player-cats { display: flex; gap: 6px; flex-wrap: wrap; }
+.tlb-cat-badge {
+  background: #667eea; color: white; font-size: 11px; font-weight: 600;
+  padding: 2px 8px; border-radius: 10px;
+}
+.tlb-no-cat { color: #aaa; font-size: 12px; font-style: italic; }
+
+/* Match Notes */
+.tlb-notes-playerpick {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap;
+}
+.tlb-notes-playerpick label { font-weight: 600; color: #555; }
+.tlb-notes-playerpick select {
+  padding: 8px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; min-width: 220px;
+}
+.tlb-note-msg { font-size: 13px; color: #555; }
+
+.tlb-note-matches { display: flex; flex-direction: column; gap: 14px; }
+.tlb-note-match-card {
+  border: 1px solid #e8e8e8; border-radius: 10px; padding: 14px; background: white;
+}
+.tlb-note-match-header {
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;
+}
+.tlb-note-status { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 10px; }
+.tlb-note-status.status-done { background: #e8f5e9; color: #2e7d32; }
+.tlb-note-status.status-ongoing { background: #ffebee; color: #c62828; }
+.tlb-note-status.status-upcoming { background: #fff3e0; color: #ef6c00; }
+.tlb-note-match-teams { font-size: 14px; color: #333; margin-bottom: 10px; }
+.tlb-note-score { color: #667eea; font-weight: 600; }
+
+.tlb-note-existing { margin-bottom: 10px; }
+.tlb-note-item {
+  display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;
+  background: #f7f9ff; border-radius: 6px; padding: 8px 10px; margin-bottom: 6px;
+}
+.tlb-note-text { font-size: 13px; color: #333; flex: 1; }
+.tlb-note-item-actions { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+.tlb-note-date { font-size: 11px; color: #aaa; }
+.tlb-note-item-actions button { background: none; border: none; cursor: pointer; opacity: 0.6; }
+.tlb-note-item-actions button:hover { opacity: 1; }
+
+.tlb-note-editor { display: flex; gap: 8px; align-items: flex-start; }
+.tlb-note-editor textarea {
+  flex: 1; padding: 8px 10px; border: 1px solid #ddd; border-radius: 6px;
+  font-size: 14px; resize: vertical; box-sizing: border-box;
+}
+.tlb-note-editor button {
+  background: #28a745; color: white; border: none; padding: 8px 14px;
+  border-radius: 6px; cursor: pointer; font-weight: 600; white-space: nowrap;
+}
+.tlb-note-editor button:disabled { background: #ccc; }

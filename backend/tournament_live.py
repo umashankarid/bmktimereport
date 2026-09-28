@@ -384,3 +384,97 @@ def search_open_tournaments(days_ahead=28):
     except Exception as e:
         logger.error(f"❌ Error searching open tournaments: {e}")
         return {'success': False, 'error': str(e), 'tournaments': []}
+
+
+def get_player_matches(tournament_id, player_name):
+    """Return all matches (across all days) involving a specific player, plus the
+    set of event categories they play. Uses get_live_matches per day.
+
+    Args:
+        tournament_id (str): The tournamentsoftware GUID.
+        player_name (str): The player's name to filter by.
+
+    Returns:
+        dict: {'success': bool, 'matches': [...], 'categories': [...]}
+    """
+    tournament_id = (tournament_id or "").strip()
+    target = _normalize_name(player_name)
+    if not tournament_id or not target:
+        return {'success': False, 'error': 'Tournament ID and player required', 'matches': []}
+
+    try:
+        # First call to discover days
+        first = get_live_matches(tournament_id, komet_names=[player_name])
+        if not first.get('success'):
+            return first
+        days = first.get('days', [])
+
+        all_matches = []
+        seen = set()
+
+        def collect(day_result):
+            for m in day_result.get('matches', []):
+                # match involves the player if either team contains the name
+                names = []
+                for team in (m.get('team1', ''), m.get('team2', '')):
+                    names.extend([p.strip() for p in team.split('/')])
+                if any(_normalize_name(n) == target for n in names):
+                    key = (m.get('event'), m.get('round'), m.get('team1'), m.get('team2'))
+                    if key not in seen:
+                        seen.add(key)
+                        all_matches.append(m)
+
+        collect(first)
+        # Fetch remaining days
+        for d in days:
+            if d and d != first.get('selected_day'):
+                dr = get_live_matches(tournament_id, req_date=d, komet_names=[player_name])
+                if dr.get('success'):
+                    collect(dr)
+
+        categories = sorted({m.get('event', '') for m in all_matches if m.get('event')})
+        return {'success': True, 'matches': all_matches, 'categories': categories}
+    except Exception as e:
+        logger.error(f"❌ Error fetching player matches: {e}")
+        return {'success': False, 'error': str(e), 'matches': []}
+
+
+def get_players_with_categories(tournament_id, komet_names):
+    """For each Komet player, derive the event categories they play from matches.
+
+    Returns:
+        dict: {'success': bool, 'players': [{'name','categories':[...]}]}
+    """
+    try:
+        # Gather all matches across all days once, then map players to categories
+        first = get_live_matches(tournament_id, komet_names=komet_names)
+        if not first.get('success'):
+            return {'success': False, 'players': [], 'error': first.get('error', '')}
+        days = first.get('days', [])
+        all_matches = list(first.get('matches', []))
+        for d in days:
+            if d and d != first.get('selected_day'):
+                dr = get_live_matches(tournament_id, req_date=d, komet_names=komet_names)
+                if dr.get('success'):
+                    all_matches.extend(dr.get('matches', []))
+
+        target_set = {_normalize_name(n): n for n in komet_names}
+        cats_by_player = {}
+        for m in all_matches:
+            event = m.get('event', '')
+            names = []
+            for team in (m.get('team1', ''), m.get('team2', '')):
+                names.extend([p.strip() for p in team.split('/')])
+            for n in names:
+                key = _normalize_name(n)
+                if key in target_set and event:
+                    cats_by_player.setdefault(target_set[key], set()).add(event)
+
+        players = [
+            {'name': name, 'categories': sorted(cats_by_player.get(name, []))}
+            for name in komet_names
+        ]
+        return {'success': True, 'players': players}
+    except Exception as e:
+        logger.error(f"❌ Error deriving player categories: {e}")
+        return {'success': False, 'players': [], 'error': str(e)}

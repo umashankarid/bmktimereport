@@ -949,6 +949,41 @@ def create_app():
             logger.error(f"Error fetching komet players: {str(e)}")
             return jsonify({'success': False, 'error': str(e), 'players': []}), 500
 
+    @app.route('/api/logbook/players-with-categories', methods=['GET'])
+    def logbook_players_with_categories():
+        """Get Komet players + the event categories they play (derived from matches)."""
+        try:
+            from tournament_live import get_komet_players, get_players_with_categories
+            tournament_id = request.args.get('id', '').strip()
+            if not tournament_id:
+                return jsonify({'success': False, 'error': 'No tournament ID', 'players': []}), 400
+            kp = get_komet_players(tournament_id)
+            if not kp.get('success'):
+                return jsonify(kp), 500
+            names = [p['name'] for p in kp.get('players', [])]
+            if not names:
+                return jsonify({'success': True, 'players': []}), 200
+            result = get_players_with_categories(tournament_id, names)
+            return jsonify(result), 200 if result.get('success') else 500
+        except Exception as e:
+            logger.error(f"Error fetching players with categories: {str(e)}")
+            return jsonify({'success': False, 'error': str(e), 'players': []}), 500
+
+    @app.route('/api/logbook/player-matches', methods=['GET'])
+    def logbook_player_matches():
+        """Get all matches for a specific player in a tournament (+ categories)."""
+        try:
+            from tournament_live import get_player_matches
+            tournament_id = request.args.get('id', '').strip()
+            player = request.args.get('player', '').strip()
+            if not tournament_id or not player:
+                return jsonify({'success': False, 'error': 'Tournament ID and player required', 'matches': []}), 400
+            result = get_player_matches(tournament_id, player)
+            return jsonify(result), 200 if result.get('success') else 500
+        except Exception as e:
+            logger.error(f"Error fetching player matches: {str(e)}")
+            return jsonify({'success': False, 'error': str(e), 'matches': []}), 500
+
     @app.route('/api/logbook/comments', methods=['GET'])
     @verify_token
     def get_logbook_comments():
@@ -968,17 +1003,18 @@ def create_app():
     @app.route('/api/logbook/comments', methods=['POST'])
     @verify_token
     def save_logbook_comment():
-        """Save/update the current coach's comment for a player in a tournament."""
+        """Save/update the current coach's match note for a player in a tournament."""
         try:
             coach_name = request.admin.get('username', '')
             data = request.get_json(silent=True) or {}
             tournament_name = (data.get('tournament') or '').strip()
             player_name = (data.get('player') or '').strip()
             comment = (data.get('comment') or '').strip()
+            match_label = (data.get('match_label') or '').strip()
             if not tournament_name or not player_name:
                 return jsonify({'success': False, 'message': 'Tournament and player are required'}), 400
             db = get_db_manager()
-            result = db.save_player_comment(tournament_name, player_name, coach_name, comment)
+            result = db.save_player_comment(tournament_name, player_name, coach_name, comment, match_label=match_label)
             return jsonify(result), 200 if result.get('success') else 400
         except Exception as e:
             return jsonify({'success': False, 'message': str(e)}), 500

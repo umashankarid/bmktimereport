@@ -122,7 +122,8 @@ class DatabaseManager:
                     start_time TEXT DEFAULT '',
                     end_time TEXT DEFAULT '',
                     status TEXT DEFAULT 'Active',
-                    tournament_url TEXT DEFAULT ''
+                    tournament_url TEXT DEFAULT '',
+                    hidden INTEGER DEFAULT 0
                 );
 
                 CREATE TABLE IF NOT EXISTS volunteer_registrations (
@@ -204,6 +205,7 @@ class DatabaseManager:
                     player_name TEXT NOT NULL,
                     coach_name TEXT NOT NULL,
                     comment TEXT NOT NULL,
+                    match_label TEXT DEFAULT '',
                     created_date TEXT DEFAULT '',
                     updated_date TEXT DEFAULT ''
                 );
@@ -221,8 +223,22 @@ class DatabaseManager:
                     conn.execute("ALTER TABLE tournaments ADD COLUMN tournament_url TEXT DEFAULT ''")
                     conn.commit()
                     logger.info("✅ Migration: added tournament_url column to tournaments")
+                if 'hidden' not in cols:
+                    conn.execute("ALTER TABLE tournaments ADD COLUMN hidden INTEGER DEFAULT 0")
+                    conn.commit()
+                    logger.info("✅ Migration: added hidden column to tournaments")
             except Exception as mig_err:
-                logger.warning(f"⚠️  tournament_url migration skipped: {mig_err}")
+                logger.warning(f"⚠️  tournaments migration skipped: {mig_err}")
+
+            # Add match_label to player_comments if missing
+            try:
+                pc_cols = [r[1] for r in conn.execute("PRAGMA table_info(player_comments)").fetchall()]
+                if pc_cols and 'match_label' not in pc_cols:
+                    conn.execute("ALTER TABLE player_comments ADD COLUMN match_label TEXT DEFAULT ''")
+                    conn.commit()
+                    logger.info("✅ Migration: added match_label column to player_comments")
+            except Exception as mig_err:
+                logger.warning(f"⚠️  player_comments migration skipped: {mig_err}")
         finally:
             conn.close()
 
@@ -1218,19 +1234,16 @@ class DatabaseManager:
         try:
             conn = self._get_connection()
             try:
-                # Check whether tournament_url column exists (older DBs may not have it)
+                # Check which optional columns exist (older DBs may not have them)
                 cols = [r[1] for r in conn.execute("PRAGMA table_info(tournaments)").fetchall()]
                 has_url = 'tournament_url' in cols
-                if has_url:
-                    cursor = conn.execute(
-                        "SELECT tournament_name, start_date, end_date, venue, "
-                        "start_time, end_time, status, tournament_url FROM tournaments ORDER BY start_date DESC"
-                    )
-                else:
-                    cursor = conn.execute(
-                        "SELECT tournament_name, start_date, end_date, venue, "
-                        "start_time, end_time, status FROM tournaments ORDER BY start_date DESC"
-                    )
+                has_hidden = 'hidden' in cols
+                url_col = ", tournament_url" if has_url else ""
+                where = " WHERE COALESCE(hidden, 0) = 0" if has_hidden else ""
+                cursor = conn.execute(
+                    f"SELECT tournament_name, start_date, end_date, venue, "
+                    f"start_time, end_time, status{url_col} FROM tournaments{where} ORDER BY start_date DESC"
+                )
                 rows = cursor.fetchall()
             finally:
                 conn.close()
@@ -1296,11 +1309,29 @@ class DatabaseManager:
 
             conn = self._get_connection()
             try:
-                conn.execute(
-                    "INSERT INTO tournaments (tournament_name, start_date, end_date, venue, "
-                    "start_time, end_time, status, tournament_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                    (tournament_name, start_date, end_date, venue, start_time, end_time, status, tournament_url)
-                )
+                # If a hidden tournament with the same name exists, un-hide and
+                # refresh it (preserves its match notes) instead of inserting a dup.
+                cols = [r[1] for r in conn.execute("PRAGMA table_info(tournaments)").fetchall()]
+                existing = None
+                if 'hidden' in cols:
+                    cur = conn.execute(
+                        "SELECT id FROM tournaments WHERE TRIM(LOWER(tournament_name)) = TRIM(LOWER(?)) AND COALESCE(hidden,0) = 1",
+                        (tournament_name,)
+                    )
+                    existing = cur.fetchone()
+
+                if existing:
+                    conn.execute(
+                        "UPDATE tournaments SET hidden = 0, start_date = ?, end_date = ?, venue = ?, "
+                        "start_time = ?, end_time = ?, status = ?, tournament_url = ? WHERE id = ?",
+                        (start_date, end_date, venue, start_time, end_time, status, tournament_url, existing['id'])
+                    )
+                else:
+                    conn.execute(
+                        "INSERT INTO tournaments (tournament_name, start_date, end_date, venue, "
+                        "start_time, end_time, status, tournament_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                        (tournament_name, start_date, end_date, venue, start_time, end_time, status, tournament_url)
+                    )
                 conn.commit()
             finally:
                 conn.close()
@@ -1349,7 +1380,8 @@ class DatabaseManager:
             return {'success': False, 'message': f'Error updating tournament URL: {str(e)}'}
 
     def delete_tournament(self, tournament_name):
-        """Delete a tournament by name (case-insensitive, trimmed).
+        """Soft-delete a tournament: hide it from views but keep the row so its
+        match notes/comments are preserved.
 
         Args:
             tournament_name (str): The tournament name.
@@ -1361,17 +1393,17 @@ class DatabaseManager:
             conn = self._get_connection()
             try:
                 cursor = conn.execute(
-                    "DELETE FROM tournaments WHERE TRIM(LOWER(tournament_name)) = TRIM(LOWER(?))",
+                    "UPDATE tournaments SET hidden = 1 WHERE TRIM(LOWER(tournament_name)) = TRIM(LOWER(?))",
                     (tournament_name,)
                 )
                 conn.commit()
-                deleted = cursor.rowcount
+                updated = cursor.rowcount
             finally:
                 conn.close()
 
-            if deleted:
+            if updated:
                 self._invalidate_cache('tournaments')
-                return {'success': True, 'message': 'Tournament deleted'}
+                return {'success': True, 'message': 'Tournament removed from view (data preserved)'}
             return {'success': False, 'message': 'Tournament not found'}
         except Exception as e:
             logger.error(f"✗ Error deleting tournament: {e}")
@@ -1389,8 +1421,10 @@ class DatabaseManager:
         try:
             conn = self._get_connection()
             try:
+                cols = [r[1] for r in conn.execute("PRAGMA table_info(tournaments)").fetchall()]
+                where = " AND COALESCE(hidden, 0) = 0" if 'hidden' in cols else ""
                 cursor = conn.execute(
-                    "SELECT id FROM tournaments WHERE tournament_name = ?",
+                    f"SELECT id FROM tournaments WHERE TRIM(LOWER(tournament_name)) = TRIM(LOWER(?)){where}",
                     (tournament_name,)
                 )
                 return cursor.fetchone() is not None
@@ -2653,8 +2687,8 @@ class DatabaseManager:
 
     # ==================== PLAYER COMMENTS (Tournament Logbook) ====================
 
-    def save_player_comment(self, tournament_name, player_name, coach_name, comment):
-        """Append a new comment for a player in a tournament (one row per comment).
+    def save_player_comment(self, tournament_name, player_name, coach_name, comment, match_label=''):
+        """Append a new match note for a player in a tournament (one row per note).
 
         Returns:
             dict: {'success': bool, 'message': str, 'id': int}
@@ -2671,16 +2705,16 @@ class DatabaseManager:
             conn = self._get_connection()
             try:
                 cursor = conn.execute(
-                    "INSERT INTO player_comments (tournament_name, player_name, coach_name, comment, created_date, updated_date) "
-                    "VALUES (?, ?, ?, ?, ?, ?)",
-                    (tournament_name, player_name, coach_name, comment.strip(), now, now)
+                    "INSERT INTO player_comments (tournament_name, player_name, coach_name, comment, match_label, created_date, updated_date) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    (tournament_name, player_name, coach_name, comment.strip(), (match_label or '').strip(), now, now)
                 )
                 new_id = cursor.lastrowid
                 conn.commit()
             finally:
                 conn.close()
 
-            return {'success': True, 'message': 'Comment added', 'id': new_id}
+            return {'success': True, 'message': 'Note added', 'id': new_id}
         except Exception as e:
             logger.error(f"Error saving player comment: {e}")
             return {'success': False, 'message': f'Error saving comment: {str(e)}'}
@@ -2750,7 +2784,8 @@ class DatabaseManager:
             conn = self._get_connection()
             try:
                 query = ("SELECT id, tournament_name, player_name, coach_name, comment, "
-                         "created_date, updated_date FROM player_comments WHERE tournament_name = ?")
+                         "COALESCE(match_label,'') AS match_label, created_date, updated_date "
+                         "FROM player_comments WHERE tournament_name = ?")
                 params = [tournament_name]
                 if coach_name:
                     query += " AND coach_name = ?"
@@ -2771,6 +2806,7 @@ class DatabaseManager:
                     'player_name': r['player_name'],
                     'coach_name': r['coach_name'],
                     'comment': r['comment'],
+                    'match_label': r['match_label'],
                     'created_date': r['created_date'],
                     'updated_date': r['updated_date'],
                 }
@@ -2792,13 +2828,15 @@ class DatabaseManager:
             try:
                 if tournament_name:
                     cursor = conn.execute(
-                        "SELECT id, tournament_name, player_name, coach_name, comment, created_date, updated_date "
+                        "SELECT id, tournament_name, player_name, coach_name, comment, "
+                        "COALESCE(match_label,'') AS match_label, created_date, updated_date "
                         "FROM player_comments WHERE tournament_name = ? ORDER BY player_name, coach_name, created_date",
                         (tournament_name,)
                     )
                 else:
                     cursor = conn.execute(
-                        "SELECT id, tournament_name, player_name, coach_name, comment, created_date, updated_date "
+                        "SELECT id, tournament_name, player_name, coach_name, comment, "
+                        "COALESCE(match_label,'') AS match_label, created_date, updated_date "
                         "FROM player_comments ORDER BY tournament_name, player_name, coach_name, created_date"
                     )
                 rows = cursor.fetchall()
@@ -2812,6 +2850,7 @@ class DatabaseManager:
                     'player_name': r['player_name'],
                     'coach_name': r['coach_name'],
                     'comment': r['comment'],
+                    'match_label': r['match_label'],
                     'created_date': r['created_date'],
                     'updated_date': r['updated_date'],
                 }

@@ -6,18 +6,8 @@ function TournamentLogbook({ isAdmin = false }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // Detail view
   const [selected, setSelected] = useState(null);
-  const [activeTab, setActiveTab] = useState('players'); // players, ongoing, upcoming, finished, comments, report
-
-  // Admin report
-  const [reportComments, setReportComments] = useState([]);
-  const [loadingReport, setLoadingReport] = useState(false);
-
-  // Admin URL editing
-  const [editingUrl, setEditingUrl] = useState('');
-  const [savingUrl, setSavingUrl] = useState(false);
-  const [urlMsg, setUrlMsg] = useState('');
+  const [activeTab, setActiveTab] = useState('players'); // players, ongoing, upcoming, finished, notes, report
 
   // Matches
   const [matches, setMatches] = useState([]);
@@ -27,26 +17,32 @@ function TournamentLogbook({ isAdmin = false }) {
   const [matchError, setMatchError] = useState('');
   const [kometOnly, setKometOnly] = useState(true);
 
-  // Komet players
+  // Komet players (with categories)
   const [players, setPlayers] = useState([]);
   const [loadingPlayers, setLoadingPlayers] = useState(false);
   const [playersError, setPlayersError] = useState('');
   const [playerSearch, setPlayerSearch] = useState('');
 
-  // Comments
-  const [commentPlayer, setCommentPlayer] = useState('');
-  const [commentText, setCommentText] = useState('');
+  // Match Notes
+  const [notePlayer, setNotePlayer] = useState('');
+  const [playerMatches, setPlayerMatches] = useState([]);
+  const [loadingPlayerMatches, setLoadingPlayerMatches] = useState(false);
   const [myComments, setMyComments] = useState([]);
-  const [savingComment, setSavingComment] = useState(false);
-  const [commentMsg, setCommentMsg] = useState('');
-  const [editingCommentId, setEditingCommentId] = useState(null);
+  const [noteDrafts, setNoteDrafts] = useState({}); // matchLabel -> text
+  const [savingNote, setSavingNote] = useState('');
+  const [noteMsg, setNoteMsg] = useState('');
+
+  // Admin report + URL editing
+  const [reportComments, setReportComments] = useState([]);
+  const [loadingReport, setLoadingReport] = useState(false);
+  const [editingUrl, setEditingUrl] = useState('');
+  const [savingUrl, setSavingUrl] = useState(false);
+  const [urlMsg, setUrlMsg] = useState('');
 
   const token = localStorage.getItem('adminToken') || localStorage.getItem('trainerToken');
   const authHeader = { 'Authorization': `Bearer ${token}` };
 
-  useEffect(() => {
-    fetchTournaments();
-  }, []);
+  useEffect(() => { fetchTournaments(); }, []);
 
   const fetchTournaments = async () => {
     try {
@@ -65,28 +61,23 @@ function TournamentLogbook({ isAdmin = false }) {
   const openTournament = (t) => {
     setSelected(t);
     setActiveTab('players');
-    setMatches([]);
-    setPlayers([]);
-    setMyComments([]);
-    setCommentPlayer('');
-    setCommentText('');
-    setCommentMsg('');
+    setMatches([]); setPlayers([]); setMyComments([]);
+    setNotePlayer(''); setPlayerMatches([]); setNoteDrafts({}); setNoteMsg('');
+    setPlayerSearch('');
     if (t.tournament_id) {
       fetchPlayers(t);
       fetchComments(t);
     }
   };
 
-  const backToList = () => {
-    setSelected(null);
-  };
+  const backToList = () => setSelected(null);
 
   const fetchPlayers = async (t) => {
     if (!t.tournament_id) return;
     try {
       setLoadingPlayers(true);
       setPlayersError('');
-      const res = await fetch(`/api/logbook/komet-players?id=${encodeURIComponent(t.tournament_id)}`, { headers: authHeader });
+      const res = await fetch(`/api/logbook/players-with-categories?id=${encodeURIComponent(t.tournament_id)}`, { headers: authHeader });
       const data = await res.json();
       if (data.success) setPlayers(data.players || []);
       else setPlayersError(data.error || 'Failed to load players');
@@ -126,9 +117,7 @@ function TournamentLogbook({ isAdmin = false }) {
       const res = await fetch(`/api/logbook/comments?tournament=${encodeURIComponent(t.name)}`, { headers: authHeader });
       const data = await res.json();
       if (data.success) setMyComments(data.data || []);
-    } catch (err) {
-      // ignore
-    }
+    } catch (err) { /* ignore */ }
   };
 
   const fetchReport = async (t) => {
@@ -137,10 +126,23 @@ function TournamentLogbook({ isAdmin = false }) {
       const res = await fetch(`/api/logbook/comments/report?tournament=${encodeURIComponent(t.name)}`, { headers: authHeader });
       const data = await res.json();
       if (data.success) setReportComments(data.data || []);
-    } catch (err) {
-      // ignore
-    } finally {
+    } catch (err) { /* ignore */ } finally {
       setLoadingReport(false);
+    }
+  };
+
+  const fetchPlayerMatches = async (playerName) => {
+    if (!selected?.tournament_id || !playerName) { setPlayerMatches([]); return; }
+    try {
+      setLoadingPlayerMatches(true);
+      const res = await fetch(`/api/logbook/player-matches?id=${encodeURIComponent(selected.tournament_id)}&player=${encodeURIComponent(playerName)}`, { headers: authHeader });
+      const data = await res.json();
+      if (data.success) setPlayerMatches(data.matches || []);
+      else setPlayerMatches([]);
+    } catch (err) {
+      setPlayerMatches([]);
+    } finally {
+      setLoadingPlayerMatches(false);
     }
   };
 
@@ -149,19 +151,13 @@ function TournamentLogbook({ isAdmin = false }) {
     if ((tab === 'ongoing' || tab === 'upcoming' || tab === 'finished') && matches.length === 0 && selected?.tournament_id) {
       fetchMatches(selected);
     }
-    if (tab === 'report' && selected) {
-      fetchReport(selected);
-    }
+    if (tab === 'report' && selected) fetchReport(selected);
   };
 
   const saveTournamentUrl = async () => {
-    if (!editingUrl.trim()) {
-      setUrlMsg('Please paste a tournament URL');
-      return;
-    }
+    if (!editingUrl.trim()) { setUrlMsg('Please paste a tournament URL'); return; }
     try {
-      setSavingUrl(true);
-      setUrlMsg('');
+      setSavingUrl(true); setUrlMsg('');
       const res = await fetch('/api/tournaments/set-url', {
         method: 'POST',
         headers: { ...authHeader, 'Content-Type': 'application/json' },
@@ -170,17 +166,13 @@ function TournamentLogbook({ isAdmin = false }) {
       const data = await res.json();
       if (data.success) {
         setUrlMsg('✅ Link saved');
-        // Refresh tournaments and re-open this one with the new URL
         await fetchTournaments();
         const guidMatch = editingUrl.match(/\/tournament\/([0-9A-Fa-f-]{36})/) || editingUrl.match(/id=([A-Fa-f0-9-]+)/);
         const guid = guidMatch ? guidMatch[1] : '';
         const updated = { ...selected, url: editingUrl.trim(), tournament_id: guid };
         setSelected(updated);
         setEditingUrl('');
-        if (guid) {
-          fetchPlayers(updated);
-          fetchComments(updated);
-        }
+        if (guid) { fetchPlayers(updated); fetchComments(updated); }
       } else {
         setUrlMsg(`❌ ${data.message}`);
       }
@@ -191,85 +183,63 @@ function TournamentLogbook({ isAdmin = false }) {
     }
   };
 
-  const handleSaveComment = async () => {
-    if (!commentPlayer || !commentText.trim()) {
-      setCommentMsg('Select a player and write a comment');
-      return;
-    }
+  // ---- Match Notes helpers ----
+  const selectNotePlayer = (name) => {
+    setNotePlayer(name);
+    setNoteMsg('');
+    setNoteDrafts({});
+    fetchPlayerMatches(name);
+  };
+
+  const matchLabelFor = (m) => {
+    // A readable, stable identifier for the match
+    const opp = `${m.team1} vs ${m.team2}`;
+    return [m.event, m.round, opp].filter(Boolean).join(' · ');
+  };
+
+  const commentsForMatch = (label) =>
+    myComments.filter(c => c.player_name === notePlayer && (c.match_label || '') === label);
+
+  const saveNote = async (label) => {
+    const text = (noteDrafts[label] || '').trim();
+    if (!text) { setNoteMsg('Write a note first'); return; }
     try {
-      setSavingComment(true);
-      setCommentMsg('');
-      let res;
-      if (editingCommentId) {
-        // Edit existing comment
-        res = await fetch(`/api/logbook/comments/${editingCommentId}`, {
-          method: 'PUT',
-          headers: { ...authHeader, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ comment: commentText.trim() })
-        });
-      } else {
-        // Append a new comment
-        res = await fetch('/api/logbook/comments', {
-          method: 'POST',
-          headers: { ...authHeader, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ tournament: selected.name, player: commentPlayer, comment: commentText.trim() })
-        });
-      }
-      const data = await res.json();
-      if (data.success) {
-        setCommentMsg(editingCommentId ? '✅ Comment updated' : '✅ Comment added');
-        setCommentText('');
-        setCommentPlayer('');
-        setEditingCommentId(null);
-        fetchComments(selected);
-      } else {
-        setCommentMsg(`❌ ${data.message}`);
-      }
-    } catch (err) {
-      setCommentMsg('Error saving comment');
-    } finally {
-      setSavingComment(false);
-    }
-  };
-
-  const editComment = (c) => {
-    setCommentPlayer(c.player_name);
-    setCommentText(c.comment);
-    setEditingCommentId(c.id);
-    setActiveTab('comments');
-  };
-
-  const cancelEdit = () => {
-    setEditingCommentId(null);
-    setCommentText('');
-    setCommentPlayer('');
-    setCommentMsg('');
-  };
-
-  const deleteComment = async (c) => {
-    if (!window.confirm('Delete this comment?')) return;
-    try {
-      const res = await fetch(`/api/logbook/comments/${c.id}`, {
-        method: 'DELETE',
-        headers: authHeader
+      setSavingNote(label);
+      setNoteMsg('');
+      const res = await fetch('/api/logbook/comments', {
+        method: 'POST',
+        headers: { ...authHeader, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tournament: selected.name, player: notePlayer, comment: text, match_label: label })
       });
       const data = await res.json();
       if (data.success) {
-        if (editingCommentId === c.id) cancelEdit();
+        setNoteMsg('✅ Note saved');
+        setNoteDrafts(prev => ({ ...prev, [label]: '' }));
         fetchComments(selected);
+      } else {
+        setNoteMsg(`❌ ${data.message}`);
       }
     } catch (err) {
-      // ignore
+      setNoteMsg('Error saving note');
+    } finally {
+      setSavingNote('');
     }
+  };
+
+  const deleteNote = async (c) => {
+    if (!window.confirm('Delete this note?')) return;
+    try {
+      const res = await fetch(`/api/logbook/comments/${c.id}`, { method: 'DELETE', headers: authHeader });
+      const data = await res.json();
+      if (data.success) fetchComments(selected);
+    } catch (err) { /* ignore */ }
   };
 
   const matchesByStatus = (status) => matches.filter(m => m.status === status);
 
-  // Highlight Komet player names within a team string
   const renderTeam = (teamStr, kometNames, won) => {
     const kometSet = new Set((kometNames || []).map(n => n.toLowerCase()));
-    // Team is "Player A / Player B"; check each name
-    const parts = teamStr.split(' / ');
+    const parts = (teamStr || '').split(' / ');
     return (
       <span className={won ? 'won' : ''}>
         {parts.map((name, i) => {
@@ -305,7 +275,7 @@ function TournamentLogbook({ isAdmin = false }) {
     </div>
   );
 
-  // ---- Detail view ----
+  // ================= Detail view =================
   if (selected) {
     return (
       <div className="tournament-logbook">
@@ -321,12 +291,8 @@ function TournamentLogbook({ isAdmin = false }) {
             <p>This tournament has no badmintonsweden link yet.</p>
             {isAdmin ? (
               <div className="tlb-url-editor">
-                <input
-                  type="text"
-                  value={editingUrl}
-                  onChange={(e) => setEditingUrl(e.target.value)}
-                  placeholder="Paste badmintonsweden tournament URL here"
-                />
+                <input type="text" value={editingUrl} onChange={(e) => setEditingUrl(e.target.value)}
+                  placeholder="Paste badmintonsweden tournament URL here" />
                 <button onClick={saveTournamentUrl} disabled={savingUrl}>
                   {savingUrl ? 'Saving...' : '💾 Save Link'}
                 </button>
@@ -343,9 +309,9 @@ function TournamentLogbook({ isAdmin = false }) {
               <button className={activeTab === 'ongoing' ? 'active' : ''} onClick={() => switchTab('ongoing')}>🔴 Ongoing</button>
               <button className={activeTab === 'upcoming' ? 'active' : ''} onClick={() => switchTab('upcoming')}>⏳ Upcoming</button>
               <button className={activeTab === 'finished' ? 'active' : ''} onClick={() => switchTab('finished')}>✅ Finished</button>
-              <button className={activeTab === 'comments' ? 'active' : ''} onClick={() => switchTab('comments')}>📝 Player Comments</button>
+              <button className={activeTab === 'notes' ? 'active' : ''} onClick={() => switchTab('notes')}>📝 Match Notes</button>
               {isAdmin && (
-                <button className={activeTab === 'report' ? 'active' : ''} onClick={() => switchTab('report')}>📊 All Coach Comments</button>
+                <button className={activeTab === 'report' ? 'active' : ''} onClick={() => switchTab('report')}>📊 All Coach Notes</button>
               )}
             </div>
 
@@ -361,43 +327,32 @@ function TournamentLogbook({ isAdmin = false }) {
 
             {(activeTab === 'ongoing' || activeTab === 'upcoming' || activeTab === 'finished') && (
               <label className="tlb-komet-toggle">
-                <input
-                  type="checkbox"
-                  checked={kometOnly}
-                  onChange={(e) => {
-                    setKometOnly(e.target.checked);
-                    // Re-fetch with the new filter
-                    setTimeout(() => fetchMatches(selected, selectedDay), 0);
-                  }}
-                />
+                <input type="checkbox" checked={kometOnly}
+                  onChange={(e) => { setKometOnly(e.target.checked); setTimeout(() => fetchMatches(selected, selectedDay), 0); }} />
                 Show only Komet players' matches
               </label>
             )}
 
             <div className="tlb-content">
-              {/* Komet Players */}
+              {/* Komet Players + categories (no comment button) */}
               {activeTab === 'players' && (
                 loadingPlayers ? <p className="tlb-loading">Loading players...</p> :
                 playersError ? <p className="tlb-error">{playersError}</p> :
                 players.length === 0 ? <p className="tlb-empty">No Komet players found in this tournament.</p> :
                 <>
-                  <input
-                    type="text"
-                    className="tlb-player-search"
-                    placeholder="🔍 Search player by name..."
-                    value={playerSearch}
-                    onChange={(e) => setPlayerSearch(e.target.value)}
-                  />
+                  <input type="text" className="tlb-player-search" placeholder="🔍 Search player by name..."
+                    value={playerSearch} onChange={(e) => setPlayerSearch(e.target.value)} />
                   <div className="tlb-players-list">
                     {players
                       .filter(p => p.name.toLowerCase().includes(playerSearch.toLowerCase()))
                       .map((p, i) => (
                         <div key={i} className="tlb-player-card">
                           <span className="tlb-player-name">{p.name}</span>
-                          <span className="tlb-player-club">{p.club}</span>
-                          <button className="tlb-comment-btn" onClick={() => { setCommentPlayer(p.name); setEditingCommentId(null); setCommentText(''); setActiveTab('comments'); }}>
-                            📝 Comment
-                          </button>
+                          <span className="tlb-player-cats">
+                            {(p.categories && p.categories.length) ? p.categories.map((c, j) => (
+                              <span key={j} className="tlb-cat-badge">{c}</span>
+                            )) : <span className="tlb-no-cat">No category yet</span>}
+                          </span>
                         </div>
                       ))}
                   </div>
@@ -417,92 +372,96 @@ function TournamentLogbook({ isAdmin = false }) {
                 })()
               )}
 
-              {/* Player Comments */}
-              {activeTab === 'comments' && (
-                <div className="tlb-comments">
-                  <div className="tlb-comment-editor">
-                    <h4>{editingCommentId ? 'Edit Comment' : 'Add Comment'}</h4>
-                    <div className="tlb-comment-row">
-                      <select
-                        value={commentPlayer}
-                        onChange={(e) => setCommentPlayer(e.target.value)}
-                        disabled={!!editingCommentId}
-                      >
-                        <option value="">-- Select player --</option>
-                        {players.map((p, i) => (
-                          <option key={i} value={p.name}>{p.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <textarea
-                      value={commentText}
-                      onChange={(e) => setCommentText(e.target.value)}
-                      placeholder="Write your observations about this player for training..."
-                      rows={4}
-                    />
-                    <div className="tlb-comment-actions">
-                      <button onClick={handleSaveComment} disabled={savingComment}>
-                        {savingComment ? 'Saving...' : (editingCommentId ? '💾 Update' : '➕ Add Comment')}
-                      </button>
-                      {editingCommentId && (
-                        <button className="tlb-cancel-btn" onClick={cancelEdit}>Cancel</button>
-                      )}
-                      {commentMsg && <span className="tlb-comment-msg">{commentMsg}</span>}
-                    </div>
+              {/* Match Notes: pick player -> their matches -> note per match */}
+              {activeTab === 'notes' && (
+                <div className="tlb-notes">
+                  <div className="tlb-notes-playerpick">
+                    <label>Select player:</label>
+                    <select value={notePlayer} onChange={(e) => selectNotePlayer(e.target.value)}>
+                      <option value="">-- Select a Komet player --</option>
+                      {players.map((p, i) => <option key={i} value={p.name}>{p.name}</option>)}
+                    </select>
+                    {noteMsg && <span className="tlb-note-msg">{noteMsg}</span>}
                   </div>
 
-                  <div className="tlb-my-comments">
-                    <h4>My Comments ({myComments.length})</h4>
-                    {myComments.length === 0 ? (
-                      <p className="tlb-empty">No comments yet.</p>
-                    ) : (
-                      myComments.map((c, i) => (
-                        <div key={i} className="tlb-comment-item">
-                          <div className="tlb-comment-player">{c.player_name}</div>
-                          <div className="tlb-comment-text">{c.comment}</div>
-                          <div className="tlb-comment-footer">
-                            <span className="tlb-comment-date">{c.updated_date}</span>
-                            <span className="tlb-comment-item-actions">
-                              <button onClick={() => editComment(c)} title="Edit">✏️</button>
-                              <button onClick={() => deleteComment(c)} title="Delete">🗑️</button>
-                            </span>
+                  {!notePlayer ? (
+                    <p className="tlb-empty">Select a player to view their matches and add notes.</p>
+                  ) : loadingPlayerMatches ? (
+                    <p className="tlb-loading">Loading {notePlayer}'s matches...</p>
+                  ) : playerMatches.length === 0 ? (
+                    <p className="tlb-empty">No matches found for {notePlayer}.</p>
+                  ) : (
+                    <div className="tlb-note-matches">
+                      {playerMatches.map((m, idx) => {
+                        const label = matchLabelFor(m);
+                        const existing = commentsForMatch(label);
+                        return (
+                          <div key={idx} className="tlb-note-match-card">
+                            <div className="tlb-note-match-header">
+                              <span className="tlb-match-event">{m.event}{m.round ? ` · ${m.round}` : ''}</span>
+                              <span className={`tlb-note-status status-${m.status}`}>
+                                {m.status === 'done' ? '✅ Finished' : m.status === 'ongoing' ? '🔴 Live' : '⏳ Upcoming'}
+                              </span>
+                            </div>
+                            <div className="tlb-note-match-teams">
+                              {m.team1} <span className="tlb-vs">vs</span> {m.team2}
+                              {m.score && <span className="tlb-note-score"> · {m.score}</span>}
+                            </div>
+
+                            {existing.length > 0 && (
+                              <div className="tlb-note-existing">
+                                {existing.map((c, ci) => (
+                                  <div key={ci} className="tlb-note-item">
+                                    <span className="tlb-note-text">{c.comment}</span>
+                                    <span className="tlb-note-item-actions">
+                                      <span className="tlb-note-date">{c.updated_date}</span>
+                                      <button onClick={() => deleteNote(c)} title="Delete">🗑️</button>
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+
+                            <div className="tlb-note-editor">
+                              <textarea
+                                rows={2}
+                                placeholder="Add a note for this match..."
+                                value={noteDrafts[label] || ''}
+                                onChange={(e) => setNoteDrafts(prev => ({ ...prev, [label]: e.target.value }))}
+                              />
+                              <button onClick={() => saveNote(label)} disabled={savingNote === label}>
+                                {savingNote === label ? 'Saving...' : '➕ Add Note'}
+                              </button>
+                            </div>
                           </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               )}
 
-              {/* Admin: All coach comments report */}
+              {/* Admin: all coach notes */}
               {activeTab === 'report' && isAdmin && (
                 <div className="tlb-report">
-                  {loadingReport ? (
-                    <p className="tlb-loading">Loading report...</p>
-                  ) : reportComments.length === 0 ? (
-                    <p className="tlb-empty">No comments recorded for this tournament yet.</p>
-                  ) : (
-                    <table className="tlb-report-table">
-                      <thead>
-                        <tr>
-                          <th>Player</th>
-                          <th>Coach</th>
-                          <th>Comment</th>
-                          <th>Updated</th>
+                  {loadingReport ? <p className="tlb-loading">Loading report...</p> :
+                  reportComments.length === 0 ? <p className="tlb-empty">No notes recorded for this tournament yet.</p> :
+                  <table className="tlb-report-table">
+                    <thead>
+                      <tr><th>Player</th><th>Match</th><th>Coach</th><th>Note</th><th>Updated</th></tr>
+                    </thead>
+                    <tbody>
+                      {reportComments.map((c, i) => (
+                        <tr key={i}>
+                          <td>{c.player_name}</td>
+                          <td>{c.match_label || '—'}</td>
+                          <td>{c.coach_name}</td>
+                          <td>{c.comment}</td>
+                          <td className="tlb-report-date">{c.updated_date}</td>
                         </tr>
-                      </thead>
-                      <tbody>
-                        {reportComments.map((c, i) => (
-                          <tr key={i}>
-                            <td>{c.player_name}</td>
-                            <td>{c.coach_name}</td>
-                            <td>{c.comment}</td>
-                            <td className="tlb-report-date">{c.updated_date}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  )}
+                      ))}
+                    </tbody>
+                  </table>}
                 </div>
               )}
             </div>
@@ -512,11 +471,11 @@ function TournamentLogbook({ isAdmin = false }) {
     );
   }
 
-  // ---- Tournament list ----
+  // ================= Tournament list =================
   return (
     <div className="tournament-logbook">
       <h2>📖 Tournament Logbook</h2>
-      <p className="tlb-sub">Select a tournament to view Komet players, live matches, and record player comments.</p>
+      <p className="tlb-sub">Select a tournament to view Komet players, matches, and record match notes.</p>
 
       {loading ? (
         <p className="tlb-loading">Loading tournaments...</p>
