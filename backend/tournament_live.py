@@ -204,8 +204,11 @@ def get_live_matches(tournament_id, req_date="", komet_names=None):
                 team1_won = team_won[0] if team_won else False
                 has_winner = any(team_won)
 
-                # Komet detection: club id match OR name match (fallback)
-                has_komet = bool(club_ids & KOMET_CLUB_IDS)
+                # Komet detection: match player names against the actual Komet player
+                # list (from the tournament's player list filtered by club name).
+                # NOTE: data-club-id is NOT reliable across tournaments, so we do not
+                # use it for detection.
+                has_komet = False
                 komet_names = []
                 if komet_set:
                     for n in all_player_names:
