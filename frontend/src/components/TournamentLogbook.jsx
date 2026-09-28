@@ -366,9 +366,30 @@ function TournamentLogbook({ isAdmin = false }) {
                 (() => {
                   const statusMap = { ongoing: 'ongoing', upcoming: 'upcoming', finished: 'done' };
                   const list = matchesByStatus(statusMap[activeTab]);
-                  return list.length === 0
-                    ? <p className="tlb-empty">No {activeTab} matches.</p>
-                    : <div className="tlb-match-list">{list.map(renderMatchCard)}</div>;
+                  if (list.length === 0) {
+                    return <p className="tlb-empty">No {activeTab} matches.</p>;
+                  }
+                  // Group matches by time (section header + matches below)
+                  const groups = {};
+                  const order = [];
+                  list.forEach(m => {
+                    const t = m.time || 'No time';
+                    if (!(t in groups)) { groups[t] = []; order.push(t); }
+                    groups[t].push(m);
+                  });
+                  order.sort((a, b) => (a === 'No time' ? 1 : b === 'No time' ? -1 : a.localeCompare(b)));
+                  return (
+                    <div className="tlb-time-sections">
+                      {order.map((t, gi) => (
+                        <div key={gi} className="tlb-time-section">
+                          <h4 className="tlb-time-header">🕐 {t}</h4>
+                          <div className="tlb-match-list">
+                            {groups[t].map(renderMatchCard)}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  );
                 })()
               )}
 

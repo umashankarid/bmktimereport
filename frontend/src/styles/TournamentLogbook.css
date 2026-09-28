@@ -461,3 +461,17 @@
   border-radius: 6px; cursor: pointer; font-weight: 600; white-space: nowrap;
 }
 .tlb-note-editor button:disabled { background: #ccc; }
+
+/* Time sections in match tabs */
+.tlb-time-sections { display: flex; flex-direction: column; gap: 18px; }
+.tlb-time-section { }
+.tlb-time-header {
+  margin: 0 0 8px 0;
+  font-size: 15px;
+  color: #333;
+  background: #f0f0f5;
+  padding: 6px 12px;
+  border-radius: 6px;
+  position: sticky;
+  top: 0;
+}

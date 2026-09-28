@@ -127,120 +127,125 @@ def get_live_matches(tournament_id, req_date="", komet_names=None):
         today_compact = datetime.now().strftime("%Y%m%d")
         is_today_page = (selected_day == today_compact) or (not selected_day)
 
+        # Komet club id on tournamentsoftware pages (BMK Komet = 3 in this tournament,
+        # but detection also falls back to name matching for robustness).
+        KOMET_CLUB_IDS = {"3"}
+
         matches = []
-        for m in soup.select(".match"):
-            header_items = m.select(".match__header-title-item .nav-link__value")
-            event = header_items[0].get_text(strip=True) if header_items else ""
-            round_name = header_items[1].get_text(strip=True) if len(header_items) > 1 else ""
+        # The matches page groups matches under time headers:
+        #   <li class="match-group__item">
+        #     <div class="match-group__wrapper">
+        #       <h5 class="match-group__header">09:00</h5>
+        #       <ol class="match-group"> <li> <div class="match ..."> ... </ol>
+        # Iterate only the wrappers that carry a time header (avoids double-counting
+        # the nested match-group that also matches a generic selector).
+        seen_matches = set()
+        for wrapper in soup.select(".match-group__wrapper"):
+            header = wrapper.select_one(".match-group__header")
+            if not header:
+                continue
+            group_time = header.get_text(strip=True)
+            tm = re.search(r"(\d{1,2}:\d{2})", group_time)
+            group_time = tm.group(1) if tm else group_time
 
-            aside_blocks = m.select("span.match__header-aside-block")
-            now_playing = False
-            court = ""
-            duration = ""
-            court_assigned = False
-            for ab in aside_blocks:
-                t = (ab.get("title") or ab.get("data-original-title") or "").strip()
-                if not t:
+            for m in wrapper.select(".match"):
+                # De-dupe in case of nested structures
+                mid = id(m)
+                if mid in seen_matches:
                     continue
-                if t.lower() in ("now playing", "spelas nu", "pågår"):
-                    now_playing = True
-                    continue
-                if "|" in t:
-                    left, right = t.split("|", 1)
-                    dm = re.search(r"(\d+\s*m)", left)
-                    duration = dm.group(1).replace(" ", "") if dm else left.replace("Spelperiod:", "").strip()
-                    court = right.strip()
+                seen_matches.add(mid)
+
+                header_items = m.select(".match__header-title-item .nav-link__value")
+                event = header_items[0].get_text(strip=True) if header_items else ""
+                round_name = header_items[1].get_text(strip=True) if len(header_items) > 1 else ""
+
+                # Court / duration / now-playing from aside blocks (present when scheduled/live)
+                now_playing = False
+                court = ""
+                duration = ""
+                court_assigned = False
+                for ab in m.select("span.match__header-aside-block"):
+                    t = (ab.get("title") or ab.get("data-original-title") or "").strip()
+                    if not t:
+                        continue
+                    if t.lower() in ("now playing", "spelas nu", "pågår"):
+                        now_playing = True
+                        continue
+                    if "|" in t:
+                        left, right = t.split("|", 1)
+                        dm = re.search(r"(\d+\s*m)", left)
+                        duration = dm.group(1).replace(" ", "") if dm else left.replace("Spelperiod:", "").strip()
+                        court = right.strip()
+                    else:
+                        court = t
+                    if re.search(r"\s-\s\d+\s*$", court):
+                        court_assigned = True
+
+                # Teams: each .match__row is one side; players are the nav-link values.
+                # Also collect club ids to detect Komet involvement.
+                teams = []
+                team_won = []
+                all_player_names = []
+                club_ids = set()
+                for row in m.select(".match__row"):
+                    names = [el.get_text(strip=True) for el in row.select(".nav-link__value") if el.get_text(strip=True)]
+                    # strip seeding markers like [1], [3/4], [WC]
+                    names = [re.sub(r"\s*\[[^\]]*\]\s*$", "", n).strip() for n in names]
+                    all_player_names.extend(names)
+                    for a in row.select("a[data-club-id]"):
+                        cid = a.get("data-club-id")
+                        if cid:
+                            club_ids.add(str(cid))
+                    teams.append(" / ".join(names) if names else "")
+                    team_won.append("has-won" in (row.get("class") or []))
+
+                team1 = teams[0] if teams else ""
+                team2 = teams[1] if len(teams) > 1 else ""
+                team1_won = team_won[0] if team_won else False
+                has_winner = any(team_won)
+
+                # Komet detection: club id match OR name match (fallback)
+                has_komet = bool(club_ids & KOMET_CLUB_IDS)
+                komet_names = []
+                if komet_set:
+                    for n in all_player_names:
+                        if _normalize_name(n) in komet_set:
+                            has_komet = True
+                            komet_names.append(n)
+
+                # Score
+                score_sets = []
+                for pts in m.select("ul.points"):
+                    cells = pts.select("li.points__cell")
+                    if len(cells) == 2:
+                        score_sets.append(f"{cells[0].get_text(strip=True)}-{cells[1].get_text(strip=True)}")
+                score = " ".join(score_sets)
+                status_tags = [t.get_text(strip=True) for t in m.select(".match__status") if t.get_text(strip=True)]
+                status_text = " ".join(status_tags)
+                if not score and has_winner:
+                    score = status_text or "W.O."
+
+                # Status: done if score/winner; ongoing if now-playing/court assigned; else upcoming
+                if score_sets or has_winner:
+                    status = "done"
+                elif now_playing or court_assigned:
+                    status = "ongoing"
                 else:
-                    court = t
-                if re.search(r"\s-\s\d+\s*$", court):
-                    court_assigned = True
+                    status = "upcoming"
 
-            # Scheduled/planned time — scan comprehensively:
-            #  1) any element with a datetime attribute (e.g. <time datetime="...T13:00">)
-            #  2) any element title / data-original-title containing HH:MM
-            #  3) the aside block text / whole match text as a fallback
-            match_time = ""
+                # Skip placeholder matches (e.g. "Pool A #1" vs "Pool B #2" with no real players)
+                is_placeholder = bool(re.search(r"Pool\s|#\d", team1 + team2)) and not all_player_names
+                if is_placeholder:
+                    continue
 
-            # 1) datetime attributes
-            for el in m.select("[datetime]"):
-                dt = el.get("datetime", "")
-                tm = re.search(r"T(\d{1,2}:\d{2})", dt)
-                if tm:
-                    match_time = tm.group(1)
-                    break
-
-            # 2) title / data-original-title attributes anywhere in the match
-            if not match_time:
-                for el in m.find_all(True):
-                    for attr in ("title", "data-original-title"):
-                        val = el.get(attr) or ""
-                        tm = re.search(r"\b(\d{1,2}:\d{2})\b", val)
-                        if tm:
-                            match_time = tm.group(1)
-                            break
-                    if match_time:
-                        break
-
-            # 3) visible text of aside blocks / time element
-            if not match_time:
-                for el in m.select("time, .match__header-aside-block, .match__time, .match__header-aside"):
-                    txt = el.get_text(" ", strip=True)
-                    tm = re.search(r"\b(\d{1,2}:\d{2})\b", txt)
-                    if tm:
-                        match_time = tm.group(1)
-                        break
-
-            # Teams / players
-            teams = []
-            team_won = []
-            all_player_names = []
-            for row in m.select(".match__row"):
-                names = [el.get_text(strip=True) for el in row.select(".nav-link__value") if el.get_text(strip=True)]
-                all_player_names.extend(names)
-                teams.append(" / ".join(names) if names else row.get_text(strip=True).strip())
-                team_won.append("has-won" in (row.get("class") or []))
-            team1 = teams[0] if teams else ""
-            team2 = teams[1] if len(teams) > 1 else ""
-            team1_won = team_won[0] if team_won else False
-            has_winner = any(team_won)
-
-            # Flag Komet involvement
-            has_komet = False
-            if komet_set:
-                for n in all_player_names:
-                    if _normalize_name(n) in komet_set:
-                        has_komet = True
-                        break
-
-            status_tags = [t.get_text(strip=True) for t in m.select(".match__status") if t.get_text(strip=True)]
-            status_text = " ".join(status_tags)
-
-            # Score
-            score_sets = []
-            for pts in m.select("ul.points"):
-                cells = pts.select("li.points__cell")
-                if len(cells) == 2:
-                    score_sets.append(f"{cells[0].get_text(strip=True)}-{cells[1].get_text(strip=True)}")
-            score = " ".join(score_sets)
-            if not score and has_winner:
-                score = status_text or "W.O."
-
-            # Derive status
-            if score_sets or has_winner:
-                status = "done"
-            elif now_playing or court_assigned:
-                status = "ongoing"
-            else:
-                status = "upcoming"
-
-            if event or team1 or team2:
-                matches.append({
-                    "event": event, "round": round_name,
-                    "court": court, "duration": duration, "time": match_time,
-                    "team1": team1, "team2": team2, "team1_won": team1_won,
-                    "score": score, "status": status, "has_komet": has_komet,
-                    "komet_names": [n for n in all_player_names if _normalize_name(n) in komet_set] if komet_set else [],
-                })
+                if event or team1 or team2:
+                    matches.append({
+                        "event": event, "round": round_name,
+                        "court": court, "duration": duration, "time": group_time,
+                        "team1": team1, "team2": team2, "team1_won": team1_won,
+                        "score": score, "status": status, "has_komet": has_komet,
+                        "komet_names": komet_names,
+                    })
 
         return {
             'success': True,
