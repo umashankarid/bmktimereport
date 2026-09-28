@@ -155,27 +155,39 @@ def get_live_matches(tournament_id, req_date="", komet_names=None):
                 if re.search(r"\s-\s\d+\s*$", court):
                     court_assigned = True
 
-            # Scheduled time (for upcoming matches) - look for a <time> element or HH:MM text
+            # Scheduled/planned time — scan comprehensively:
+            #  1) any element with a datetime attribute (e.g. <time datetime="...T13:00">)
+            #  2) any element title / data-original-title containing HH:MM
+            #  3) the aside block text / whole match text as a fallback
             match_time = ""
-            time_el = m.select_one("time")
-            if time_el:
-                dt = time_el.get("datetime", "")
-                # datetime like 2026-10-03T09:30:00 -> take HH:MM
-                tm = re.search(r"T(\d{2}:\d{2})", dt)
+
+            # 1) datetime attributes
+            for el in m.select("[datetime]"):
+                dt = el.get("datetime", "")
+                tm = re.search(r"T(\d{1,2}:\d{2})", dt)
                 if tm:
                     match_time = tm.group(1)
-                else:
-                    txt = time_el.get_text(strip=True)
-                    tm2 = re.search(r"(\d{1,2}:\d{2})", txt)
-                    if tm2:
-                        match_time = tm2.group(1)
+                    break
+
+            # 2) title / data-original-title attributes anywhere in the match
             if not match_time:
-                # Try to find a HH:MM in any aside title
-                for ab in aside_blocks:
-                    t = (ab.get("title") or ab.get("data-original-title") or "")
-                    tm3 = re.search(r"\b(\d{1,2}:\d{2})\b", t)
-                    if tm3:
-                        match_time = tm3.group(1)
+                for el in m.find_all(True):
+                    for attr in ("title", "data-original-title"):
+                        val = el.get(attr) or ""
+                        tm = re.search(r"\b(\d{1,2}:\d{2})\b", val)
+                        if tm:
+                            match_time = tm.group(1)
+                            break
+                    if match_time:
+                        break
+
+            # 3) visible text of aside blocks / time element
+            if not match_time:
+                for el in m.select("time, .match__header-aside-block, .match__time, .match__header-aside"):
+                    txt = el.get_text(" ", strip=True)
+                    tm = re.search(r"\b(\d{1,2}:\d{2})\b", txt)
+                    if tm:
+                        match_time = tm.group(1)
                         break
 
             # Teams / players
