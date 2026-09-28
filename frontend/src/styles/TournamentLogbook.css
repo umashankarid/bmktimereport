@@ -376,3 +376,34 @@
   background: #f0f0f0 !important;
   color: #555 !important;
 }
+
+/* Komet highlighting */
+.tlb-komet-player {
+  color: #d32f2f;
+  font-weight: 700;
+  background: #fff0f0;
+  padding: 0 3px;
+  border-radius: 3px;
+}
+.tlb-match-card.komet {
+  border-left-width: 5px;
+  box-shadow: 0 2px 8px rgba(211, 47, 47, 0.12);
+}
+.tlb-komet-badge {
+  background: #d32f2f;
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+  letter-spacing: 0.5px;
+}
+.tlb-komet-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-size: 14px;
+  color: #555;
+  cursor: pointer;
+}

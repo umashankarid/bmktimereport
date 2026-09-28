@@ -64,19 +64,33 @@ def get_current_tournaments(db):
         return {'success': False, 'tournaments': [], 'error': str(e)}
 
 
-def get_live_matches(tournament_id, req_date=""):
+def _normalize_name(name):
+    """Normalize a player name for comparison ('Lastname, Firstname' or 'Firstname Lastname')."""
+    if not name:
+        return ""
+    name = name.strip()
+    if "," in name:
+        parts = [p.strip() for p in name.split(",")]
+        if len(parts) == 2:
+            name = parts[1] + " " + parts[0]
+    return " ".join(name.lower().split())
+
+
+def get_live_matches(tournament_id, req_date="", komet_names=None):
     """Scrape a tournament's Matches page: done, ongoing and upcoming matches
     with court + duration, players, score and status.
 
     Args:
         tournament_id (str): The tournamentsoftware GUID.
         req_date (str): Optional YYYYMMDD to fetch a specific day.
+        komet_names (list): Optional list of Komet player names to flag matches.
 
     Returns:
         dict: {'success': bool, 'matches': [...], 'days': [...], 'selected_day': str}
     """
     tournament_id = (tournament_id or "").strip()
     req_date = (req_date or "").strip()
+    komet_set = set(_normalize_name(n) for n in (komet_names or []) if n)
     if not tournament_id:
         return {'success': False, 'error': 'No tournament ID', 'matches': []}
 
@@ -141,17 +155,50 @@ def get_live_matches(tournament_id, req_date=""):
                 if re.search(r"\s-\s\d+\s*$", court):
                     court_assigned = True
 
+            # Scheduled time (for upcoming matches) - look for a <time> element or HH:MM text
+            match_time = ""
+            time_el = m.select_one("time")
+            if time_el:
+                dt = time_el.get("datetime", "")
+                # datetime like 2026-10-03T09:30:00 -> take HH:MM
+                tm = re.search(r"T(\d{2}:\d{2})", dt)
+                if tm:
+                    match_time = tm.group(1)
+                else:
+                    txt = time_el.get_text(strip=True)
+                    tm2 = re.search(r"(\d{1,2}:\d{2})", txt)
+                    if tm2:
+                        match_time = tm2.group(1)
+            if not match_time:
+                # Try to find a HH:MM in any aside title
+                for ab in aside_blocks:
+                    t = (ab.get("title") or ab.get("data-original-title") or "")
+                    tm3 = re.search(r"\b(\d{1,2}:\d{2})\b", t)
+                    if tm3:
+                        match_time = tm3.group(1)
+                        break
+
             # Teams / players
             teams = []
             team_won = []
+            all_player_names = []
             for row in m.select(".match__row"):
                 names = [el.get_text(strip=True) for el in row.select(".nav-link__value") if el.get_text(strip=True)]
+                all_player_names.extend(names)
                 teams.append(" / ".join(names) if names else row.get_text(strip=True).strip())
                 team_won.append("has-won" in (row.get("class") or []))
             team1 = teams[0] if teams else ""
             team2 = teams[1] if len(teams) > 1 else ""
             team1_won = team_won[0] if team_won else False
             has_winner = any(team_won)
+
+            # Flag Komet involvement
+            has_komet = False
+            if komet_set:
+                for n in all_player_names:
+                    if _normalize_name(n) in komet_set:
+                        has_komet = True
+                        break
 
             status_tags = [t.get_text(strip=True) for t in m.select(".match__status") if t.get_text(strip=True)]
             status_text = " ".join(status_tags)
@@ -177,9 +224,10 @@ def get_live_matches(tournament_id, req_date=""):
             if event or team1 or team2:
                 matches.append({
                     "event": event, "round": round_name,
-                    "court": court, "duration": duration,
+                    "court": court, "duration": duration, "time": match_time,
                     "team1": team1, "team2": team2, "team1_won": team1_won,
-                    "score": score, "status": status,
+                    "score": score, "status": status, "has_komet": has_komet,
+                    "komet_names": [n for n in all_player_names if _normalize_name(n) in komet_set] if komet_set else [],
                 })
 
         return {

@@ -787,14 +787,31 @@ def create_app():
     # Live matches for a tournament (scrapes tournamentsoftware.com)
     @app.route('/api/live-matches', methods=['GET'])
     def get_live_matches():
-        """Get live/done/upcoming matches for a tournament by its GUID."""
+        """Get live/done/upcoming matches for a tournament by its GUID.
+        Flags Komet players' matches; optional ?komet_only=1 filters to only those."""
         try:
-            from tournament_live import get_live_matches as _get_live
+            from tournament_live import get_live_matches as _get_live, get_komet_players as _get_komet
             tournament_id = request.args.get('id', '').strip()
             req_date = request.args.get('date', '').strip()
+            komet_only = request.args.get('komet_only', '').strip() in ('1', 'true', 'yes')
             if not tournament_id:
                 return jsonify({'success': False, 'error': 'No tournament ID', 'matches': []}), 400
-            result = _get_live(tournament_id, req_date)
+
+            # Fetch Komet player names to flag/filter matches
+            komet_names = []
+            try:
+                kp = _get_komet(tournament_id)
+                if kp.get('success'):
+                    komet_names = [p['name'] for p in kp.get('players', [])]
+            except Exception as ke:
+                logger.warning(f"Could not fetch komet players for flagging: {ke}")
+
+            result = _get_live(tournament_id, req_date, komet_names=komet_names)
+
+            # Optionally filter to only Komet matches
+            if result.get('success') and komet_only:
+                result['matches'] = [m for m in result.get('matches', []) if m.get('has_komet')]
+
             return jsonify(result), 200 if result.get('success') else 500
         except Exception as e:
             logger.error(f"Error fetching live matches: {str(e)}")

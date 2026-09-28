@@ -25,6 +25,7 @@ function TournamentLogbook({ isAdmin = false }) {
   const [selectedDay, setSelectedDay] = useState('');
   const [loadingMatches, setLoadingMatches] = useState(false);
   const [matchError, setMatchError] = useState('');
+  const [kometOnly, setKometOnly] = useState(true);
 
   // Komet players
   const [players, setPlayers] = useState([]);
@@ -103,6 +104,7 @@ function TournamentLogbook({ isAdmin = false }) {
       setMatchError('');
       const params = new URLSearchParams({ id: t.tournament_id });
       if (day) params.append('date', day);
+      if (kometOnly) params.append('komet_only', '1');
       const res = await fetch(`/api/live-matches?${params.toString()}`, { headers: authHeader });
       const data = await res.json();
       if (data.success) {
@@ -263,17 +265,39 @@ function TournamentLogbook({ isAdmin = false }) {
 
   const matchesByStatus = (status) => matches.filter(m => m.status === status);
 
+  // Highlight Komet player names within a team string
+  const renderTeam = (teamStr, kometNames, won) => {
+    const kometSet = new Set((kometNames || []).map(n => n.toLowerCase()));
+    // Team is "Player A / Player B"; check each name
+    const parts = teamStr.split(' / ');
+    return (
+      <span className={won ? 'won' : ''}>
+        {parts.map((name, i) => {
+          const isKomet = kometSet.has(name.trim().toLowerCase());
+          return (
+            <React.Fragment key={i}>
+              {i > 0 && ' / '}
+              <span className={isKomet ? 'tlb-komet-player' : ''}>{name}</span>
+            </React.Fragment>
+          );
+        })}
+      </span>
+    );
+  };
+
   const renderMatchCard = (m, idx) => (
-    <div key={idx} className={`tlb-match-card ${m.status}`}>
+    <div key={idx} className={`tlb-match-card ${m.status} ${m.has_komet ? 'komet' : ''}`}>
       <div className="tlb-match-header">
         <span className="tlb-match-event">{m.event}{m.round ? ` · ${m.round}` : ''}</span>
+        {m.has_komet && <span className="tlb-komet-badge">KOMET</span>}
       </div>
       <div className="tlb-match-teams">
-        <span className={m.team1_won ? 'won' : ''}>{m.team1}</span>
+        {renderTeam(m.team1, m.komet_names, m.team1_won)}
         <span className="tlb-vs">vs</span>
-        <span className={(!m.team1_won && m.status === 'done') ? 'won' : ''}>{m.team2}</span>
+        {renderTeam(m.team2, m.komet_names, (!m.team1_won && m.status === 'done'))}
       </div>
       <div className="tlb-match-meta">
+        {m.time && <span>🕐 {m.time}</span>}
         {m.score && <span>🏸 {m.score}</span>}
         {m.court && <span>📍 {m.court}</span>}
         {m.duration && <span>⏱️ {m.duration}</span>}
@@ -333,6 +357,21 @@ function TournamentLogbook({ isAdmin = false }) {
                   </button>
                 ))}
               </div>
+            )}
+
+            {(activeTab === 'ongoing' || activeTab === 'upcoming' || activeTab === 'finished') && (
+              <label className="tlb-komet-toggle">
+                <input
+                  type="checkbox"
+                  checked={kometOnly}
+                  onChange={(e) => {
+                    setKometOnly(e.target.checked);
+                    // Re-fetch with the new filter
+                    setTimeout(() => fetchMatches(selected, selectedDay), 0);
+                  }}
+                />
+                Show only Komet players' matches
+              </label>
             )}
 
             <div className="tlb-content">
