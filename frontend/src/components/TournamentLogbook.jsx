@@ -30,6 +30,7 @@ function TournamentLogbook({ isAdmin = false }) {
   const [players, setPlayers] = useState([]);
   const [loadingPlayers, setLoadingPlayers] = useState(false);
   const [playersError, setPlayersError] = useState('');
+  const [playerSearch, setPlayerSearch] = useState('');
 
   // Comments
   const [commentPlayer, setCommentPlayer] = useState('');
@@ -37,6 +38,7 @@ function TournamentLogbook({ isAdmin = false }) {
   const [myComments, setMyComments] = useState([]);
   const [savingComment, setSavingComment] = useState(false);
   const [commentMsg, setCommentMsg] = useState('');
+  const [editingCommentId, setEditingCommentId] = useState(null);
 
   const token = localStorage.getItem('adminToken') || localStorage.getItem('trainerToken');
   const authHeader = { 'Authorization': `Bearer ${token}` };
@@ -195,16 +197,28 @@ function TournamentLogbook({ isAdmin = false }) {
     try {
       setSavingComment(true);
       setCommentMsg('');
-      const res = await fetch('/api/logbook/comments', {
-        method: 'POST',
-        headers: { ...authHeader, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tournament: selected.name, player: commentPlayer, comment: commentText.trim() })
-      });
+      let res;
+      if (editingCommentId) {
+        // Edit existing comment
+        res = await fetch(`/api/logbook/comments/${editingCommentId}`, {
+          method: 'PUT',
+          headers: { ...authHeader, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ comment: commentText.trim() })
+        });
+      } else {
+        // Append a new comment
+        res = await fetch('/api/logbook/comments', {
+          method: 'POST',
+          headers: { ...authHeader, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tournament: selected.name, player: commentPlayer, comment: commentText.trim() })
+        });
+      }
       const data = await res.json();
       if (data.success) {
-        setCommentMsg('✅ Comment saved');
+        setCommentMsg(editingCommentId ? '✅ Comment updated' : '✅ Comment added');
         setCommentText('');
         setCommentPlayer('');
+        setEditingCommentId(null);
         fetchComments(selected);
       } else {
         setCommentMsg(`❌ ${data.message}`);
@@ -219,7 +233,32 @@ function TournamentLogbook({ isAdmin = false }) {
   const editComment = (c) => {
     setCommentPlayer(c.player_name);
     setCommentText(c.comment);
+    setEditingCommentId(c.id);
     setActiveTab('comments');
+  };
+
+  const cancelEdit = () => {
+    setEditingCommentId(null);
+    setCommentText('');
+    setCommentPlayer('');
+    setCommentMsg('');
+  };
+
+  const deleteComment = async (c) => {
+    if (!window.confirm('Delete this comment?')) return;
+    try {
+      const res = await fetch(`/api/logbook/comments/${c.id}`, {
+        method: 'DELETE',
+        headers: authHeader
+      });
+      const data = await res.json();
+      if (data.success) {
+        if (editingCommentId === c.id) cancelEdit();
+        fetchComments(selected);
+      }
+    } catch (err) {
+      // ignore
+    }
   };
 
   const matchesByStatus = (status) => matches.filter(m => m.status === status);
@@ -302,17 +341,28 @@ function TournamentLogbook({ isAdmin = false }) {
                 loadingPlayers ? <p className="tlb-loading">Loading players...</p> :
                 playersError ? <p className="tlb-error">{playersError}</p> :
                 players.length === 0 ? <p className="tlb-empty">No Komet players found in this tournament.</p> :
-                <div className="tlb-players-list">
-                  {players.map((p, i) => (
-                    <div key={i} className="tlb-player-card">
-                      <span className="tlb-player-name">{p.name}</span>
-                      <span className="tlb-player-club">{p.club}</span>
-                      <button className="tlb-comment-btn" onClick={() => { setCommentPlayer(p.name); setActiveTab('comments'); }}>
-                        📝 Comment
-                      </button>
-                    </div>
-                  ))}
-                </div>
+                <>
+                  <input
+                    type="text"
+                    className="tlb-player-search"
+                    placeholder="🔍 Search player by name..."
+                    value={playerSearch}
+                    onChange={(e) => setPlayerSearch(e.target.value)}
+                  />
+                  <div className="tlb-players-list">
+                    {players
+                      .filter(p => p.name.toLowerCase().includes(playerSearch.toLowerCase()))
+                      .map((p, i) => (
+                        <div key={i} className="tlb-player-card">
+                          <span className="tlb-player-name">{p.name}</span>
+                          <span className="tlb-player-club">{p.club}</span>
+                          <button className="tlb-comment-btn" onClick={() => { setCommentPlayer(p.name); setEditingCommentId(null); setCommentText(''); setActiveTab('comments'); }}>
+                            📝 Comment
+                          </button>
+                        </div>
+                      ))}
+                  </div>
+                </>
               )}
 
               {/* Match tabs */}
@@ -332,9 +382,13 @@ function TournamentLogbook({ isAdmin = false }) {
               {activeTab === 'comments' && (
                 <div className="tlb-comments">
                   <div className="tlb-comment-editor">
-                    <h4>Write / Update Comment</h4>
+                    <h4>{editingCommentId ? 'Edit Comment' : 'Add Comment'}</h4>
                     <div className="tlb-comment-row">
-                      <select value={commentPlayer} onChange={(e) => setCommentPlayer(e.target.value)}>
+                      <select
+                        value={commentPlayer}
+                        onChange={(e) => setCommentPlayer(e.target.value)}
+                        disabled={!!editingCommentId}
+                      >
                         <option value="">-- Select player --</option>
                         {players.map((p, i) => (
                           <option key={i} value={p.name}>{p.name}</option>
@@ -349,8 +403,11 @@ function TournamentLogbook({ isAdmin = false }) {
                     />
                     <div className="tlb-comment-actions">
                       <button onClick={handleSaveComment} disabled={savingComment}>
-                        {savingComment ? 'Saving...' : '💾 Save Comment'}
+                        {savingComment ? 'Saving...' : (editingCommentId ? '💾 Update' : '➕ Add Comment')}
                       </button>
+                      {editingCommentId && (
+                        <button className="tlb-cancel-btn" onClick={cancelEdit}>Cancel</button>
+                      )}
                       {commentMsg && <span className="tlb-comment-msg">{commentMsg}</span>}
                     </div>
                   </div>
@@ -361,10 +418,16 @@ function TournamentLogbook({ isAdmin = false }) {
                       <p className="tlb-empty">No comments yet.</p>
                     ) : (
                       myComments.map((c, i) => (
-                        <div key={i} className="tlb-comment-item" onClick={() => editComment(c)}>
+                        <div key={i} className="tlb-comment-item">
                           <div className="tlb-comment-player">{c.player_name}</div>
                           <div className="tlb-comment-text">{c.comment}</div>
-                          <div className="tlb-comment-date">{c.updated_date}</div>
+                          <div className="tlb-comment-footer">
+                            <span className="tlb-comment-date">{c.updated_date}</span>
+                            <span className="tlb-comment-item-actions">
+                              <button onClick={() => editComment(c)} title="Edit">✏️</button>
+                              <button onClick={() => deleteComment(c)} title="Delete">🗑️</button>
+                            </span>
+                          </div>
                         </div>
                       ))
                     )}

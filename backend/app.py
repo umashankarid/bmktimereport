@@ -966,6 +966,34 @@ def create_app():
         except Exception as e:
             return jsonify({'success': False, 'message': str(e)}), 500
 
+    @app.route('/api/logbook/comments/<int:comment_id>', methods=['PUT'])
+    @verify_token
+    def update_logbook_comment(comment_id):
+        """Edit one of the current coach's comments."""
+        try:
+            coach_name = request.admin.get('username', '')
+            data = request.get_json(silent=True) or {}
+            comment = (data.get('comment') or '').strip()
+            if not comment:
+                return jsonify({'success': False, 'message': 'Comment cannot be empty'}), 400
+            db = get_db_manager()
+            result = db.update_player_comment(comment_id, coach_name, comment)
+            return jsonify(result), 200 if result.get('success') else 400
+        except Exception as e:
+            return jsonify({'success': False, 'message': str(e)}), 500
+
+    @app.route('/api/logbook/comments/<int:comment_id>', methods=['DELETE'])
+    @verify_token
+    def delete_logbook_comment(comment_id):
+        """Delete one of the current coach's comments."""
+        try:
+            coach_name = request.admin.get('username', '')
+            db = get_db_manager()
+            result = db.delete_player_comment(comment_id, coach_name)
+            return jsonify(result), 200 if result.get('success') else 400
+        except Exception as e:
+            return jsonify({'success': False, 'message': str(e)}), 500
+
     @app.route('/api/logbook/comments/report', methods=['GET'])
     @verify_token
     def logbook_comments_report():

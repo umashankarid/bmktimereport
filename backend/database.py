@@ -2654,16 +2654,16 @@ class DatabaseManager:
     # ==================== PLAYER COMMENTS (Tournament Logbook) ====================
 
     def save_player_comment(self, tournament_name, player_name, coach_name, comment):
-        """Insert or update a coach's comment for a player in a tournament.
-
-        One comment per (tournament, player, coach) — updates if it exists.
+        """Append a new comment for a player in a tournament (one row per comment).
 
         Returns:
-            dict: {'success': bool, 'message': str}
+            dict: {'success': bool, 'message': str, 'id': int}
         """
         try:
             if not tournament_name or not player_name or not coach_name:
                 return {'success': False, 'message': 'Tournament, player, and coach are required'}
+            if not comment or not comment.strip():
+                return {'success': False, 'message': 'Comment cannot be empty'}
 
             from datetime import datetime
             now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -2671,30 +2671,74 @@ class DatabaseManager:
             conn = self._get_connection()
             try:
                 cursor = conn.execute(
-                    "SELECT id FROM player_comments WHERE tournament_name = ? AND player_name = ? AND coach_name = ?",
-                    (tournament_name, player_name, coach_name)
+                    "INSERT INTO player_comments (tournament_name, player_name, coach_name, comment, created_date, updated_date) "
+                    "VALUES (?, ?, ?, ?, ?, ?)",
+                    (tournament_name, player_name, coach_name, comment.strip(), now, now)
                 )
-                existing = cursor.fetchone()
-
-                if existing:
-                    conn.execute(
-                        "UPDATE player_comments SET comment = ?, updated_date = ? WHERE id = ?",
-                        (comment, now, existing['id'])
-                    )
-                else:
-                    conn.execute(
-                        "INSERT INTO player_comments (tournament_name, player_name, coach_name, comment, created_date, updated_date) "
-                        "VALUES (?, ?, ?, ?, ?, ?)",
-                        (tournament_name, player_name, coach_name, comment, now, now)
-                    )
+                new_id = cursor.lastrowid
                 conn.commit()
             finally:
                 conn.close()
 
-            return {'success': True, 'message': 'Comment saved'}
+            return {'success': True, 'message': 'Comment added', 'id': new_id}
         except Exception as e:
             logger.error(f"Error saving player comment: {e}")
             return {'success': False, 'message': f'Error saving comment: {str(e)}'}
+
+    def update_player_comment(self, comment_id, coach_name, comment):
+        """Edit an existing comment (only if it belongs to the given coach).
+
+        Returns:
+            dict: {'success': bool, 'message': str}
+        """
+        try:
+            if not comment or not comment.strip():
+                return {'success': False, 'message': 'Comment cannot be empty'}
+            from datetime import datetime
+            now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+            conn = self._get_connection()
+            try:
+                cursor = conn.execute(
+                    "UPDATE player_comments SET comment = ?, updated_date = ? WHERE id = ? AND coach_name = ?",
+                    (comment.strip(), now, comment_id, coach_name)
+                )
+                conn.commit()
+                updated = cursor.rowcount
+            finally:
+                conn.close()
+
+            if updated:
+                return {'success': True, 'message': 'Comment updated'}
+            return {'success': False, 'message': 'Comment not found or not yours'}
+        except Exception as e:
+            logger.error(f"Error updating player comment: {e}")
+            return {'success': False, 'message': f'Error updating comment: {str(e)}'}
+
+    def delete_player_comment(self, comment_id, coach_name):
+        """Delete a comment (only if it belongs to the given coach).
+
+        Returns:
+            dict: {'success': bool, 'message': str}
+        """
+        try:
+            conn = self._get_connection()
+            try:
+                cursor = conn.execute(
+                    "DELETE FROM player_comments WHERE id = ? AND coach_name = ?",
+                    (comment_id, coach_name)
+                )
+                conn.commit()
+                deleted = cursor.rowcount
+            finally:
+                conn.close()
+
+            if deleted:
+                return {'success': True, 'message': 'Comment deleted'}
+            return {'success': False, 'message': 'Comment not found or not yours'}
+        except Exception as e:
+            logger.error(f"Error deleting player comment: {e}")
+            return {'success': False, 'message': f'Error deleting comment: {str(e)}'}
 
     def get_player_comments(self, tournament_name, coach_name=None, player_name=None):
         """Get player comments for a tournament, optionally filtered by coach and/or player.
@@ -2705,7 +2749,7 @@ class DatabaseManager:
         try:
             conn = self._get_connection()
             try:
-                query = ("SELECT tournament_name, player_name, coach_name, comment, "
+                query = ("SELECT id, tournament_name, player_name, coach_name, comment, "
                          "created_date, updated_date FROM player_comments WHERE tournament_name = ?")
                 params = [tournament_name]
                 if coach_name:
@@ -2714,7 +2758,7 @@ class DatabaseManager:
                 if player_name:
                     query += " AND player_name = ?"
                     params.append(player_name)
-                query += " ORDER BY player_name, coach_name"
+                query += " ORDER BY created_date DESC"
                 cursor = conn.execute(query, params)
                 rows = cursor.fetchall()
             finally:
@@ -2722,6 +2766,7 @@ class DatabaseManager:
 
             data = [
                 {
+                    'id': r['id'],
                     'tournament_name': r['tournament_name'],
                     'player_name': r['player_name'],
                     'coach_name': r['coach_name'],
@@ -2747,14 +2792,14 @@ class DatabaseManager:
             try:
                 if tournament_name:
                     cursor = conn.execute(
-                        "SELECT tournament_name, player_name, coach_name, comment, created_date, updated_date "
-                        "FROM player_comments WHERE tournament_name = ? ORDER BY tournament_name, player_name, coach_name",
+                        "SELECT id, tournament_name, player_name, coach_name, comment, created_date, updated_date "
+                        "FROM player_comments WHERE tournament_name = ? ORDER BY player_name, coach_name, created_date",
                         (tournament_name,)
                     )
                 else:
                     cursor = conn.execute(
-                        "SELECT tournament_name, player_name, coach_name, comment, created_date, updated_date "
-                        "FROM player_comments ORDER BY tournament_name, player_name, coach_name"
+                        "SELECT id, tournament_name, player_name, coach_name, comment, created_date, updated_date "
+                        "FROM player_comments ORDER BY tournament_name, player_name, coach_name, created_date"
                     )
                 rows = cursor.fetchall()
             finally:
@@ -2762,6 +2807,7 @@ class DatabaseManager:
 
             data = [
                 {
+                    'id': r['id'],
                     'tournament_name': r['tournament_name'],
                     'player_name': r['player_name'],
                     'coach_name': r['coach_name'],

@@ -337,3 +337,42 @@
 }
 .tlb-url-editor button:disabled { background: #ccc; }
 .tlb-url-msg { font-size: 13px; color: #555; }
+
+/* Player search box */
+.tlb-player-search {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+  margin-bottom: 12px;
+  box-sizing: border-box;
+}
+.tlb-player-search:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 2px rgba(102,126,234,0.1);
+}
+
+/* Comment item footer with edit/delete */
+.tlb-comment-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 6px;
+}
+.tlb-comment-item-actions button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 2px 4px;
+  opacity: 0.6;
+}
+.tlb-comment-item-actions button:hover { opacity: 1; }
+.tlb-comment-item { cursor: default; }
+
+.tlb-cancel-btn {
+  background: #f0f0f0 !important;
+  color: #555 !important;
+}
