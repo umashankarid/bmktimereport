@@ -919,13 +919,13 @@ class DatabaseManager:
 
             conn = self._get_connection()
             try:
-                # Use subquery to update only the first matching record
+                # Match with trimmed/case-insensitive comparison; update ALL matching
+                # rows (a day can have multiple time slots of the same activity).
                 cursor = conn.execute(
-                    "UPDATE activities SET paid = ? WHERE id = ("
-                    "  SELECT id FROM activities "
-                    "  WHERE trainer_name = ? COLLATE NOCASE AND date = ? AND activity = ? "
-                    "  LIMIT 1"
-                    ")",
+                    "UPDATE activities SET paid = ? WHERE "
+                    "TRIM(LOWER(trainer_name)) = TRIM(LOWER(?)) "
+                    "AND TRIM(date) = TRIM(?) "
+                    "AND TRIM(LOWER(activity)) = TRIM(LOWER(?))",
                     (paid_value, trainer_name, date, activity_name)
                 )
                 conn.commit()
@@ -937,7 +937,7 @@ class DatabaseManager:
                 self._invalidate_cache('all_activities')
                 return {
                     'success': True,
-                    'message': f'Activity marked as {"paid" if paid_status else "unpaid"}',
+                    'message': f'Activity marked as {"paid" if paid_status else "unpaid"} ({updated} entr{"ies" if updated > 1 else "y"})',
                     'data': {
                         'trainer_name': trainer_name,
                         'date': date,
