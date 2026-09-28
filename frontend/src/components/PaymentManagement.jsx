@@ -15,10 +15,11 @@ function PaymentManagement() {
   const [selectedAssistantTrainer, setSelectedAssistantTrainer] = useState('All');
   
   // Junior Trainer State
-  const [unpaidActivities, setUnpaidActivities] = useState([]);
+  const [juniorActivities, setJuniorActivities] = useState([]);
   const [selectedJunior, setSelectedJunior] = useState('');
   const [juniors, setJuniors] = useState([]);
-  const [selectedDate, setSelectedDate] = useState(''); // No default date
+  const [juniorMonth, setJuniorMonth] = useState(''); // Month filter (YYYY-MM)
+  const [selectedEntries, setSelectedEntries] = useState({}); // key -> bool
   
   // General State
   const [loading, setLoading] = useState(false);
@@ -31,12 +32,12 @@ function PaymentManagement() {
     fetchAssistantTrainers();
   }, []);
 
-  // Fetch unpaid activities when selected junior or date changes
+  // Fetch activities when selected junior or month changes
   useEffect(() => {
     if (selectedJunior) {
-      fetchUnpaidActivities(selectedJunior);
+      fetchJuniorActivities(selectedJunior);
     }
-  }, [selectedJunior, selectedDate]);
+  }, [selectedJunior, juniorMonth]);
 
   // ==================== ASSISTANT TRAINER FUNCTIONS ====================
   
@@ -211,7 +212,7 @@ function PaymentManagement() {
         setJuniors(juniorTrainers);
         if (juniorTrainers.length > 0) {
           setSelectedJunior(juniorTrainers[0].name);
-          fetchUnpaidActivities(juniorTrainers[0].name);
+          fetchJuniorActivities(juniorTrainers[0].name);
         }
       }
     } catch (err) {
@@ -219,9 +220,10 @@ function PaymentManagement() {
     }
   };
 
-  const fetchUnpaidActivities = async (trainerName) => {
+  const fetchJuniorActivities = async (trainerName) => {
     try {
       setLoading(true);
+      setSelectedEntries({}); // clear selection on reload
       const token = localStorage.getItem('adminToken');
       if (!token) return;
 
@@ -231,18 +233,20 @@ function PaymentManagement() {
 
       const result = await response.json();
       if (result.success && result.data) {
-        // Filter only unpaid activities
-        let unpaid = result.data.filter(a => !a.Paid || a.Paid === 'No' || a.Paid === '');
-        
-        // Filter by date if selected
-        if (selectedDate) {
-          unpaid = unpaid.filter(a => a.Date === selectedDate);
+        let activities = result.data;
+
+        // Filter by month if selected (Date is YYYY-MM-DD)
+        if (juniorMonth) {
+          activities = activities.filter(a => (a.Date || '').startsWith(juniorMonth));
         }
-        
-        setUnpaidActivities(unpaid);
+
+        // Sort by date descending
+        activities.sort((a, b) => (b.Date || '').localeCompare(a.Date || ''));
+
+        setJuniorActivities(activities);
       }
     } catch (err) {
-      console.error('Error fetching unpaid activities:', err);
+      console.error('Error fetching junior activities:', err);
     } finally {
       setLoading(false);
     }
@@ -251,57 +255,87 @@ function PaymentManagement() {
   const handleJuniorChange = (e) => {
     const trainerName = e.target.value;
     setSelectedJunior(trainerName);
-    fetchUnpaidActivities(trainerName);
+    fetchJuniorActivities(trainerName);
   };
 
-  const handleMarkAsPaid = async (activity) => {
-    if (!window.confirm(`Mark "${activity.Activity}" on ${activity.Date} as paid?`)) {
+  const isPaid = (activity) => {
+    const p = activity.Paid;
+    return p === true || p === 'Yes' || p === 'yes' || p === 'TRUE' || p === 'True' || p === '1' || p === 1;
+  };
+
+  const entryKey = (a) => `${a.Date}|${a.Activity}|${a['Start Time']}|${a['End Time']}`;
+
+  const toggleEntry = (a) => {
+    const key = entryKey(a);
+    setSelectedEntries(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const toggleSelectAll = (activities) => {
+    // Select all unpaid entries; if all already selected, clear
+    const unpaid = activities.filter(a => !isPaid(a));
+    const allSelected = unpaid.length > 0 && unpaid.every(a => selectedEntries[entryKey(a)]);
+    if (allSelected) {
+      setSelectedEntries({});
+    } else {
+      const next = {};
+      unpaid.forEach(a => { next[entryKey(a)] = true; });
+      setSelectedEntries(next);
+    }
+  };
+
+  const handleMarkSelectedPaid = async () => {
+    const toPay = juniorActivities.filter(a => selectedEntries[entryKey(a)] && !isPaid(a));
+    if (toPay.length === 0) {
+      setMessage('Please select at least one unpaid entry');
+      setMessageType('error');
+      return;
+    }
+    if (!window.confirm(`Mark ${toPay.length} selected entr${toPay.length > 1 ? 'ies' : 'y'} as paid? This will freeze them.`)) {
       return;
     }
 
     try {
       setLoading(true);
       setMessage('');
-
       const token = localStorage.getItem('adminToken');
-      
-      // Optimistically remove from UI immediately
-      const activityKey = `${activity.Date}-${activity.Activity}`;
-      setUnpaidActivities(prev => 
-        prev.filter(a => `${a.Date}-${a.Activity}` !== activityKey)
-      );
+      let ok = 0;
+      let failed = 0;
 
-      const response = await fetch('/api/activities/mark-paid', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          trainer_name: activity['Trainer Name'],
-          date: activity.Date,
-          activity: activity.Activity,
-          paid: true
-        })
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        setMessage(`✅ Activity marked as paid and frozen`);
-        setMessageType('success');
-        // Optional: refresh to ensure consistency, but not required since we optimistically updated
-      } else {
-        setMessage(`❌ ${result.message}`);
-        setMessageType('error');
-        // On error, re-fetch to restore the activity to the list
-        fetchUnpaidActivities(selectedJunior);
+      for (const activity of toPay) {
+        try {
+          const response = await fetch('/api/activities/mark-paid', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              trainer_name: activity['Trainer Name'],
+              date: activity.Date,
+              activity: activity.Activity,
+              paid: true
+            })
+          });
+          const result = await response.json();
+          if (result.success) ok++; else failed++;
+        } catch (e) {
+          failed++;
+        }
       }
+
+      if (failed === 0) {
+        setMessage(`✅ ${ok} entr${ok > 1 ? 'ies' : 'y'} marked as paid and frozen`);
+        setMessageType('success');
+      } else {
+        setMessage(`⚠️ ${ok} paid, ${failed} failed`);
+        setMessageType('error');
+      }
+      setSelectedEntries({});
+      fetchJuniorActivities(selectedJunior);
+      fetchFrozenDates();
     } catch (err) {
       setMessage('Error marking as paid: ' + err.message);
       setMessageType('error');
-      // On error, re-fetch to restore the activity to the list
-      fetchUnpaidActivities(selectedJunior);
     } finally {
       setLoading(false);
     }
@@ -502,18 +536,18 @@ function PaymentManagement() {
               </div>
 
               <div className="date-filter">
-                <label>Filter by Date (optional):</label>
+                <label>Filter by Month (optional):</label>
                 <input
-                  type="date"
-                  value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
+                  type="month"
+                  value={juniorMonth}
+                  onChange={(e) => setJuniorMonth(e.target.value)}
                   disabled={loading || !selectedJunior}
                 />
-                {selectedDate && (
+                {juniorMonth && (
                   <button
                     className="btn-clear-date"
-                    onClick={() => setSelectedDate('')}
-                    title="Clear date filter"
+                    onClick={() => setJuniorMonth('')}
+                    title="Clear month filter (show all)"
                   >
                     ✕
                   </button>
@@ -525,31 +559,49 @@ function PaymentManagement() {
               <div className="empty-state">
                 <p>No junior trainers found</p>
               </div>
-            ) : unpaidActivities.length === 0 ? (
+            ) : !selectedJunior ? (
               <div className="empty-state">
-                <p>✅ {selectedJunior ? `All activities for ${selectedJunior} have been paid!` : 'Select a junior trainer to view unpaid activities'}</p>
+                <p>Select a junior trainer to view activities</p>
+              </div>
+            ) : juniorActivities.length === 0 ? (
+              <div className="empty-state">
+                <p>No activities found for {selectedJunior}{juniorMonth ? ` in ${juniorMonth}` : ''}</p>
               </div>
             ) : (
               <div className="unpaid-activities">
-                <h3>💰 Unpaid Activities {selectedDate && `on ${selectedDate}`}</h3>
-                <p className="tab-description">{unpaidActivities.length} unpaid activities</p>
-                
+                <h3>💰 Activities for {selectedJunior} {juniorMonth && `(${juniorMonth})`}</h3>
+                <p className="tab-description">
+                  {juniorActivities.length} total ·
+                  {' '}{juniorActivities.filter(a => !isPaid(a)).length} unpaid ·
+                  {' '}{juniorActivities.filter(a => isPaid(a)).length} paid
+                </p>
+
                 <div className="activities-table-container">
                   <table className="activities-table">
                     <thead>
                       <tr>
+                        <th style={{width: '40px'}}>
+                          <input
+                            type="checkbox"
+                            onChange={() => toggleSelectAll(juniorActivities)}
+                            checked={
+                              juniorActivities.filter(a => !isPaid(a)).length > 0 &&
+                              juniorActivities.filter(a => !isPaid(a)).every(a => selectedEntries[entryKey(a)])
+                            }
+                            title="Select all unpaid"
+                          />
+                        </th>
                         <th>Date</th>
                         <th>Activity</th>
                         <th>Start Time</th>
                         <th>End Time</th>
                         <th>Duration</th>
                         <th>Notes</th>
-                        <th>Action</th>
+                        <th>Status</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {unpaidActivities.map((activity, idx) => {
-                        // Calculate duration
+                      {juniorActivities.map((activity, idx) => {
                         const startTime = activity['Start Time'];
                         const endTime = activity['End Time'];
                         let duration = '-';
@@ -561,34 +613,54 @@ function PaymentManagement() {
                             const diffHours = Math.floor(diffMs / 3600000);
                             const diffMins = Math.floor((diffMs % 3600000) / 60000);
                             duration = diffHours > 0 ? `${diffHours}h ${diffMins}m` : `${diffMins}m`;
-                          } catch (e) {
-                            // Fallback if time parsing fails
-                          }
+                          } catch (e) { /* ignore */ }
                         }
-                        
+
+                        const paid = isPaid(activity);
+                        const key = entryKey(activity);
+
                         return (
-                          <tr key={idx}>
+                          <tr key={idx} className={paid ? 'paid-row' : ''}>
+                            <td>
+                              <input
+                                type="checkbox"
+                                checked={!!selectedEntries[key]}
+                                onChange={() => toggleEntry(activity)}
+                                disabled={paid}
+                                title={paid ? 'Already paid (frozen)' : 'Select to mark as paid'}
+                              />
+                            </td>
                             <td>{activity.Date}</td>
                             <td>{activity.Activity}</td>
                             <td>{startTime}</td>
                             <td>{endTime}</td>
                             <td className="duration-cell">{duration}</td>
                             <td>{activity.Note || '-'}</td>
-                            <td className="action-cell">
-                              <button
-                                className="btn-mark-paid"
-                                onClick={() => handleMarkAsPaid(activity)}
-                                disabled={loading}
-                                title="Mark as paid and freeze"
-                              >
-                                💳
-                              </button>
+                            <td>
+                              {paid ? (
+                                <span className="badge-paid">🔒 Paid</span>
+                              ) : (
+                                <span className="badge-unpaid">Unpaid</span>
+                              )}
                             </td>
                           </tr>
                         );
                       })}
                     </tbody>
                   </table>
+                </div>
+
+                <div className="bulk-pay-bar">
+                  <span className="bulk-pay-count">
+                    {Object.values(selectedEntries).filter(Boolean).length} selected
+                  </span>
+                  <button
+                    className="btn-mark-paid-bulk"
+                    onClick={handleMarkSelectedPaid}
+                    disabled={loading || Object.values(selectedEntries).filter(Boolean).length === 0}
+                  >
+                    💳 Mark Selected as Paid &amp; Freeze
+                  </button>
                 </div>
               </div>
             )}
