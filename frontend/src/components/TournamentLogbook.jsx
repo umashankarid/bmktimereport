@@ -14,6 +14,11 @@ function TournamentLogbook({ isAdmin = false }) {
   const [reportComments, setReportComments] = useState([]);
   const [loadingReport, setLoadingReport] = useState(false);
 
+  // Admin URL editing
+  const [editingUrl, setEditingUrl] = useState('');
+  const [savingUrl, setSavingUrl] = useState(false);
+  const [urlMsg, setUrlMsg] = useState('');
+
   // Matches
   const [matches, setMatches] = useState([]);
   const [days, setDays] = useState([]);
@@ -145,6 +150,43 @@ function TournamentLogbook({ isAdmin = false }) {
     }
   };
 
+  const saveTournamentUrl = async () => {
+    if (!editingUrl.trim()) {
+      setUrlMsg('Please paste a tournament URL');
+      return;
+    }
+    try {
+      setSavingUrl(true);
+      setUrlMsg('');
+      const res = await fetch('/api/tournaments/set-url', {
+        method: 'POST',
+        headers: { ...authHeader, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tournament_name: selected.name, tournament_url: editingUrl.trim() })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setUrlMsg('✅ Link saved');
+        // Refresh tournaments and re-open this one with the new URL
+        await fetchTournaments();
+        const guidMatch = editingUrl.match(/\/tournament\/([0-9A-Fa-f-]{36})/) || editingUrl.match(/id=([A-Fa-f0-9-]+)/);
+        const guid = guidMatch ? guidMatch[1] : '';
+        const updated = { ...selected, url: editingUrl.trim(), tournament_id: guid };
+        setSelected(updated);
+        setEditingUrl('');
+        if (guid) {
+          fetchPlayers(updated);
+          fetchComments(updated);
+        }
+      } else {
+        setUrlMsg(`❌ ${data.message}`);
+      }
+    } catch (err) {
+      setUrlMsg('Error saving link');
+    } finally {
+      setSavingUrl(false);
+    }
+  };
+
   const handleSaveComment = async () => {
     if (!commentPlayer || !commentText.trim()) {
       setCommentMsg('Select a player and write a comment');
@@ -213,7 +255,23 @@ function TournamentLogbook({ isAdmin = false }) {
 
         {!selected.tournament_id ? (
           <div className="tlb-warning">
-            This tournament has no valid badmintonsweden link. An admin can add one in Manage Tournaments.
+            <p>This tournament has no badmintonsweden link yet.</p>
+            {isAdmin ? (
+              <div className="tlb-url-editor">
+                <input
+                  type="text"
+                  value={editingUrl}
+                  onChange={(e) => setEditingUrl(e.target.value)}
+                  placeholder="Paste badmintonsweden tournament URL here"
+                />
+                <button onClick={saveTournamentUrl} disabled={savingUrl}>
+                  {savingUrl ? 'Saving...' : '💾 Save Link'}
+                </button>
+                {urlMsg && <span className="tlb-url-msg">{urlMsg}</span>}
+              </div>
+            ) : (
+              <p style={{ fontSize: '13px' }}>An admin can add one in Manage Tournaments.</p>
+            )}
           </div>
         ) : (
           <>

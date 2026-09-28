@@ -308,3 +308,32 @@
   font-size: 12px;
   white-space: nowrap;
 }
+
+/* Admin URL editor */
+.tlb-url-editor {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+.tlb-url-editor input {
+  flex: 1;
+  min-width: 240px;
+  padding: 8px 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 13px;
+}
+.tlb-url-editor button {
+  background: #28a745;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.tlb-url-editor button:disabled { background: #ccc; }
+.tlb-url-msg { font-size: 13px; color: #555; }

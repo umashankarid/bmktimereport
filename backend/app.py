@@ -817,6 +817,22 @@ def create_app():
         except Exception as e:
             return jsonify({'success': False, 'message': str(e)}), 500
 
+    # Delete a tournament (admin)
+    @app.route('/api/tournaments/delete', methods=['POST'])
+    @verify_token
+    def delete_tournament():
+        """Delete a tournament by name."""
+        try:
+            data = request.get_json(silent=True) or {}
+            name = (data.get('tournament_name') or '').strip()
+            if not name:
+                return jsonify({'success': False, 'message': 'Tournament name is required'}), 400
+            db = get_db_manager()
+            result = db.delete_tournament(name)
+            return jsonify(result), 200 if result.get('success') else 400
+        except Exception as e:
+            return jsonify({'success': False, 'message': str(e)}), 500
+
     # ==================== TOURNAMENT LOGBOOK ====================
 
     @app.route('/api/logbook/tournaments', methods=['GET'])

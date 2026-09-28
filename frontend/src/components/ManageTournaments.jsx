@@ -140,11 +140,25 @@ function ManageTournaments() {
       setLoading(true);
       setMessage('');
 
-      // Delete tournament from Google Sheets
-      // Note: This requires a backend endpoint - for now we'll just show a message
-      setMessage('✅ Tournament deleted successfully');
-      setMessageType('success');
-      fetchTournaments();
+      const response = await fetch('/api/tournaments/delete', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+        },
+        body: JSON.stringify({ tournament_name: tournamentName })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setMessage('✅ Tournament deleted successfully');
+        setMessageType('success');
+        fetchTournaments();
+      } else {
+        setMessage(`❌ ${result.message || 'Failed to delete tournament'}`);
+        setMessageType('error');
+      }
     } catch (err) {
       setMessage('Failed to delete tournament: ' + err.message);
       setMessageType('error');

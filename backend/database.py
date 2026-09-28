@@ -1218,10 +1218,19 @@ class DatabaseManager:
         try:
             conn = self._get_connection()
             try:
-                cursor = conn.execute(
-                    "SELECT tournament_name, start_date, end_date, venue, "
-                    "start_time, end_time, status, tournament_url FROM tournaments ORDER BY start_date DESC"
-                )
+                # Check whether tournament_url column exists (older DBs may not have it)
+                cols = [r[1] for r in conn.execute("PRAGMA table_info(tournaments)").fetchall()]
+                has_url = 'tournament_url' in cols
+                if has_url:
+                    cursor = conn.execute(
+                        "SELECT tournament_name, start_date, end_date, venue, "
+                        "start_time, end_time, status, tournament_url FROM tournaments ORDER BY start_date DESC"
+                    )
+                else:
+                    cursor = conn.execute(
+                        "SELECT tournament_name, start_date, end_date, venue, "
+                        "start_time, end_time, status FROM tournaments ORDER BY start_date DESC"
+                    )
                 rows = cursor.fetchall()
             finally:
                 conn.close()
@@ -1235,7 +1244,7 @@ class DatabaseManager:
                     'Start Time': row['start_time'],
                     'End Time': row['end_time'],
                     'Status': row['status'],
-                    'Tournament URL': row['tournament_url'] if 'tournament_url' in row.keys() else ''
+                    'Tournament URL': (row['tournament_url'] if has_url else '') or ''
                 }
                 for row in rows
             ]
@@ -1338,6 +1347,35 @@ class DatabaseManager:
         except Exception as e:
             logger.error(f"✗ Error updating tournament URL: {e}")
             return {'success': False, 'message': f'Error updating tournament URL: {str(e)}'}
+
+    def delete_tournament(self, tournament_name):
+        """Delete a tournament by name (case-insensitive, trimmed).
+
+        Args:
+            tournament_name (str): The tournament name.
+
+        Returns:
+            dict: {'success': bool, 'message': str}
+        """
+        try:
+            conn = self._get_connection()
+            try:
+                cursor = conn.execute(
+                    "DELETE FROM tournaments WHERE TRIM(LOWER(tournament_name)) = TRIM(LOWER(?))",
+                    (tournament_name,)
+                )
+                conn.commit()
+                deleted = cursor.rowcount
+            finally:
+                conn.close()
+
+            if deleted:
+                self._invalidate_cache('tournaments')
+                return {'success': True, 'message': 'Tournament deleted'}
+            return {'success': False, 'message': 'Tournament not found'}
+        except Exception as e:
+            logger.error(f"✗ Error deleting tournament: {e}")
+            return {'success': False, 'message': f'Error deleting tournament: {str(e)}'}
 
     def tournament_exists(self, tournament_name):
         """Check if a tournament already exists by name.
