@@ -233,7 +233,11 @@ def create_app():
             trainer = request.args.get('trainer', None)  # Optional trainer filter
             
             db = get_db_manager()
-            result = db.get_all_activities(limit=limit)
+            # When filtering by a specific trainer, fetch a large set first so the
+            # global limit doesn't starve that trainer's results (otherwise we'd
+            # only see the newest ~100 activities across ALL trainers).
+            fetch_limit = 100000 if trainer else limit
+            result = db.get_all_activities(limit=fetch_limit)
             
             if not result['success']:
                 return jsonify(result), 400
@@ -244,6 +248,11 @@ def create_app():
             if trainer:
                 trainer_lower = trainer.strip().lower()
                 all_activities = [a for a in all_activities if a.get('Trainer Name', '').strip().lower() == trainer_lower]
+                # Return all of this trainer's activities (no truncation)
+                return jsonify({
+                    'success': True,
+                    'data': all_activities
+                }), 200
             
             return jsonify({
                 'success': True,
