@@ -20,7 +20,8 @@ function ManageTournaments() {
     venue: '',
     start_time: '',
     end_time: '',
-    status: 'Upcoming'
+    status: 'Upcoming',
+    tournament_url: ''
   });
 
   useEffect(() => {
@@ -96,7 +97,8 @@ function ManageTournaments() {
           'Venue': formData.venue,
           'Start Time': formData.start_time,
           'End Time': formData.end_time,
-          'Status': formData.status
+          'Status': formData.status,
+          'Tournament URL': formData.tournament_url
         })
       });
 
@@ -112,7 +114,8 @@ function ManageTournaments() {
           venue: '',
           start_time: '',
           end_time: '',
-          status: 'Upcoming'
+          status: 'Upcoming',
+          tournament_url: ''
         });
         setShowAddForm(false);
         fetchTournaments();
@@ -445,6 +448,18 @@ function ManageTournaments() {
                   value={formData.venue}
                   onChange={handleInputChange}
                   placeholder="Location"
+                  disabled={loading}
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Tournament URL (for live tracking)</label>
+                <input
+                  type="text"
+                  name="tournament_url"
+                  value={formData.tournament_url}
+                  onChange={handleInputChange}
+                  placeholder="https://badmintonsweden.tournamentsoftware.com/tournament/..."
                   disabled={loading}
                 />
               </div>

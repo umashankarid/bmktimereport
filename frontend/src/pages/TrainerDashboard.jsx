@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import ActivityForm from '../components/ActivityForm';
 import Responsibilities from '../components/Responsibilities';
 import BillReimbursement from '../components/BillReimbursement';
+import CurrentTournament from '../components/CurrentTournament';
 import '../styles/TrainerDashboard.css';
 
 function TrainerDashboard({ onLogout, error, setError, onActivitySubmit, trainers, currentTrainer }) {
@@ -127,6 +128,12 @@ function TrainerDashboard({ onLogout, error, setError, onActivitySubmit, trainer
         >
           💰 Bill Reimbursement
         </button>
+        <button
+          className={`tab ${activeTab === 'current-tournament' ? 'active' : ''}`}
+          onClick={() => setActiveTab('current-tournament')}
+        >
+          🏸 Current Tournament
+        </button>
       </nav>
 
       <main className="container">
@@ -147,6 +154,10 @@ function TrainerDashboard({ onLogout, error, setError, onActivitySubmit, trainer
 
         {activeTab === 'bills' && (
           <BillReimbursement currentTrainer={currentTrainer} />
+        )}
+
+        {activeTab === 'current-tournament' && (
+          <CurrentTournament />
         )}
       </main>
 

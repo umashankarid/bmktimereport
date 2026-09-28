@@ -12,6 +12,7 @@ import TimeReportStatus from '../components/TimeReportStatus';
 import BillManagement from '../components/BillManagement';
 import PasswordVault from '../components/PasswordVault';
 import Responsibilities from '../components/Responsibilities';
+import CurrentTournament from '../components/CurrentTournament';
 
 function AdminDashboard({ onLogout }) {
   const navigate = useNavigate();
@@ -398,6 +399,12 @@ function AdminDashboard({ onLogout }) {
           📱 QR Codes
         </button>
         <button
+          className={`tab-btn ${activeTab === 'current-tournament' ? 'active' : ''}`}
+          onClick={() => setActiveTab('current-tournament')}
+        >
+          🏸 Current Tournament
+        </button>
+        <button
           className={`tab-btn ${activeTab === 'responsibilities' ? 'active' : ''}`}
           onClick={() => setActiveTab('responsibilities')}
         >
@@ -429,6 +436,9 @@ function AdminDashboard({ onLogout }) {
         )}
         {activeTab === 'responsibilities' && (
           <Responsibilities currentTrainer={{ trainer_type: 'Assistant Trainer' }} />
+        )}
+        {activeTab === 'current-tournament' && (
+          <CurrentTournament />
         )}
 
 

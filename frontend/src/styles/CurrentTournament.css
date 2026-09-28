@@ -1,0 +1,271 @@
+.current-tournament {
+  padding: 20px;
+}
+
+.current-tournament h2 {
+  margin: 0 0 6px 0;
+  font-size: 22px;
+  color: #333;
+}
+
+.ct-sub {
+  color: #666;
+  font-size: 14px;
+  margin: 0 0 20px 0;
+}
+
+.ct-loading, .ct-empty {
+  color: #888;
+  font-style: italic;
+  padding: 20px;
+  text-align: center;
+}
+
+.ct-error {
+  color: #c62828;
+  padding: 12px;
+  background: #ffebee;
+  border-radius: 6px;
+}
+
+/* Tournament list cards */
+.ct-tournament-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.ct-card {
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  padding: 16px;
+  background: #fff;
+  box-shadow: 0 2px 10px rgba(102, 126, 234, 0.06);
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.ct-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.15);
+}
+
+.ct-card-disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.ct-card-disabled:hover {
+  transform: none;
+  box-shadow: 0 2px 10px rgba(102, 126, 234, 0.06);
+}
+
+.ct-card h3 {
+  margin: 0 0 6px;
+  color: #667eea;
+  font-size: 16px;
+}
+
+.ct-card p {
+  margin: 2px 0;
+  color: #666;
+  font-size: 13px;
+}
+
+.ct-link {
+  color: #667eea !important;
+  font-weight: 600;
+  margin-top: 8px !important;
+}
+
+.ct-nolink {
+  color: #c62828 !important;
+  margin-top: 8px !important;
+}
+
+/* Back button */
+.ct-back {
+  background: none;
+  border: none;
+  color: #667eea;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 4px 0;
+  margin-bottom: 12px;
+}
+
+.ct-back:hover {
+  text-decoration: underline;
+}
+
+/* Day selector */
+.ct-days {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.ct-day-btn {
+  padding: 6px 12px;
+  border: 1px solid #ddd;
+  background: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.ct-day-btn.active {
+  background: #667eea;
+  color: white;
+  border-color: #667eea;
+}
+
+/* Filters */
+.ct-filters {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+  align-items: center;
+}
+
+.ct-filter-chip {
+  padding: 6px 12px;
+  border: 1px solid #ddd;
+  background: white;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.ct-filter-chip.active {
+  background: #667eea;
+  color: white;
+  border-color: #667eea;
+}
+
+.ct-refresh {
+  margin-left: auto;
+  padding: 6px 14px;
+  border: none;
+  background: #f0f0f0;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.ct-refresh:hover {
+  background: #e0e0e0;
+}
+
+/* Match cards */
+.match-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.match-card {
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  padding: 14px;
+  background: white;
+  border-left: 4px solid #ccc;
+}
+
+.match-card.ongoing {
+  border-left-color: #e53935;
+  background: #fff8f8;
+}
+
+.match-card.done {
+  border-left-color: #43a047;
+}
+
+.match-card.upcoming {
+  border-left-color: #fb8c00;
+}
+
+.match-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.match-event {
+  font-size: 12px;
+  color: #888;
+  font-weight: 600;
+}
+
+.match-status {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
+.status-ongoing {
+  background: #ffebee;
+  color: #c62828;
+}
+
+.status-done {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.status-upcoming {
+  background: #fff3e0;
+  color: #ef6c00;
+}
+
+.match-teams {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.match-team {
+  flex: 1;
+  font-size: 14px;
+  color: #333;
+}
+
+.match-team.won {
+  font-weight: 700;
+  color: #2e7d32;
+}
+
+.match-vs {
+  color: #aaa;
+  font-size: 12px;
+}
+
+.match-meta {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: #666;
+}
+
+.match-score {
+  font-weight: 600;
+  color: #333;
+}
+
+@media (max-width: 600px) {
+  .ct-tournament-list {
+    grid-template-columns: 1fr;
+  }
+  .ct-filters {
+    gap: 6px;
+  }
+  .ct-refresh {
+    margin-left: 0;
+  }
+}

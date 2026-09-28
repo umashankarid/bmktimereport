@@ -121,7 +121,8 @@ class DatabaseManager:
                     venue TEXT DEFAULT '',
                     start_time TEXT DEFAULT '',
                     end_time TEXT DEFAULT '',
-                    status TEXT DEFAULT 'Active'
+                    status TEXT DEFAULT 'Active',
+                    tournament_url TEXT DEFAULT ''
                 );
 
                 CREATE TABLE IF NOT EXISTS volunteer_registrations (
@@ -198,6 +199,17 @@ class DatabaseManager:
                     ON password_reset_tokens(token);
             """)
             conn.commit()
+
+            # --- Lightweight migrations for existing databases ---
+            # Add tournament_url column if it doesn't exist yet
+            try:
+                cols = [r[1] for r in conn.execute("PRAGMA table_info(tournaments)").fetchall()]
+                if 'tournament_url' not in cols:
+                    conn.execute("ALTER TABLE tournaments ADD COLUMN tournament_url TEXT DEFAULT ''")
+                    conn.commit()
+                    logger.info("✅ Migration: added tournament_url column to tournaments")
+            except Exception as mig_err:
+                logger.warning(f"⚠️  tournament_url migration skipped: {mig_err}")
         finally:
             conn.close()
 
@@ -1195,7 +1207,7 @@ class DatabaseManager:
             try:
                 cursor = conn.execute(
                     "SELECT tournament_name, start_date, end_date, venue, "
-                    "start_time, end_time, status FROM tournaments ORDER BY start_date DESC"
+                    "start_time, end_time, status, tournament_url FROM tournaments ORDER BY start_date DESC"
                 )
                 rows = cursor.fetchall()
             finally:
@@ -1209,7 +1221,8 @@ class DatabaseManager:
                     'Venue': row['venue'],
                     'Start Time': row['start_time'],
                     'End Time': row['end_time'],
-                    'Status': row['status']
+                    'Status': row['status'],
+                    'Tournament URL': row['tournament_url'] if 'tournament_url' in row.keys() else ''
                 }
                 for row in rows
             ]
@@ -1257,13 +1270,14 @@ class DatabaseManager:
             start_time = tournament_data.get('Start Time', '')
             end_time = tournament_data.get('End Time', '')
             status = tournament_data.get('Status', 'Upcoming')
+            tournament_url = tournament_data.get('Tournament URL', tournament_data.get('tournament_url', ''))
 
             conn = self._get_connection()
             try:
                 conn.execute(
                     "INSERT INTO tournaments (tournament_name, start_date, end_date, venue, "
-                    "start_time, end_time, status) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                    (tournament_name, start_date, end_date, venue, start_time, end_time, status)
+                    "start_time, end_time, status, tournament_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                    (tournament_name, start_date, end_date, venue, start_time, end_time, status, tournament_url)
                 )
                 conn.commit()
             finally:
@@ -1281,6 +1295,36 @@ class DatabaseManager:
                 'success': False,
                 'message': f'Error adding tournament: {str(e)}'
             }
+
+    def update_tournament_url(self, tournament_name, tournament_url):
+        """Set/update the tournamentsoftware URL for a tournament (by name).
+
+        Args:
+            tournament_name (str): The tournament name.
+            tournament_url (str): The tournamentsoftware URL.
+
+        Returns:
+            dict: {'success': bool, 'message': str}
+        """
+        try:
+            conn = self._get_connection()
+            try:
+                cursor = conn.execute(
+                    "UPDATE tournaments SET tournament_url = ? "
+                    "WHERE TRIM(LOWER(tournament_name)) = TRIM(LOWER(?))",
+                    (tournament_url.strip(), tournament_name)
+                )
+                conn.commit()
+                updated = cursor.rowcount
+            finally:
+                conn.close()
+
+            if updated:
+                return {'success': True, 'message': 'Tournament URL updated'}
+            return {'success': False, 'message': 'Tournament not found'}
+        except Exception as e:
+            logger.error(f"✗ Error updating tournament URL: {e}")
+            return {'success': False, 'message': f'Error updating tournament URL: {str(e)}'}
 
     def tournament_exists(self, tournament_name):
         """Check if a tournament already exists by name.

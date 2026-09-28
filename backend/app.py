@@ -761,6 +761,52 @@ def create_app():
                 'success': False,
                 'message': f'Error fetching tournaments: {str(e)}'
             }), 500
+
+    # Current tournaments (happening today) - for live tracking
+    @app.route('/api/current-tournaments', methods=['GET'])
+    def get_current_tournaments():
+        """Get tournaments happening today, with parsed tournamentsoftware GUID."""
+        try:
+            from tournament_live import get_current_tournaments as _get_current
+            db = get_db_manager()
+            result = _get_current(db)
+            return jsonify(result), 200
+        except Exception as e:
+            logger.error(f"Error fetching current tournaments: {str(e)}")
+            return jsonify({'success': False, 'tournaments': [], 'error': str(e)}), 500
+
+    # Live matches for a tournament (scrapes tournamentsoftware.com)
+    @app.route('/api/live-matches', methods=['GET'])
+    def get_live_matches():
+        """Get live/done/upcoming matches for a tournament by its GUID."""
+        try:
+            from tournament_live import get_live_matches as _get_live
+            tournament_id = request.args.get('id', '').strip()
+            req_date = request.args.get('date', '').strip()
+            if not tournament_id:
+                return jsonify({'success': False, 'error': 'No tournament ID', 'matches': []}), 400
+            result = _get_live(tournament_id, req_date)
+            return jsonify(result), 200 if result.get('success') else 500
+        except Exception as e:
+            logger.error(f"Error fetching live matches: {str(e)}")
+            return jsonify({'success': False, 'error': str(e), 'matches': []}), 500
+
+    # Update a tournament's tournamentsoftware URL (admin)
+    @app.route('/api/tournaments/set-url', methods=['POST'])
+    @verify_token
+    def set_tournament_url():
+        """Set/update the tournamentsoftware URL for a tournament."""
+        try:
+            data = request.get_json(silent=True) or {}
+            name = (data.get('tournament_name') or '').strip()
+            url = (data.get('tournament_url') or '').strip()
+            if not name:
+                return jsonify({'success': False, 'message': 'Tournament name is required'}), 400
+            db = get_db_manager()
+            result = db.update_tournament_url(name, url)
+            return jsonify(result), 200 if result.get('success') else 400
+        except Exception as e:
+            return jsonify({'success': False, 'message': str(e)}), 500
     
     # Get tournaments with volunteer info (for admin dashboard)
     @app.route('/api/tournaments/with-volunteers', methods=['GET'])
@@ -927,7 +973,7 @@ def create_app():
                 }), 400
             
             tournament_name = data.get('Tournament Name')
-            date = data.get('Date')
+            date = data.get('Date') or data.get('Start Date')
             
             if not tournament_name or not date:
                 return jsonify({
