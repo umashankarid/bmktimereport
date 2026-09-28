@@ -257,9 +257,12 @@ def get_komet_players(tournament_id, club_filter="komet"):
         return {'success': False, 'error': str(e), 'players': []}
 
 
-def search_open_tournaments(days_ahead=90):
-    """Search badmintonsweden for tournaments with registration open (or upcoming)
-    within the next `days_ahead` days. Returns name, url, location, and dates.
+def search_open_tournaments(days_ahead=28):
+    """Search badmintonsweden for upcoming tournaments from today to `days_ahead`
+    days out (default 4 weeks). Returns name, url, location, and dates.
+
+    Includes all upcoming tournaments in the window regardless of registration
+    status (so events whose registration has closed still appear).
 
     Returns:
         dict: {'success': bool, 'tournaments': [{'name','url','location','date_start','date_end'}]}
@@ -277,9 +280,9 @@ def search_open_tournaments(days_ahead=90):
         start = datetime.now().strftime("%Y-%m-%dT00:00")
         end = (datetime.now() + timedelta(days=days_ahead)).strftime("%Y-%m-%dT00:00")
 
-        # Load the find page to get the search form's hidden fields
+        # StatusFilterID=0 = all statuses (not just registration-open) within the date range
         resp = s.get(
-            f"{TS_BASE}/find?StatusFilterID=2&DateFilterType=0&StartDate={start}&EndDate={end}&Distance=10&page=1&SportID=2",
+            f"{TS_BASE}/find?StatusFilterID=0&DateFilterType=0&StartDate={start}&EndDate={end}&Distance=10&page=1&SportID=2",
             timeout=15
         )
         page_soup = BeautifulSoup(resp.text, "html.parser")
@@ -291,8 +294,11 @@ def search_open_tournaments(days_ahead=90):
                 if name:
                     form_data[name] = inp.get("value", "")
 
-        # StatusFilterID 2 = registration open
-        form_data["TournamentExtendedFilter.StatusFilterID"] = "2"
+        # StatusFilterID 0 = all statuses; keep the date range to limit to the window
+        form_data["TournamentExtendedFilter.StatusFilterID"] = "0"
+        form_data["TournamentExtendedFilter.DateFilterType"] = "0"
+        form_data["TournamentExtendedFilter.StartDate"] = start
+        form_data["TournamentExtendedFilter.EndDate"] = end
 
         resp = s.post(
             f"{TS_BASE}/find/tournament/DoSearch",
