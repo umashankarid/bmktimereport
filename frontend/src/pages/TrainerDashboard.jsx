@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import ActivityForm from '../components/ActivityForm';
 import Responsibilities from '../components/Responsibilities';
 import BillReimbursement from '../components/BillReimbursement';
-import CurrentTournament from '../components/CurrentTournament';
+import TournamentLogbook from '../components/TournamentLogbook';
 import '../styles/TrainerDashboard.css';
 
 function TrainerDashboard({ onLogout, error, setError, onActivitySubmit, trainers, currentTrainer }) {
@@ -132,7 +132,7 @@ function TrainerDashboard({ onLogout, error, setError, onActivitySubmit, trainer
           className={`tab ${activeTab === 'current-tournament' ? 'active' : ''}`}
           onClick={() => setActiveTab('current-tournament')}
         >
-          🏸 Current Tournament
+          📖 Tournament Logbook
         </button>
       </nav>
 
@@ -157,7 +157,7 @@ function TrainerDashboard({ onLogout, error, setError, onActivitySubmit, trainer
         )}
 
         {activeTab === 'current-tournament' && (
-          <CurrentTournament />
+          <TournamentLogbook />
         )}
       </main>
 

@@ -1,0 +1,310 @@
+.tournament-logbook {
+  padding: 20px;
+}
+
+.tournament-logbook h2 {
+  margin: 0 0 6px 0;
+  font-size: 22px;
+  color: #333;
+}
+
+.tlb-sub {
+  color: #666;
+  font-size: 14px;
+  margin: 0 0 20px 0;
+}
+
+.tlb-loading, .tlb-empty {
+  color: #888;
+  font-style: italic;
+  padding: 20px;
+  text-align: center;
+}
+
+.tlb-error {
+  color: #c62828;
+  background: #ffebee;
+  padding: 12px;
+  border-radius: 6px;
+}
+
+.tlb-warning {
+  background: #fff3e0;
+  color: #ef6c00;
+  padding: 14px;
+  border-radius: 8px;
+  margin-top: 12px;
+}
+
+/* Tournament list */
+.tlb-tournament-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.tlb-card {
+  position: relative;
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  padding: 16px;
+  background: #fff;
+  box-shadow: 0 2px 10px rgba(102, 126, 234, 0.06);
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.tlb-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.15);
+}
+
+.tlb-card h3 {
+  margin: 0 0 6px;
+  color: #667eea;
+  font-size: 16px;
+}
+
+.tlb-card p {
+  margin: 2px 0;
+  color: #666;
+  font-size: 13px;
+}
+
+.tlb-status {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  background: #eee;
+  color: #555;
+}
+
+.tlb-status-ongoing { background: #ffebee; color: #c62828; }
+.tlb-status-upcoming { background: #fff3e0; color: #ef6c00; }
+.tlb-status-finished, .tlb-status-completed { background: #e8f5e9; color: #2e7d32; }
+
+.tlb-nolink {
+  color: #c62828 !important;
+  font-size: 12px !important;
+}
+
+/* Back button */
+.tlb-back {
+  background: none;
+  border: none;
+  color: #667eea;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 4px 0;
+  margin-bottom: 12px;
+}
+.tlb-back:hover { text-decoration: underline; }
+
+/* Detail tabs */
+.tlb-tabs {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  border-bottom: 2px solid #e0e0e0;
+  margin-bottom: 16px;
+}
+
+.tlb-tabs button {
+  background: none;
+  border: none;
+  padding: 10px 14px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #666;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  white-space: nowrap;
+}
+
+.tlb-tabs button.active {
+  color: #667eea;
+  border-bottom-color: #667eea;
+  font-weight: 600;
+}
+
+/* Days */
+.tlb-days {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.tlb-days button {
+  padding: 6px 12px;
+  border: 1px solid #ddd;
+  background: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.tlb-days button.active {
+  background: #667eea;
+  color: white;
+  border-color: #667eea;
+}
+
+/* Players list */
+.tlb-players-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.tlb-player-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  background: white;
+}
+.tlb-player-name {
+  font-weight: 600;
+  color: #333;
+  flex: 1;
+}
+.tlb-player-club {
+  color: #888;
+  font-size: 13px;
+}
+.tlb-comment-btn {
+  background: #667eea;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.tlb-comment-btn:hover { background: #5568c8; }
+
+/* Match cards */
+.tlb-match-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.tlb-match-card {
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  padding: 12px 14px;
+  background: white;
+  border-left: 4px solid #ccc;
+}
+.tlb-match-card.ongoing { border-left-color: #e53935; background: #fff8f8; }
+.tlb-match-card.done { border-left-color: #43a047; }
+.tlb-match-card.upcoming { border-left-color: #fb8c00; }
+.tlb-match-event { font-size: 12px; color: #888; font-weight: 600; }
+.tlb-match-teams {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 0;
+  font-size: 14px;
+  color: #333;
+}
+.tlb-match-teams .won { font-weight: 700; color: #2e7d32; }
+.tlb-vs { color: #aaa; font-size: 12px; }
+.tlb-match-meta {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: #666;
+}
+
+/* Comments */
+.tlb-comments {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+.tlb-comment-editor h4, .tlb-my-comments h4 {
+  margin: 0 0 12px 0;
+  color: #444;
+}
+.tlb-comment-row { margin-bottom: 10px; }
+.tlb-comment-editor select {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+}
+.tlb-comment-editor textarea {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  resize: vertical;
+  box-sizing: border-box;
+}
+.tlb-comment-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+}
+.tlb-comment-actions button {
+  background: #28a745;
+  color: white;
+  border: none;
+  padding: 8px 18px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+}
+.tlb-comment-actions button:disabled { background: #ccc; }
+.tlb-comment-msg { font-size: 13px; color: #555; }
+
+.tlb-comment-item {
+  border: 1px solid #eee;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  background: white;
+}
+.tlb-comment-item:hover { background: #f9f9ff; }
+.tlb-comment-player { font-weight: 600; color: #667eea; font-size: 14px; }
+.tlb-comment-text { color: #333; font-size: 13px; margin: 4px 0; }
+.tlb-comment-date { color: #aaa; font-size: 11px; }
+
+@media (max-width: 700px) {
+  .tlb-tournament-list { grid-template-columns: 1fr; }
+  .tlb-comments { grid-template-columns: 1fr; }
+}
+
+/* Admin report table */
+.tlb-report-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.tlb-report-table th {
+  background: #f5f5f5;
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 2px solid #ddd;
+  font-weight: 600;
+  color: #555;
+}
+.tlb-report-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #eee;
+  vertical-align: top;
+}
+.tlb-report-date {
+  color: #aaa;
+  font-size: 12px;
+  white-space: nowrap;
+}

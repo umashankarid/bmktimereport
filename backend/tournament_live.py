@@ -191,3 +191,67 @@ def get_live_matches(tournament_id, req_date=""):
     except Exception as e:
         logger.error(f"❌ Error fetching live matches: {e}")
         return {'success': False, 'error': str(e), 'matches': []}
+
+
+def get_komet_players(tournament_id, club_filter="komet"):
+    """Scrape a tournament's player list and return players whose club matches
+    the club_filter (default 'komet', case-insensitive substring match).
+
+    Args:
+        tournament_id (str): The tournamentsoftware GUID.
+        club_filter (str): Club name substring to match (default 'komet').
+
+    Returns:
+        dict: {'success': bool, 'players': [{'name','club','player_id'}]}
+    """
+    tournament_id = (tournament_id or "").strip()
+    if not tournament_id:
+        return {'success': False, 'error': 'No tournament ID', 'players': []}
+
+    try:
+        from bs4 import BeautifulSoup
+        s = requests.Session()
+        s.headers.update({"User-Agent": "Mozilla/5.0"})
+        s.post(f"{TS_BASE}/cookiewall/Save", data={
+            "ReturnUrl": "/", "SettingsOpen": "false", "CookieWallCategoryPreferences": "1,2,3"
+        }, allow_redirects=True, timeout=8)
+
+        url = f"{TS_BASE}/tournament/{tournament_id}/Players/GetPlayersContent"
+        resp = s.get(url, headers={"X-Requested-With": "XMLHttpRequest"}, timeout=20)
+        soup = BeautifulSoup(resp.text, "html.parser")
+
+        players = []
+        for item in soup.select("li"):
+            name_el = item.select_one("a")
+            if not name_el:
+                continue
+            name = name_el.get_text(strip=True)
+            if not name or len(name) < 3:
+                continue
+            href = name_el.get("href", "")
+            pid_match = re.search(r"player=(\d+)", href)
+            player_id = pid_match.group(1) if pid_match else ""
+            all_text = [t.strip() for t in item.get_text(separator="|", strip=True).split("|") if t.strip()]
+            club = ""
+            for t in all_text:
+                if t != name and len(t) > 2 and not t.startswith("("):
+                    club = t
+                    break
+            players.append({"name": name, "club": club, "player_id": player_id})
+
+        # Filter by club and deduplicate by name
+        cf = (club_filter or "").lower()
+        seen = set()
+        komet_players = []
+        for p in players:
+            if cf and cf not in (p["club"] or "").lower():
+                continue
+            if p["name"] in seen:
+                continue
+            seen.add(p["name"])
+            komet_players.append(p)
+
+        return {'success': True, 'players': komet_players}
+    except Exception as e:
+        logger.error(f"❌ Error fetching komet players: {e}")
+        return {'success': False, 'error': str(e), 'players': []}

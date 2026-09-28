@@ -197,6 +197,19 @@ class DatabaseManager:
 
                 CREATE INDEX IF NOT EXISTS idx_reset_token
                     ON password_reset_tokens(token);
+
+                CREATE TABLE IF NOT EXISTS player_comments (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    tournament_name TEXT NOT NULL,
+                    player_name TEXT NOT NULL,
+                    coach_name TEXT NOT NULL,
+                    comment TEXT NOT NULL,
+                    created_date TEXT DEFAULT '',
+                    updated_date TEXT DEFAULT ''
+                );
+
+                CREATE INDEX IF NOT EXISTS idx_player_comments_lookup
+                    ON player_comments(tournament_name, player_name, coach_name);
             """)
             conn.commit()
 
@@ -2599,3 +2612,128 @@ class DatabaseManager:
         except Exception as e:
             logger.error(f"Error deleting vault item: {e}")
             return {'success': False, 'message': f'Error deleting item: {str(e)}'}
+
+    # ==================== PLAYER COMMENTS (Tournament Logbook) ====================
+
+    def save_player_comment(self, tournament_name, player_name, coach_name, comment):
+        """Insert or update a coach's comment for a player in a tournament.
+
+        One comment per (tournament, player, coach) — updates if it exists.
+
+        Returns:
+            dict: {'success': bool, 'message': str}
+        """
+        try:
+            if not tournament_name or not player_name or not coach_name:
+                return {'success': False, 'message': 'Tournament, player, and coach are required'}
+
+            from datetime import datetime
+            now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+            conn = self._get_connection()
+            try:
+                cursor = conn.execute(
+                    "SELECT id FROM player_comments WHERE tournament_name = ? AND player_name = ? AND coach_name = ?",
+                    (tournament_name, player_name, coach_name)
+                )
+                existing = cursor.fetchone()
+
+                if existing:
+                    conn.execute(
+                        "UPDATE player_comments SET comment = ?, updated_date = ? WHERE id = ?",
+                        (comment, now, existing['id'])
+                    )
+                else:
+                    conn.execute(
+                        "INSERT INTO player_comments (tournament_name, player_name, coach_name, comment, created_date, updated_date) "
+                        "VALUES (?, ?, ?, ?, ?, ?)",
+                        (tournament_name, player_name, coach_name, comment, now, now)
+                    )
+                conn.commit()
+            finally:
+                conn.close()
+
+            return {'success': True, 'message': 'Comment saved'}
+        except Exception as e:
+            logger.error(f"Error saving player comment: {e}")
+            return {'success': False, 'message': f'Error saving comment: {str(e)}'}
+
+    def get_player_comments(self, tournament_name, coach_name=None, player_name=None):
+        """Get player comments for a tournament, optionally filtered by coach and/or player.
+
+        Returns:
+            dict: {'success': bool, 'data': [...]}
+        """
+        try:
+            conn = self._get_connection()
+            try:
+                query = ("SELECT tournament_name, player_name, coach_name, comment, "
+                         "created_date, updated_date FROM player_comments WHERE tournament_name = ?")
+                params = [tournament_name]
+                if coach_name:
+                    query += " AND coach_name = ?"
+                    params.append(coach_name)
+                if player_name:
+                    query += " AND player_name = ?"
+                    params.append(player_name)
+                query += " ORDER BY player_name, coach_name"
+                cursor = conn.execute(query, params)
+                rows = cursor.fetchall()
+            finally:
+                conn.close()
+
+            data = [
+                {
+                    'tournament_name': r['tournament_name'],
+                    'player_name': r['player_name'],
+                    'coach_name': r['coach_name'],
+                    'comment': r['comment'],
+                    'created_date': r['created_date'],
+                    'updated_date': r['updated_date'],
+                }
+                for r in rows
+            ]
+            return {'success': True, 'data': data}
+        except Exception as e:
+            logger.error(f"Error getting player comments: {e}")
+            return {'success': False, 'data': [], 'message': str(e)}
+
+    def get_all_player_comments(self, tournament_name=None):
+        """Admin report: get all player comments, optionally filtered by tournament.
+
+        Returns:
+            dict: {'success': bool, 'data': [...]}
+        """
+        try:
+            conn = self._get_connection()
+            try:
+                if tournament_name:
+                    cursor = conn.execute(
+                        "SELECT tournament_name, player_name, coach_name, comment, created_date, updated_date "
+                        "FROM player_comments WHERE tournament_name = ? ORDER BY tournament_name, player_name, coach_name",
+                        (tournament_name,)
+                    )
+                else:
+                    cursor = conn.execute(
+                        "SELECT tournament_name, player_name, coach_name, comment, created_date, updated_date "
+                        "FROM player_comments ORDER BY tournament_name, player_name, coach_name"
+                    )
+                rows = cursor.fetchall()
+            finally:
+                conn.close()
+
+            data = [
+                {
+                    'tournament_name': r['tournament_name'],
+                    'player_name': r['player_name'],
+                    'coach_name': r['coach_name'],
+                    'comment': r['comment'],
+                    'created_date': r['created_date'],
+                    'updated_date': r['updated_date'],
+                }
+                for r in rows
+            ]
+            return {'success': True, 'data': data}
+        except Exception as e:
+            logger.error(f"Error getting all player comments: {e}")
+            return {'success': False, 'data': [], 'message': str(e)}

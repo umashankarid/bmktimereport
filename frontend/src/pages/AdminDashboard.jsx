@@ -12,7 +12,7 @@ import TimeReportStatus from '../components/TimeReportStatus';
 import BillManagement from '../components/BillManagement';
 import PasswordVault from '../components/PasswordVault';
 import Responsibilities from '../components/Responsibilities';
-import CurrentTournament from '../components/CurrentTournament';
+import TournamentLogbook from '../components/TournamentLogbook';
 
 function AdminDashboard({ onLogout }) {
   const navigate = useNavigate();
@@ -402,7 +402,7 @@ function AdminDashboard({ onLogout }) {
           className={`tab-btn ${activeTab === 'current-tournament' ? 'active' : ''}`}
           onClick={() => setActiveTab('current-tournament')}
         >
-          🏸 Current Tournament
+          📖 Tournament Logbook
         </button>
         <button
           className={`tab-btn ${activeTab === 'responsibilities' ? 'active' : ''}`}
@@ -438,7 +438,7 @@ function AdminDashboard({ onLogout }) {
           <Responsibilities currentTrainer={{ trainer_type: 'Assistant Trainer' }} />
         )}
         {activeTab === 'current-tournament' && (
-          <CurrentTournament />
+          <TournamentLogbook isAdmin={true} />
         )}
 
 

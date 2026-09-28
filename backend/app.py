@@ -816,6 +816,93 @@ def create_app():
             return jsonify(result), 200 if result.get('success') else 400
         except Exception as e:
             return jsonify({'success': False, 'message': str(e)}), 500
+
+    # ==================== TOURNAMENT LOGBOOK ====================
+
+    @app.route('/api/logbook/tournaments', methods=['GET'])
+    def logbook_tournaments():
+        """List all tournaments (with URL + parsed GUID) for the logbook."""
+        try:
+            from tournament_live import parse_guid_from_url
+            db = get_db_manager()
+            result = db.get_tournaments()
+            data = result['data'] if result['success'] else []
+            tournaments = []
+            for t in data:
+                url = t.get('Tournament URL', '') or ''
+                tournaments.append({
+                    'name': t.get('Tournament Name', ''),
+                    'url': url,
+                    'tournament_id': parse_guid_from_url(url),
+                    'location': t.get('Venue', ''),
+                    'date_start': t.get('Start Date', ''),
+                    'date_end': t.get('End Date', ''),
+                    'status': t.get('Status', ''),
+                })
+            return jsonify({'success': True, 'tournaments': tournaments}), 200
+        except Exception as e:
+            logger.error(f"Error listing logbook tournaments: {str(e)}")
+            return jsonify({'success': False, 'tournaments': [], 'error': str(e)}), 500
+
+    @app.route('/api/logbook/komet-players', methods=['GET'])
+    def logbook_komet_players():
+        """Get Komet players in a tournament (scraped, filtered by club)."""
+        try:
+            from tournament_live import get_komet_players
+            tournament_id = request.args.get('id', '').strip()
+            if not tournament_id:
+                return jsonify({'success': False, 'error': 'No tournament ID', 'players': []}), 400
+            result = get_komet_players(tournament_id)
+            return jsonify(result), 200 if result.get('success') else 500
+        except Exception as e:
+            logger.error(f"Error fetching komet players: {str(e)}")
+            return jsonify({'success': False, 'error': str(e), 'players': []}), 500
+
+    @app.route('/api/logbook/comments', methods=['GET'])
+    @verify_token
+    def get_logbook_comments():
+        """Get the current coach's comments for a tournament (optionally one player)."""
+        try:
+            coach_name = request.admin.get('username', '')
+            tournament_name = request.args.get('tournament', '').strip()
+            player_name = request.args.get('player', '').strip() or None
+            if not tournament_name:
+                return jsonify({'success': False, 'message': 'Tournament is required'}), 400
+            db = get_db_manager()
+            result = db.get_player_comments(tournament_name, coach_name=coach_name, player_name=player_name)
+            return jsonify(result), 200
+        except Exception as e:
+            return jsonify({'success': False, 'data': [], 'message': str(e)}), 500
+
+    @app.route('/api/logbook/comments', methods=['POST'])
+    @verify_token
+    def save_logbook_comment():
+        """Save/update the current coach's comment for a player in a tournament."""
+        try:
+            coach_name = request.admin.get('username', '')
+            data = request.get_json(silent=True) or {}
+            tournament_name = (data.get('tournament') or '').strip()
+            player_name = (data.get('player') or '').strip()
+            comment = (data.get('comment') or '').strip()
+            if not tournament_name or not player_name:
+                return jsonify({'success': False, 'message': 'Tournament and player are required'}), 400
+            db = get_db_manager()
+            result = db.save_player_comment(tournament_name, player_name, coach_name, comment)
+            return jsonify(result), 200 if result.get('success') else 400
+        except Exception as e:
+            return jsonify({'success': False, 'message': str(e)}), 500
+
+    @app.route('/api/logbook/comments/report', methods=['GET'])
+    @verify_token
+    def logbook_comments_report():
+        """Admin report: all coach comments, optionally filtered by tournament."""
+        try:
+            tournament_name = request.args.get('tournament', '').strip() or None
+            db = get_db_manager()
+            result = db.get_all_player_comments(tournament_name)
+            return jsonify(result), 200
+        except Exception as e:
+            return jsonify({'success': False, 'data': [], 'message': str(e)}), 500
     
     # Get tournaments with volunteer info (for admin dashboard)
     @app.route('/api/tournaments/with-volunteers', methods=['GET'])
