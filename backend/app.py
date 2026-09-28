@@ -833,6 +833,64 @@ def create_app():
         except Exception as e:
             return jsonify({'success': False, 'message': str(e)}), 500
 
+    # Search open tournaments on badmintonsweden (for the import popup)
+    @app.route('/api/tournaments/search-open', methods=['GET'])
+    @verify_token
+    def search_open_tournaments_endpoint():
+        """Return open/upcoming tournaments from badmintonsweden for admin to pick from."""
+        try:
+            from tournament_live import search_open_tournaments
+            result = search_open_tournaments()
+            return jsonify(result), 200 if result.get('success') else 500
+        except Exception as e:
+            logger.error(f"Error searching open tournaments: {str(e)}")
+            return jsonify({'success': False, 'tournaments': [], 'error': str(e)}), 500
+
+    # Bulk-add selected tournaments (from the import popup)
+    @app.route('/api/tournaments/bulk-add', methods=['POST'])
+    @verify_token
+    def bulk_add_tournaments():
+        """Add multiple selected tournaments. Skips ones that already exist by name."""
+        try:
+            data = request.get_json(silent=True) or {}
+            items = data.get('tournaments', [])
+            if not isinstance(items, list) or not items:
+                return jsonify({'success': False, 'message': 'No tournaments provided'}), 400
+
+            db = get_db_manager()
+            added = 0
+            skipped = 0
+            errors = []
+            for t in items:
+                name = (t.get('name') or '').strip()
+                if not name:
+                    continue
+                if db.tournament_exists(name):
+                    skipped += 1
+                    continue
+                result = db.add_tournament({
+                    'Tournament Name': name,
+                    'Start Date': t.get('date_start', ''),
+                    'End Date': t.get('date_end', '') or t.get('date_start', ''),
+                    'Venue': t.get('location', ''),
+                    'Status': 'Upcoming',
+                    'Tournament URL': t.get('url', '')
+                })
+                if result.get('success'):
+                    added += 1
+                else:
+                    errors.append(f"{name}: {result.get('message')}")
+
+            return jsonify({
+                'success': True,
+                'added': added,
+                'skipped': skipped,
+                'errors': errors
+            }), 200
+        except Exception as e:
+            logger.error(f"Error bulk-adding tournaments: {str(e)}")
+            return jsonify({'success': False, 'message': str(e)}), 500
+
     # ==================== TOURNAMENT LOGBOOK ====================
 
     @app.route('/api/logbook/tournaments', methods=['GET'])

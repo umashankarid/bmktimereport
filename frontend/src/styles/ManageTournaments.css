@@ -694,3 +694,65 @@
     min-width: 150px;
   }
 }
+
+/* Import from Badminton Sweden modal */
+.import-modal {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  width: 100%;
+  max-width: 560px;
+  margin: 20px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+}
+.import-modal .modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.import-modal .modal-header h2 { margin: 0; font-size: 20px; }
+.import-modal .close-btn {
+  background: none; border: none; font-size: 24px; cursor: pointer; color: #888;
+}
+.import-desc { color: #666; font-size: 14px; margin: 6px 0 14px; }
+.import-loading, .import-empty { text-align: center; color: #888; padding: 30px; }
+.import-select-all { padding: 6px 0; font-size: 14px; border-bottom: 1px solid #eee; margin-bottom: 8px; }
+.import-select-all label { display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 600; }
+.import-list { overflow-y: auto; flex: 1; }
+.import-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  cursor: pointer;
+}
+.import-item.selected { background: #f0f7ff; border-color: #b3d4fc; }
+.import-item input { margin-top: 3px; }
+.import-item-name { font-weight: 600; color: #333; font-size: 14px; }
+.import-item-meta { font-size: 12px; color: #777; margin-top: 2px; }
+.import-nolink { color: #ef6c00; }
+.import-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid #eee;
+  font-size: 14px;
+  color: #555;
+}
+.btn-confirm-import {
+  background: #28a745;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn-confirm-import:disabled { background: #ccc; cursor: not-allowed; }

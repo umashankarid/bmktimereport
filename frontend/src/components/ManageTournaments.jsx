@@ -8,6 +8,10 @@ function ManageTournaments() {
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importResults, setImportResults] = useState([]);
+  const [selectedImports, setSelectedImports] = useState({});
+  const [importLoading, setImportLoading] = useState(false);
   const [selectedTournamentVolunteers, setSelectedTournamentVolunteers] = useState(null);
   const [editingTournament, setEditingTournament] = useState(null);
   const [availableVolunteers, setAvailableVolunteers] = useState([]);
@@ -168,17 +172,14 @@ function ManageTournaments() {
   };
 
   const handleImportFromBadmintonSweden = async () => {
-    if (!window.confirm('This will fetch tournaments from Badminton Sweden with "komet" in the name. Continue?')) {
-      return;
-    }
-
     try {
-      setLoading(true);
-      setMessage('🔄 Importing tournaments from Badminton Sweden...');
-      setMessageType('');
+      setImportLoading(true);
+      setShowImportModal(true);
+      setImportResults([]);
+      setSelectedImports({});
+      setMessage('');
 
-      const response = await fetch('/api/tournaments/import', {
-        method: 'POST',
+      const response = await fetch('/api/tournaments/search-open', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
         }
@@ -187,21 +188,69 @@ function ManageTournaments() {
       const result = await response.json();
 
       if (result.success) {
-        setMessage(`✅ Imported ${result.imported_count} tournaments from Badminton Sweden (found ${result.total_found} total)${result.skipped_count > 0 ? `, skipped ${result.skipped_count} duplicates` : ''}`);
+        setImportResults(result.tournaments || []);
+      } else {
+        setMessage(`❌ ${result.error || 'Failed to search tournaments'}`);
+        setMessageType('error');
+        setShowImportModal(false);
+      }
+    } catch (err) {
+      setMessage('Failed to search tournaments: ' + err.message);
+      setMessageType('error');
+      setShowImportModal(false);
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
+  const toggleImportSelect = (idx) => {
+    setSelectedImports(prev => ({ ...prev, [idx]: !prev[idx] }));
+  };
+
+  const toggleImportSelectAll = () => {
+    const allSelected = importResults.length > 0 && importResults.every((_, i) => selectedImports[i]);
+    if (allSelected) {
+      setSelectedImports({});
+    } else {
+      const next = {};
+      importResults.forEach((_, i) => { next[i] = true; });
+      setSelectedImports(next);
+    }
+  };
+
+  const handleConfirmImport = async () => {
+    const chosen = importResults.filter((_, i) => selectedImports[i]);
+    if (chosen.length === 0) {
+      setMessage('Please select at least one tournament');
+      setMessageType('error');
+      return;
+    }
+
+    try {
+      setImportLoading(true);
+      const response = await fetch('/api/tournaments/bulk-add', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+        },
+        body: JSON.stringify({ tournaments: chosen })
+      });
+      const result = await response.json();
+      if (result.success) {
+        setMessage(`✅ Added ${result.added} tournament(s)${result.skipped > 0 ? `, skipped ${result.skipped} existing` : ''}`);
         setMessageType('success');
-        if (result.errors && result.errors.length > 0) {
-          console.warn('Import errors:', result.errors);
-        }
+        setShowImportModal(false);
         fetchTournaments();
       } else {
-        setMessage(`❌ ${result.message}`);
+        setMessage(`❌ ${result.message || 'Failed to import'}`);
         setMessageType('error');
       }
     } catch (err) {
-      setMessage('Failed to import tournaments: ' + err.message);
+      setMessage('Failed to import: ' + err.message);
       setMessageType('error');
     } finally {
-      setLoading(false);
+      setImportLoading(false);
     }
   };
 
@@ -695,6 +744,66 @@ function ManageTournaments() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Import from Badminton Sweden - multi-select modal */}
+      {showImportModal && (
+        <div className="modal-overlay" onClick={() => !importLoading && setShowImportModal(false)}>
+          <div className="modal import-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>🔍 Import from Badminton Sweden</h2>
+              <button className="close-btn" onClick={() => setShowImportModal(false)} disabled={importLoading}>×</button>
+            </div>
+            <p className="import-desc">Select the tournaments you want to add. Name, dates, venue and link are filled in automatically.</p>
+
+            {importLoading && importResults.length === 0 ? (
+              <p className="import-loading">🔄 Searching open tournaments...</p>
+            ) : importResults.length === 0 ? (
+              <p className="import-empty">No open tournaments found.</p>
+            ) : (
+              <>
+                <div className="import-select-all">
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={importResults.length > 0 && importResults.every((_, i) => selectedImports[i])}
+                      onChange={toggleImportSelectAll}
+                    />
+                    Select all ({importResults.length})
+                  </label>
+                </div>
+                <div className="import-list">
+                  {importResults.map((t, idx) => (
+                    <label key={idx} className={`import-item ${selectedImports[idx] ? 'selected' : ''}`}>
+                      <input
+                        type="checkbox"
+                        checked={!!selectedImports[idx]}
+                        onChange={() => toggleImportSelect(idx)}
+                      />
+                      <div className="import-item-info">
+                        <div className="import-item-name">{t.name}</div>
+                        <div className="import-item-meta">
+                          📍 {t.location || '—'} · 📅 {t.date_start}{t.date_end && t.date_end !== t.date_start ? ` → ${t.date_end}` : ''}
+                          {!t.url && <span className="import-nolink"> · ⚠️ no link</span>}
+                        </div>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+                <div className="import-actions">
+                  <span>{Object.values(selectedImports).filter(Boolean).length} selected</span>
+                  <button
+                    className="btn-confirm-import"
+                    onClick={handleConfirmImport}
+                    disabled={importLoading || Object.values(selectedImports).filter(Boolean).length === 0}
+                  >
+                    {importLoading ? 'Adding...' : '➕ Add Selected'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       )}
     </div>

@@ -255,3 +255,78 @@ def get_komet_players(tournament_id, club_filter="komet"):
     except Exception as e:
         logger.error(f"❌ Error fetching komet players: {e}")
         return {'success': False, 'error': str(e), 'players': []}
+
+
+def search_open_tournaments(days_ahead=90):
+    """Search badmintonsweden for tournaments with registration open (or upcoming)
+    within the next `days_ahead` days. Returns name, url, location, and dates.
+
+    Returns:
+        dict: {'success': bool, 'tournaments': [{'name','url','location','date_start','date_end'}]}
+    """
+    try:
+        from bs4 import BeautifulSoup
+        from datetime import datetime, timedelta
+
+        s = requests.Session()
+        s.headers.update({"User-Agent": "Mozilla/5.0"})
+        s.post(f"{TS_BASE}/cookiewall/Save", data={
+            "ReturnUrl": "/", "SettingsOpen": "false", "CookieWallCategoryPreferences": "1,2,3"
+        }, allow_redirects=True, timeout=8)
+
+        start = datetime.now().strftime("%Y-%m-%dT00:00")
+        end = (datetime.now() + timedelta(days=days_ahead)).strftime("%Y-%m-%dT00:00")
+
+        # Load the find page to get the search form's hidden fields
+        resp = s.get(
+            f"{TS_BASE}/find?StatusFilterID=2&DateFilterType=0&StartDate={start}&EndDate={end}&Distance=10&page=1&SportID=2",
+            timeout=15
+        )
+        page_soup = BeautifulSoup(resp.text, "html.parser")
+        form = page_soup.select_one("#form_globalsearch")
+        form_data = {}
+        if form:
+            for inp in form.find_all("input"):
+                name = inp.get("name", "")
+                if name:
+                    form_data[name] = inp.get("value", "")
+
+        # StatusFilterID 2 = registration open
+        form_data["TournamentExtendedFilter.StatusFilterID"] = "2"
+
+        resp = s.post(
+            f"{TS_BASE}/find/tournament/DoSearch",
+            data=form_data,
+            headers={"X-Requested-With": "XMLHttpRequest"},
+            timeout=15
+        )
+        soup = BeautifulSoup(resp.text, "html.parser")
+
+        tournaments = []
+        for item in soup.select("li.list__item"):
+            link = item.select_one("a.media__link")
+            if not link:
+                continue
+            name = link.get_text(strip=True)
+            href = link.get("href", "")
+            location_el = item.select_one(".media__subheading .nav-link__value")
+            location = location_el.get_text(strip=True) if location_el else ""
+            time_els = item.select("time")
+            date_start = time_els[0].get("datetime", "")[:10] if time_els else ""
+            date_end = time_els[1].get("datetime", "")[:10] if len(time_els) > 1 else ""
+            tid_match = re.search(r'id=([A-Fa-f0-9-]+)', href) or re.search(r'/tournament/([0-9A-Fa-f-]{36})', href)
+            tournament_url = f"{TS_BASE}/tournament/{tid_match.group(1)}" if tid_match else ""
+
+            if name:
+                tournaments.append({
+                    "name": name,
+                    "url": tournament_url,
+                    "location": location,
+                    "date_start": date_start,
+                    "date_end": date_end or date_start,
+                })
+
+        return {'success': True, 'tournaments': tournaments}
+    except Exception as e:
+        logger.error(f"❌ Error searching open tournaments: {e}")
+        return {'success': False, 'error': str(e), 'tournaments': []}
