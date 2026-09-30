@@ -19,6 +19,7 @@ function PaymentManagement() {
   const [selectedJunior, setSelectedJunior] = useState('');
   const [juniors, setJuniors] = useState([]);
   const [juniorMonth, setJuniorMonth] = useState(''); // Month filter (YYYY-MM)
+  const [paidFilter, setPaidFilter] = useState('unpaid'); // 'unpaid' | 'paid' | 'all'
   const [selectedEntries, setSelectedEntries] = useState({}); // key -> bool
   
   // General State
@@ -553,6 +554,33 @@ function PaymentManagement() {
                   </button>
                 )}
               </div>
+
+              <div className="paid-filter">
+                <label>Show:</label>
+                <div className="paid-filter-buttons">
+                  <button
+                    className={`paid-filter-btn ${paidFilter === 'unpaid' ? 'active' : ''}`}
+                    onClick={() => setPaidFilter('unpaid')}
+                    disabled={loading || !selectedJunior}
+                  >
+                    Unpaid
+                  </button>
+                  <button
+                    className={`paid-filter-btn ${paidFilter === 'paid' ? 'active' : ''}`}
+                    onClick={() => setPaidFilter('paid')}
+                    disabled={loading || !selectedJunior}
+                  >
+                    Paid
+                  </button>
+                  <button
+                    className={`paid-filter-btn ${paidFilter === 'all' ? 'active' : ''}`}
+                    onClick={() => setPaidFilter('all')}
+                    disabled={loading || !selectedJunior}
+                  >
+                    All
+                  </button>
+                </div>
+              </div>
             </div>
 
             {juniors.length === 0 ? (
@@ -567,15 +595,28 @@ function PaymentManagement() {
               <div className="empty-state">
                 <p>No activities found for {selectedJunior}{juniorMonth ? ` in ${juniorMonth}` : ''}</p>
               </div>
-            ) : (
+            ) : (() => {
+              const displayed = juniorActivities.filter(a => {
+                if (paidFilter === 'paid') return isPaid(a);
+                if (paidFilter === 'unpaid') return !isPaid(a);
+                return true;
+              });
+              return (
               <div className="unpaid-activities">
                 <h3>💰 Activities for {selectedJunior} {juniorMonth && `(${juniorMonth})`}</h3>
                 <p className="tab-description">
                   {juniorActivities.length} total ·
                   {' '}{juniorActivities.filter(a => !isPaid(a)).length} unpaid ·
-                  {' '}{juniorActivities.filter(a => isPaid(a)).length} paid
+                  {' '}{juniorActivities.filter(a => isPaid(a)).length} paid ·
+                  {' '}showing {displayed.length} ({paidFilter})
                 </p>
 
+                {displayed.length === 0 ? (
+                  <div className="empty-state">
+                    <p>No {paidFilter} activities to show.</p>
+                  </div>
+                ) : (
+                <>
                 <div className="activities-table-container">
                   <table className="activities-table">
                     <thead>
@@ -583,10 +624,10 @@ function PaymentManagement() {
                         <th style={{width: '40px'}}>
                           <input
                             type="checkbox"
-                            onChange={() => toggleSelectAll(juniorActivities)}
+                            onChange={() => toggleSelectAll(displayed)}
                             checked={
-                              juniorActivities.filter(a => !isPaid(a)).length > 0 &&
-                              juniorActivities.filter(a => !isPaid(a)).every(a => selectedEntries[entryKey(a)])
+                              displayed.filter(a => !isPaid(a)).length > 0 &&
+                              displayed.filter(a => !isPaid(a)).every(a => selectedEntries[entryKey(a)])
                             }
                             title="Select all unpaid"
                           />
@@ -601,7 +642,7 @@ function PaymentManagement() {
                       </tr>
                     </thead>
                     <tbody>
-                      {juniorActivities.map((activity, idx) => {
+                      {displayed.map((activity, idx) => {
                         const startTime = activity['Start Time'];
                         const endTime = activity['End Time'];
                         let duration = '-';
@@ -662,8 +703,11 @@ function PaymentManagement() {
                     💳 Mark Selected as Paid &amp; Freeze
                   </button>
                 </div>
+                </>
+                )}
               </div>
-            )}
+              );
+            })()}
           </div>
         </div>
       )}
