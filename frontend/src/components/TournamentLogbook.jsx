@@ -263,7 +263,6 @@ function TournamentLogbook({ isAdmin = false }) {
     <div key={idx} className={`tlb-match-card ${m.status} ${m.has_komet ? 'komet' : ''}`}>
       <div className="tlb-match-header">
         <span className="tlb-match-event">{m.event}{m.round ? ` · ${m.round}` : ''}</span>
-        {m.has_komet && <span className="tlb-komet-badge">KOMET</span>}
       </div>
       <div className="tlb-match-teams">
         {renderTeam(m.team1, m.komet_names, m.team1_won, m.status === 'done')}
