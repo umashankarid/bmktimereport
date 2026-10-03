@@ -475,3 +475,12 @@
   position: sticky;
   top: 0;
 }
+
+/* Match Notes status filter */
+.tlb-note-filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+.tlb-note-filter-chip {
+  padding: 6px 12px; border: 1px solid #ddd; background: white; border-radius: 20px;
+  cursor: pointer; font-size: 13px;
+}
+.tlb-note-filter-chip.active { background: #667eea; color: white; border-color: #667eea; }
+.tlb-note-match-meta { display: flex; gap: 14px; font-size: 12px; color: #666; margin-bottom: 8px; }

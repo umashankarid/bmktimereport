@@ -31,6 +31,7 @@ function TournamentLogbook({ isAdmin = false }) {
   const [noteDrafts, setNoteDrafts] = useState({}); // matchLabel -> text
   const [savingNote, setSavingNote] = useState('');
   const [noteMsg, setNoteMsg] = useState('');
+  const [noteStatusFilter, setNoteStatusFilter] = useState('all'); // all, ongoing, upcoming, done
 
   // Admin report + URL editing
   const [reportComments, setReportComments] = useState([]);
@@ -411,9 +412,34 @@ function TournamentLogbook({ isAdmin = false }) {
                     <p className="tlb-loading">Loading {notePlayer}'s matches...</p>
                   ) : playerMatches.length === 0 ? (
                     <p className="tlb-empty">No matches found for {notePlayer}.</p>
-                  ) : (
+                  ) : (() => {
+                    const statusCount = {
+                      all: playerMatches.length,
+                      ongoing: playerMatches.filter(m => m.status === 'ongoing').length,
+                      upcoming: playerMatches.filter(m => m.status === 'upcoming').length,
+                      done: playerMatches.filter(m => m.status === 'done').length,
+                    };
+                    const filtered = noteStatusFilter === 'all'
+                      ? playerMatches
+                      : playerMatches.filter(m => m.status === noteStatusFilter);
+                    return (
+                    <>
+                    <div className="tlb-note-filters">
+                      {[['all','All'],['ongoing','🔴 Ongoing'],['upcoming','⏳ Upcoming'],['done','✅ Finished']].map(([k,label]) => (
+                        <button
+                          key={k}
+                          className={`tlb-note-filter-chip ${noteStatusFilter === k ? 'active' : ''}`}
+                          onClick={() => setNoteStatusFilter(k)}
+                        >
+                          {label} ({statusCount[k]})
+                        </button>
+                      ))}
+                    </div>
+                    {filtered.length === 0 ? (
+                      <p className="tlb-empty">No {noteStatusFilter} matches.</p>
+                    ) : (
                     <div className="tlb-note-matches">
-                      {playerMatches.map((m, idx) => {
+                      {filtered.map((m, idx) => {
                         const label = matchLabelFor(m);
                         const existing = commentsForMatch(label);
                         return (
@@ -427,6 +453,10 @@ function TournamentLogbook({ isAdmin = false }) {
                             <div className="tlb-note-match-teams">
                               {m.team1} <span className="tlb-vs">vs</span> {m.team2}
                               {m.score && <span className="tlb-note-score"> · {m.score}</span>}
+                            </div>
+                            <div className="tlb-note-match-meta">
+                              {m.time && <span>🕐 {m.time}</span>}
+                              {m.court && <span>📍 {m.court}</span>}
                             </div>
 
                             {existing.length > 0 && (
@@ -458,7 +488,10 @@ function TournamentLogbook({ isAdmin = false }) {
                         );
                       })}
                     </div>
-                  )}
+                    )}
+                    </>
+                    );
+                  })()}
                 </div>
               )}
 

@@ -228,10 +228,14 @@ def get_live_matches(tournament_id, req_date="", komet_names=None):
                 if not score and has_winner:
                     score = status_text or "W.O."
 
-                # Status: done if score/winner; ongoing if now-playing/court assigned; else upcoming
+                # Status:
+                #  - done: a score/winner exists
+                #  - ongoing: the match is on TODAY's day page and not yet finished
+                #    (the tournament day is in progress), or now-playing/court assigned
+                #  - upcoming: a future day, or no court/time yet
                 if score_sets or has_winner:
                     status = "done"
-                elif now_playing or court_assigned:
+                elif now_playing or court_assigned or is_today_page:
                     status = "ongoing"
                 else:
                     status = "upcoming"
