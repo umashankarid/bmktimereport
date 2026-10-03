@@ -238,7 +238,7 @@ function TournamentLogbook({ isAdmin = false }) {
 
   const matchesByStatus = (status) => matches.filter(m => m.status === status);
 
-  const renderTeam = (teamStr, kometNames, won) => {
+  const renderTeam = (teamStr, kometNames, won, isDone) => {
     const kometSet = new Set((kometNames || []).map(n => n.toLowerCase()));
     const parts = (teamStr || '').split(' / ');
     return (
@@ -248,10 +248,13 @@ function TournamentLogbook({ isAdmin = false }) {
           return (
             <React.Fragment key={i}>
               {i > 0 && ' / '}
-              <span className={isKomet ? 'tlb-komet-player' : ''}>{name}</span>
+              <span className={isKomet ? 'tlb-komet-player' : ''}>
+                {name}{isKomet ? ' (K)' : ''}
+              </span>
             </React.Fragment>
           );
         })}
+        {isDone && won && <span className="tlb-winner-mark"> *</span>}
       </span>
     );
   };
@@ -263,9 +266,9 @@ function TournamentLogbook({ isAdmin = false }) {
         {m.has_komet && <span className="tlb-komet-badge">KOMET</span>}
       </div>
       <div className="tlb-match-teams">
-        {renderTeam(m.team1, m.komet_names, m.team1_won)}
+        {renderTeam(m.team1, m.komet_names, m.team1_won, m.status === 'done')}
         <span className="tlb-vs">vs</span>
-        {renderTeam(m.team2, m.komet_names, (!m.team1_won && m.status === 'done'))}
+        {renderTeam(m.team2, m.komet_names, (!m.team1_won && m.status === 'done'), m.status === 'done')}
       </div>
       <div className="tlb-match-meta">
         {m.time && <span>🕐 {m.time}</span>}

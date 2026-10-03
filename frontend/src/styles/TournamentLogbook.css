@@ -484,3 +484,6 @@
 }
 .tlb-note-filter-chip.active { background: #667eea; color: white; border-color: #667eea; }
 .tlb-note-match-meta { display: flex; gap: 14px; font-size: 12px; color: #666; margin-bottom: 8px; }
+
+/* Winner mark */
+.tlb-winner-mark { color: #27ae60; font-weight: 700; }
