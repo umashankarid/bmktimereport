@@ -22,6 +22,7 @@ function TournamentLogbook({ isAdmin = false }) {
   const [loadingPlayers, setLoadingPlayers] = useState(false);
   const [playersError, setPlayersError] = useState('');
   const [playerSearch, setPlayerSearch] = useState('');
+  const [matchSearch, setMatchSearch] = useState('');
 
   // Match Notes
   const [notePlayer, setNotePlayer] = useState('');
@@ -368,9 +369,19 @@ function TournamentLogbook({ isAdmin = false }) {
                 matchError ? <p className="tlb-error">{matchError}</p> :
                 (() => {
                   const statusMap = { ongoing: 'ongoing', upcoming: 'upcoming', finished: 'done' };
-                  const list = matchesByStatus(statusMap[activeTab]);
+                  let list = matchesByStatus(statusMap[activeTab]);
+                  const q = matchSearch.trim().toLowerCase();
+                  if (q) {
+                    list = list.filter(m =>
+                      `${m.team1 || ''} ${m.team2 || ''}`.toLowerCase().includes(q)
+                    );
+                  }
+                  const searchBox = (
+                    <input type="text" className="tlb-player-search" placeholder="🔍 Filter by player name..."
+                      value={matchSearch} onChange={(e) => setMatchSearch(e.target.value)} />
+                  );
                   if (list.length === 0) {
-                    return <p className="tlb-empty">No {activeTab} matches.</p>;
+                    return (<>{searchBox}<p className="tlb-empty">No {activeTab} matches{q ? ' for that player' : ''}.</p></>);
                   }
                   // Group matches by time (section header + matches below)
                   const groups = {};
@@ -382,16 +393,19 @@ function TournamentLogbook({ isAdmin = false }) {
                   });
                   order.sort((a, b) => (a === 'No time' ? 1 : b === 'No time' ? -1 : a.localeCompare(b)));
                   return (
-                    <div className="tlb-time-sections">
-                      {order.map((t, gi) => (
-                        <div key={gi} className="tlb-time-section">
-                          <h4 className="tlb-time-header">🕐 {t}</h4>
-                          <div className="tlb-match-list">
-                            {groups[t].map(renderMatchCard)}
+                    <>
+                      {searchBox}
+                      <div className="tlb-time-sections">
+                        {order.map((t, gi) => (
+                          <div key={gi} className="tlb-time-section">
+                            <h4 className="tlb-time-header">🕐 {t}</h4>
+                            <div className="tlb-match-list">
+                              {groups[t].map(renderMatchCard)}
+                            </div>
                           </div>
-                        </div>
-                      ))}
-                    </div>
+                        ))}
+                      </div>
+                    </>
                   );
                 })()
               )}
